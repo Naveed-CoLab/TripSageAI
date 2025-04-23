@@ -568,8 +568,8 @@ export default function FlightSearchPage() {
                       <span className="text-blue-600 mr-2">{selectedOrigin?.iataCode}</span> ⟶ 
                       <span className="text-blue-600 ml-2">{selectedDestination?.iataCode}</span>
                       <span className="ml-3 text-sm text-muted-foreground font-normal">
-                        {format(form.getValues('departureDate'), "MMM d, yyyy")}
-                        {form.getValues('returnDate') && ` - ${format(form.getValues('returnDate'), "MMM d, yyyy")}`}
+                        {form.getValues('departureDate') ? format(form.getValues('departureDate'), "MMM d, yyyy") : ""}
+                        {form.getValues('returnDate') ? ` - ${format(form.getValues('returnDate'), "MMM d, yyyy")}` : ""}
                       </span>
                     </h2>
                     <div className="text-sm">
@@ -578,44 +578,44 @@ export default function FlightSearchPage() {
                   </div>
                   
                   {flightOffers.map((offer) => (
-                    <Card key={offer.id} className="overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 border-0">
+                    <Card key={offer.id} className="overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 border-0 mb-6">
                       <div className="flex flex-col md:flex-row">
                         {/* Left side with airline info */}
-                        <div className="p-4 md:w-1/6 flex flex-row md:flex-col items-center md:justify-center md:border-r">
-                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3 md:mr-0 md:mb-2">
+                        <div className="p-6 md:w-1/6 flex flex-row md:flex-col items-center md:justify-center md:border-r border-gray-100">
+                          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-3 md:mr-0 md:mb-3">
                             <span className="font-bold text-blue-600">{offer.validatingAirlineCodes[0]?.substring(0, 2)}</span>
                           </div>
                           <div className="text-sm text-center">
-                            <div>{offer.validatingAirlineCodes.join(', ')}</div>
-                            <div className="text-xs text-muted-foreground">
+                            <div className="font-medium">{offer.validatingAirlineCodes.join(', ')}</div>
+                            <div className="text-xs text-muted-foreground mt-1">
                               {offer.travelerPricings[0]?.fareDetailsBySegment[0]?.cabin || "Economy"}
                             </div>
                           </div>
                         </div>
                         
                         {/* Middle with flight details */}
-                        <div className="p-4 md:w-3/6 border-t md:border-t-0">
+                        <div className="px-8 py-6 md:w-3/6 border-t md:border-t-0">
                           <div className="flex items-center justify-between">
                             <div className="text-center">
-                              <div className="text-xl font-bold text-blue-600">
+                              <div className="text-2xl font-bold text-blue-600">
                                 {formatDateTime(offer.itineraries[0].segments[0].departure.at)}
                               </div>
-                              <div className="text-sm">{offer.itineraries[0].segments[0].departure.iataCode}</div>
+                              <div className="text-sm font-medium">{offer.itineraries[0].segments[0].departure.iataCode}</div>
                               <div className="text-xs text-muted-foreground">
                                 {formatDate(offer.itineraries[0].segments[0].departure.at)}
                               </div>
                             </div>
                             
-                            <div className="flex-1 px-4 text-center">
-                              <div className="text-xs text-muted-foreground mb-1">
+                            <div className="flex-1 px-6 text-center">
+                              <div className="text-xs font-medium text-gray-600 mb-1">
                                 {offer.itineraries[0].duration ? formatDuration(offer.itineraries[0].duration) : ""}
                               </div>
                               <div className="relative flex items-center">
                                 <div className="h-0.5 flex-1 bg-blue-200"></div>
-                                <div className="mx-2 w-2 h-2 rounded-full bg-blue-500"></div>
+                                <div className="mx-2 w-2 h-2 rounded-full bg-blue-600"></div>
                                 <div className="flex-1 h-0.5 bg-blue-200"></div>
                               </div>
-                              <div className="text-xs text-muted-foreground mt-1">
+                              <div className="text-xs text-gray-600 mt-1 font-medium">
                                 {offer.itineraries[0].segments.length > 1 
                                   ? `${offer.itineraries[0].segments.length - 1} stop(s)`
                                   : "Nonstop"
@@ -624,10 +624,10 @@ export default function FlightSearchPage() {
                             </div>
                             
                             <div className="text-center">
-                              <div className="text-xl font-bold text-blue-600">
+                              <div className="text-2xl font-bold text-blue-600">
                                 {formatDateTime(offer.itineraries[0].segments[offer.itineraries[0].segments.length - 1].arrival.at)}
                               </div>
-                              <div className="text-sm">{offer.itineraries[0].segments[offer.itineraries[0].segments.length - 1].arrival.iataCode}</div>
+                              <div className="text-sm font-medium">{offer.itineraries[0].segments[offer.itineraries[0].segments.length - 1].arrival.iataCode}</div>
                               <div className="text-xs text-muted-foreground">
                                 {formatDate(offer.itineraries[0].segments[offer.itineraries[0].segments.length - 1].arrival.at)}
                               </div>
@@ -636,12 +636,12 @@ export default function FlightSearchPage() {
                           
                           {/* Connection details */}
                           {offer.itineraries[0].segments.length > 1 && (
-                            <div className="mt-2 text-xs text-muted-foreground">
-                              <div className="flex flex-wrap gap-1 items-center justify-center">
+                            <div className="mt-3 text-xs text-gray-600">
+                              <div className="flex flex-wrap gap-2 items-center justify-center">
                                 <Clock className="h-3 w-3" />
-                                <span>Stops in:</span>
+                                <span className="font-medium">Stops in:</span>
                                 {offer.itineraries[0].segments.slice(0, -1).map((segment, idx) => (
-                                  <span key={idx} className="px-1.5 py-0.5 bg-slate-100 rounded-md">
+                                  <span key={idx} className="px-2 py-1 bg-blue-50 text-blue-600 rounded-md font-medium">
                                     {segment.arrival.iataCode}
                                   </span>
                                 ))}
@@ -650,34 +650,34 @@ export default function FlightSearchPage() {
                           )}
                           
                           {/* Amenities */}
-                          <div className="mt-3 flex justify-center gap-3 text-xs text-muted-foreground">
-                            <div className="flex items-center">
+                          <div className="mt-4 flex justify-center gap-4 text-xs">
+                            <div className="flex items-center bg-blue-50 text-blue-600 px-2 py-1 rounded-full">
                               <Briefcase className="h-3 w-3 mr-1" />
-                              <span>Carry-on included</span>
+                              <span className="font-medium">Carry-on included</span>
                             </div>
-                            <div className="flex items-center">
+                            <div className="flex items-center bg-blue-50 text-blue-600 px-2 py-1 rounded-full">
                               <Wifi className="h-3 w-3 mr-1" />
-                              <span>In-flight Wi-Fi</span>
+                              <span className="font-medium">In-flight Wi-Fi</span>
                             </div>
                           </div>
                         </div>
                         
                         {/* Right side with price and button */}
-                        <div className="p-4 md:w-2/6 bg-blue-50 flex flex-row md:flex-col justify-between items-center">
-                          <div className="text-center mb-0 md:mb-4">
-                            <div className="text-2xl font-bold text-blue-600">
+                        <div className="p-6 md:w-2/6 bg-blue-50 flex flex-row md:flex-col justify-between items-center">
+                          <div className="text-center mb-0 md:mb-6">
+                            <div className="text-3xl font-bold text-blue-600">
                               {offer.price.currency} {parseFloat(offer.price.total).toFixed(2)}
                             </div>
-                            <div className="text-xs text-muted-foreground">
+                            <div className="text-xs text-gray-600 mt-1">
                               Round trip, {offer.travelerPricings.length} {offer.travelerPricings.length > 1 ? 'passengers' : 'passenger'}
                             </div>
                           </div>
                           
                           <div className="relative">
-                            <div className="absolute -top-5 -right-4 bg-orange-500 text-white text-xs px-2 py-0.5 rounded">
-                              4 left
+                            <div className="absolute -top-5 -right-4 bg-orange-500 text-white text-xs px-2 py-0.5 rounded-full font-medium">
+                              5 seats left
                             </div>
-                            <Button className="bg-blue-600 hover:bg-blue-700">
+                            <Button className="bg-blue-600 hover:bg-blue-700 px-6">
                               Select
                             </Button>
                           </div>
