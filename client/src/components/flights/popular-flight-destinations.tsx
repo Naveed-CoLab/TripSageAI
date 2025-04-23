@@ -16,8 +16,8 @@ type Destination = {
 const popularDestinations: Destination[] = [
   { 
     name: "New York", 
-    code: "JFK", 
-    image: "https://images.unsplash.com/photo-1534430480872-3b397132e8ab?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80", 
+    code: "NYC", 
+    image: "https://ak-d.tripcdn.com/images/1lm4t12000cwldycsA928_W_800_0.jpg", 
     price: 299, 
     continent: "North America", 
     country: "USA" 

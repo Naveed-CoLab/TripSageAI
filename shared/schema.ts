@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, json, jsonb, date } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, json, jsonb, date, numeric } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -326,9 +326,65 @@ export const wishlistItemRelations = relations(wishlistItems, ({ one }) => ({
   }),
 }));
 
-// Update user relations to include wishlist items
+// Flight bookings table for tracking flight reservations
+export const flightBookings = pgTable("flight_bookings", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  
+  // Flight details
+  flightNumber: text("flight_number").notNull(),
+  airline: text("airline").notNull(),
+  departureAirport: text("departure_airport").notNull(),
+  departureCode: text("departure_code").notNull(),
+  departureTime: timestamp("departure_time").notNull(),
+  arrivalAirport: text("arrival_airport").notNull(),
+  arrivalCode: text("arrival_code").notNull(),
+  arrivalTime: timestamp("arrival_time").notNull(),
+  tripType: text("trip_type").notNull(), // ONE_WAY, ROUND_TRIP
+  
+  // Return flight info (if round trip)
+  returnFlightNumber: text("return_flight_number"),
+  returnAirline: text("return_airline"),
+  returnDepartureTime: timestamp("return_departure_time"),
+  returnArrivalTime: timestamp("return_arrival_time"),
+  
+  // Booking details
+  bookingReference: text("booking_reference").notNull(),
+  price: numeric("price").notNull(),
+  currency: text("currency").default("USD").notNull(),
+  status: text("status").default("confirmed").notNull(), // confirmed, cancelled, completed
+  cabinClass: text("cabin_class").default("ECONOMY").notNull(),
+  
+  // Passenger details 
+  passengerName: text("passenger_name"),
+  passengerEmail: text("passenger_email"),
+  passengerPhone: text("passenger_phone"),
+  
+  // Flight details as JSON for additional details
+  flightDetails: json("flight_details"),
+  
+  // Metadata
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertFlightBookingSchema = createInsertSchema(flightBookings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const flightBookingRelations = relations(flightBookings, ({ one }) => ({
+  user: one(users, {
+    fields: [flightBookings.userId],
+    references: [users.id],
+  }),
+}));
+
+// Update user relations to include flight bookings and wishlist items
 export const userWishlistRelation = relations(users, ({ many }) => ({
   wishlistItems: many(wishlistItems),
+  flightBookings: many(flightBookings),
 }));
 
 // Export type declarations for all tables
@@ -358,3 +414,5 @@ export type UserSettings = typeof userSettings.$inferSelect;
 export type InsertUserSettings = z.infer<typeof insertUserSettingsSchema>;
 export type WishlistItem = typeof wishlistItems.$inferSelect;
 export type InsertWishlistItem = z.infer<typeof insertWishlistItemSchema>;
+export type FlightBooking = typeof flightBookings.$inferSelect;
+export type InsertFlightBooking = z.infer<typeof insertFlightBookingSchema>;

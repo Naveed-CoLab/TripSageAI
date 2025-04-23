@@ -89,6 +89,14 @@ export interface IStorage {
   updateBooking(id: number, booking: InsertBooking): Promise<Booking>;
   deleteBooking(id: number): Promise<void>;
 
+  // Flight Booking methods
+  getFlightBookingsByUserId(userId: number): Promise<FlightBooking[]>;
+  getFlightBookingById(id: number): Promise<FlightBooking | undefined>;
+  createFlightBooking(booking: InsertFlightBooking): Promise<FlightBooking>;
+  updateFlightBooking(id: number, booking: Partial<FlightBooking>): Promise<FlightBooking>;
+  deleteFlightBooking(id: number): Promise<void>;
+  getFlightBookingsByStatus(userId: number, status: string): Promise<FlightBooking[]>;
+
   // Destination methods
   getAllDestinations(): Promise<Destination[]>;
   getDestinationById(id: number): Promise<Destination | undefined>;
@@ -578,6 +586,59 @@ export class DatabaseStorage implements IStorage {
         )
       );
     return item;
+  }
+  
+  // Flight booking methods
+  async getFlightBookingsByUserId(userId: number): Promise<FlightBooking[]> {
+    return db
+      .select()
+      .from(flightBookings)
+      .where(eq(flightBookings.userId, userId))
+      .orderBy(desc(flightBookings.createdAt));
+  }
+
+  async getFlightBookingById(id: number): Promise<FlightBooking | undefined> {
+    const [booking] = await db
+      .select()
+      .from(flightBookings)
+      .where(eq(flightBookings.id, id));
+    return booking;
+  }
+
+  async createFlightBooking(booking: InsertFlightBooking): Promise<FlightBooking> {
+    const [newBooking] = await db
+      .insert(flightBookings)
+      .values(booking)
+      .returning();
+    return newBooking;
+  }
+
+  async updateFlightBooking(id: number, booking: Partial<FlightBooking>): Promise<FlightBooking> {
+    const [updatedBooking] = await db
+      .update(flightBookings)
+      .set({ ...booking, updatedAt: new Date() })
+      .where(eq(flightBookings.id, id))
+      .returning();
+    return updatedBooking;
+  }
+
+  async deleteFlightBooking(id: number): Promise<void> {
+    await db
+      .delete(flightBookings)
+      .where(eq(flightBookings.id, id));
+  }
+
+  async getFlightBookingsByStatus(userId: number, status: string): Promise<FlightBooking[]> {
+    return db
+      .select()
+      .from(flightBookings)
+      .where(
+        and(
+          eq(flightBookings.userId, userId),
+          eq(flightBookings.status, status)
+        )
+      )
+      .orderBy(desc(flightBookings.createdAt));
   }
 }
 
