@@ -919,29 +919,49 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(401).json({ message: "You must be logged in to book flights" });
       }
 
+      // Print raw request data for debugging
+      console.log("Raw booking data received:", JSON.stringify(req.body, null, 2));
+      
       // Validate request data
       const bookingData = req.body;
       
-      // Process dates
-      const processedData = {
-        ...bookingData,
+      // Process data manually and ensure everything is correct
+      const cleanedData = {
         userId: req.user!.id,
+        flightNumber: bookingData.flightNumber,
+        airline: bookingData.airline,
+        departureAirport: bookingData.departureAirport,
+        departureCode: bookingData.departureCode,
         departureTime: new Date(bookingData.departureTime),
+        arrivalAirport: bookingData.arrivalAirport,
+        arrivalCode: bookingData.arrivalCode,
         arrivalTime: new Date(bookingData.arrivalTime),
+        tripType: bookingData.tripType,
+        returnFlightNumber: bookingData.returnFlightNumber || null,
+        returnAirline: bookingData.returnAirline || null,
         returnDepartureTime: bookingData.returnDepartureTime ? new Date(bookingData.returnDepartureTime) : null,
         returnArrivalTime: bookingData.returnArrivalTime ? new Date(bookingData.returnArrivalTime) : null,
-        createdAt: new Date(),
-        updatedAt: new Date()
+        bookingReference: bookingData.bookingReference,
+        price: bookingData.price,
+        currency: bookingData.currency || "USD",
+        status: bookingData.status || "CONFIRMED",
+        cabinClass: bookingData.cabinClass || "ECONOMY",
+        passengerName: bookingData.passengerName,
+        passengerEmail: bookingData.passengerEmail,
+        passengerPhone: bookingData.passengerPhone,
+        flightDetails: bookingData.flightDetails || {}
       };
       
-      console.log("Processing booking with data:", JSON.stringify({
-        ...processedData,
-        departureTime: processedData.departureTime.toISOString(),
-        arrivalTime: processedData.arrivalTime.toISOString()
+      console.log("Cleaned booking data:", JSON.stringify({
+        ...cleanedData,
+        departureTime: cleanedData.departureTime.toISOString(),
+        arrivalTime: cleanedData.arrivalTime.toISOString(),
+        returnDepartureTime: cleanedData.returnDepartureTime ? cleanedData.returnDepartureTime.toISOString() : null,
+        returnArrivalTime: cleanedData.returnArrivalTime ? cleanedData.returnArrivalTime.toISOString() : null
       }, null, 2));
       
       // Create the flight booking
-      const newBooking = await storage.createFlightBooking(processedData);
+      const newBooking = await storage.createFlightBooking(cleanedData);
       
       return res.status(201).json(newBooking);
     } catch (error: any) {
