@@ -1,8 +1,9 @@
 import { useEffect, useState, useRef } from "react";
 import { useParams, useLocation } from "wouter";
-import { useQuery, useMutation } from "@tanstack/react-query";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
 import MainLayout from "@/components/layout/main-layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -147,6 +148,7 @@ export default function TripDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
   const { toast } = useToast();
+  const { user } = useAuth();
   const tripId = parseInt(id);
   const [selectedTab, setSelectedTab] = useState("itinerary");
   const [mapUrl, setMapUrl] = useState("");
@@ -154,6 +156,12 @@ export default function TripDetailPage() {
   const mapRef = useRef<HTMLIFrameElement>(null);
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
   const [savedStates, setSavedStates] = useState<{ [key: string]: boolean }>({});
+  
+  // Fetch wishlist items to check if any attractions are already saved
+  const { data: wishlistItems } = useQuery<any[]>({
+    queryKey: ["/api/wishlist"],
+    enabled: !!user,
+  });
   
   const { data: trip, isLoading, error } = useQuery<TripWithDetails>({
     queryKey: [`/api/trips/${tripId}`],
@@ -192,6 +200,35 @@ export default function TripDetailPage() {
     generateItineraryMutation.mutate();
   };
 
+  // Add to wishlist mutation
+  const addToWishlist = useMutation({
+    mutationFn: async (wishlistItem: any) => {
+      return apiRequest("POST", "/api/wishlist", wishlistItem);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/wishlist"] });
+      toast({
+        title: "Added to wishlist",
+        description: "Item has been added to your wishlist",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to add to wishlist. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Check if an item is already saved in wishlist
+  const isInWishlist = (itemType: string, itemId: string) => {
+    if (!wishlistItems) return false;
+    return wishlistItems.some(
+      (item: any) => item.itemType === itemType && item.itemId === itemId
+    );
+  };
+  
   // Toggle saved state for an activity
   const toggleSaved = (activityId: string) => {
     setSavedStates(prev => ({
