@@ -952,13 +952,22 @@ export default function FlightsPage() {
                               {flight.seatsAvailable} seats left
                             </div>
                             
-                            <Button
-                              variant={selectedOutbound === flight.id ? "default" : "outline"}
-                              onClick={() => handleFlightSelect(flight.id, 'outbound')}
-                              className={selectedOutbound === flight.id ? "bg-green-600 hover:bg-green-700" : ""}
-                            >
-                              {selectedOutbound === flight.id ? "Selected" : "Book"}
-                            </Button>
+                            {selectedOutbound === flight.id ? (
+                              <Button
+                                variant="default"
+                                className="bg-green-600 hover:bg-green-700"
+                                onClick={handleBooking}
+                              >
+                                Continue to Booking
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                onClick={() => handleFlightSelect(flight.id, 'outbound')}
+                              >
+                                Book
+                              </Button>
+                            )}
                           </div>
                         </div>
                       ))}
@@ -1040,13 +1049,22 @@ export default function FlightsPage() {
                               {flight.seatsAvailable} seats left
                             </div>
                             
-                            <Button
-                              variant={selectedReturn === flight.id ? "default" : "outline"}
-                              onClick={() => handleFlightSelect(flight.id, 'return')}
-                              className={selectedReturn === flight.id ? "bg-green-600 hover:bg-green-700" : ""}
-                            >
-                              {selectedReturn === flight.id ? "Selected" : "Book"}
-                            </Button>
+                            {selectedReturn === flight.id ? (
+                              <Button
+                                variant="default"
+                                className="bg-green-600 hover:bg-green-700"
+                                onClick={handleBooking}
+                              >
+                                Continue to Booking
+                              </Button>
+                            ) : (
+                              <Button
+                                variant="outline"
+                                onClick={() => handleFlightSelect(flight.id, 'return')}
+                              >
+                                Book
+                              </Button>
+                            )}
                           </div>
                         </div>
                       ))}
