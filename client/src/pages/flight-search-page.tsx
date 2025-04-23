@@ -28,7 +28,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Separator } from "@/components/ui/separator";
-import { Loader2, Calendar, Plane, ArrowRightIcon, Luggage, Users } from "lucide-react";
+import { Loader2, Calendar, Plane, ArrowRightIcon, Luggage, Users, Clock, Briefcase, Wifi, Filter } from "lucide-react";
 import { format } from "date-fns";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { Calendar as CalendarComponent } from "@/components/ui/calendar";
@@ -232,442 +232,470 @@ export default function FlightSearchPage() {
   // Format date string (e.g., 2023-05-15T10:30:00 to May 15, 10:30)
   function formatDateTime(dateTime: string) {
     const date = new Date(dateTime);
-    return `${format(date, "MMM d")}, ${format(date, "HH:mm")}`;
+    return `${format(date, "HH:mm")}`;
+  }
+  
+  function formatDate(dateTime: string) {
+    const date = new Date(dateTime);
+    return `${format(date, "MMM d")}`;
   }
 
   return (
-    <div className="container mx-auto py-6 px-4 sm:px-6">
-      <div className="max-w-7xl mx-auto">
-        <h1 className="text-3xl font-bold mb-2">Flight Search</h1>
-        <p className="text-muted-foreground mb-6">Find the best flights for your trip</p>
-        
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          <div className="lg:col-span-1">
-            <Card className="sticky top-6">
-              <CardHeader>
-                <CardTitle>Search Flights</CardTitle>
-                <CardDescription>Enter your flight details</CardDescription>
-              </CardHeader>
-              <CardContent>
-                <Form {...form}>
-                  <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
-                    <FormField
-                      control={form.control}
-                      name="originLocationCode"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>From</FormLabel>
-                          <div className="relative">
-                            <FormControl>
-                              <Input
-                                placeholder="Search airports..."
-                                value={selectedOrigin ? `${selectedOrigin.iataCode} - ${selectedOrigin.name}` : ""}
-                                onChange={(e) => {
-                                  debouncedOriginSearch(e.target.value);
-                                  setSelectedOrigin(null);
-                                  field.onChange("");
-                                }}
-                              />
-                            </FormControl>
-                            {originQuery.length >= 2 && !selectedOrigin && (
-                              <div className="absolute z-10 mt-1 w-full bg-background rounded-md shadow-lg ring-1 ring-black ring-opacity-5 max-h-60 overflow-auto">
-                                {isLoadingOriginAirports ? (
-                                  <div className="p-2 text-center">
-                                    <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
-                                    Loading...
-                                  </div>
-                                ) : originAirports?.length ? (
-                                  <ul>
-                                    {originAirports.map((airport: Airport) => (
-                                      <li
-                                        key={airport.iataCode}
-                                        className="cursor-pointer hover:bg-accent p-2"
-                                        onClick={() => {
-                                          setSelectedOrigin(airport);
-                                          field.onChange(airport.iataCode);
-                                          setOriginQuery("");
-                                        }}
-                                      >
-                                        <div className="font-semibold">
-                                          {airport.iataCode} - {airport.name}
-                                        </div>
-                                        {airport.address && (
-                                          <div className="text-sm text-muted-foreground">
-                                            {airport.address.cityName}, {airport.address.countryName}
-                                          </div>
-                                        )}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                ) : (
-                                  <div className="p-2 text-center text-muted-foreground">
-                                    No airports found
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="destinationLocationCode"
-                      render={({ field }) => (
-                        <FormItem>
-                          <FormLabel>To</FormLabel>
-                          <div className="relative">
-                            <FormControl>
-                              <Input
-                                placeholder="Search airports..."
-                                value={selectedDestination ? `${selectedDestination.iataCode} - ${selectedDestination.name}` : ""}
-                                onChange={(e) => {
-                                  debouncedDestinationSearch(e.target.value);
-                                  setSelectedDestination(null);
-                                  field.onChange("");
-                                }}
-                              />
-                            </FormControl>
-                            {destinationQuery.length >= 2 && !selectedDestination && (
-                              <div className="absolute z-10 mt-1 w-full bg-background rounded-md shadow-lg ring-1 ring-black ring-opacity-5 max-h-60 overflow-auto">
-                                {isLoadingDestinationAirports ? (
-                                  <div className="p-2 text-center">
-                                    <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
-                                    Loading...
-                                  </div>
-                                ) : destinationAirports?.length ? (
-                                  <ul>
-                                    {destinationAirports.map((airport: Airport) => (
-                                      <li
-                                        key={airport.iataCode}
-                                        className="cursor-pointer hover:bg-accent p-2"
-                                        onClick={() => {
-                                          setSelectedDestination(airport);
-                                          field.onChange(airport.iataCode);
-                                          setDestinationQuery("");
-                                        }}
-                                      >
-                                        <div className="font-semibold">
-                                          {airport.iataCode} - {airport.name}
-                                        </div>
-                                        {airport.address && (
-                                          <div className="text-sm text-muted-foreground">
-                                            {airport.address.cityName}, {airport.address.countryName}
-                                          </div>
-                                        )}
-                                      </li>
-                                    ))}
-                                  </ul>
-                                ) : (
-                                  <div className="p-2 text-center text-muted-foreground">
-                                    No airports found
-                                  </div>
-                                )}
-                              </div>
-                            )}
-                          </div>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="departureDate"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                          <FormLabel>Departure Date</FormLabel>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button
-                                  variant={"outline"}
-                                  className={cn(
-                                    "w-full pl-3 text-left font-normal",
-                                    !field.value && "text-muted-foreground"
-                                  )}
-                                >
-                                  {field.value ? (
-                                    format(field.value, "PPP")
-                                  ) : (
-                                    <span>Pick a date</span>
-                                  )}
-                                  <Calendar className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <CalendarComponent
-                                mode="single"
-                                selected={field.value}
-                                onSelect={field.onChange}
-                                disabled={(date) =>
-                                  date < new Date(new Date().setHours(0, 0, 0, 0))
-                                }
-                                initialFocus
-                              />
-                            </PopoverContent>
-                          </Popover>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <FormField
-                      control={form.control}
-                      name="returnDate"
-                      render={({ field }) => (
-                        <FormItem className="flex flex-col">
-                          <FormLabel>Return Date (Optional)</FormLabel>
-                          <Popover>
-                            <PopoverTrigger asChild>
-                              <FormControl>
-                                <Button
-                                  variant={"outline"}
-                                  className={cn(
-                                    "w-full pl-3 text-left font-normal",
-                                    !field.value && "text-muted-foreground"
-                                  )}
-                                  onClick={() => {
-                                    if (!field.value) {
-                                      const departureDate = form.getValues('departureDate');
-                                      if (departureDate) {
-                                        // Default to the day after departure
-                                        const nextDay = new Date(departureDate);
-                                        nextDay.setDate(nextDay.getDate() + 1);
-                                        field.onChange(nextDay);
-                                      }
-                                    }
-                                  }}
-                                >
-                                  {field.value ? (
-                                    format(field.value, "PPP")
-                                  ) : (
-                                    <span>Pick a date</span>
-                                  )}
-                                  <Calendar className="ml-auto h-4 w-4 opacity-50" />
-                                </Button>
-                              </FormControl>
-                            </PopoverTrigger>
-                            <PopoverContent className="w-auto p-0" align="start">
-                              <CalendarComponent
-                                mode="single"
-                                selected={field.value ?? undefined}
-                                onSelect={(date) => {
-                                  field.onChange(date);
-                                }}
-                                disabled={(date) => {
-                                  const departureDate = form.getValues('departureDate');
-                                  // Disable dates before departure date
-                                  return departureDate ? date < departureDate : date < new Date();
-                                }}
-                                initialFocus
-                              />
-                            </PopoverContent>
-                          </Popover>
-                          <FormMessage />
-                        </FormItem>
-                      )}
-                    />
-                    
-                    <div className="grid grid-cols-2 gap-4">
-                      <FormField
-                        control={form.control}
-                        name="adults"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Passengers</FormLabel>
-                            <FormControl>
-                              <Input
-                                type="number"
-                                min={1}
-                                max={9}
-                                {...field}
-                                onChange={(e) => field.onChange(Number(e.target.value))}
-                              />
-                            </FormControl>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                      
-                      <FormField
-                        control={form.control}
-                        name="travelClass"
-                        render={({ field }) => (
-                          <FormItem>
-                            <FormLabel>Class</FormLabel>
-                            <Select onValueChange={field.onChange} defaultValue={field.value}>
-                              <FormControl>
-                                <SelectTrigger>
-                                  <SelectValue placeholder="Select class" />
-                                </SelectTrigger>
-                              </FormControl>
-                              <SelectContent>
-                                <SelectItem value="ECONOMY">Economy</SelectItem>
-                                <SelectItem value="PREMIUM_ECONOMY">Premium Economy</SelectItem>
-                                <SelectItem value="BUSINESS">Business</SelectItem>
-                                <SelectItem value="FIRST">First</SelectItem>
-                              </SelectContent>
-                            </Select>
-                            <FormMessage />
-                          </FormItem>
-                        )}
-                      />
-                    </div>
-                    
-                    <Button type="submit" className="w-full" disabled={isSearching || flightSearchMutation.isPending}>
-                      {isSearching || flightSearchMutation.isPending ? (
-                        <>
-                          <Loader2 className="h-4 w-4 animate-spin mr-2" />
-                          Searching...
-                        </>
-                      ) : (
-                        'Search Flights'
-                      )}
-                    </Button>
-                  </form>
-                </Form>
-              </CardContent>
-            </Card>
-          </div>
+    <div className="bg-slate-50 min-h-screen">
+      <div className="container mx-auto py-6 px-4 sm:px-6">
+        <div className="max-w-7xl mx-auto">
+          <h1 className="text-3xl font-bold mb-2">Flight Search</h1>
+          <p className="text-muted-foreground mb-6">Find the best flights for your trip</p>
           
-          <div className="lg:col-span-3">
-            {isSearching && flightSearchMutation.isPending ? (
-              <Card>
-                <CardContent className="py-10">
-                  <div className="flex flex-col items-center justify-center">
-                    <Loader2 className="h-10 w-10 animate-spin mb-4 text-primary" />
-                    <p className="text-lg font-medium">Searching for flights...</p>
-                    <p className="text-sm text-muted-foreground">This may take a moment</p>
+          <div className="flex flex-col lg:flex-row gap-6">
+            <div className="lg:w-1/4">
+              <Card className="sticky top-6 shadow-md">
+                <CardHeader className="bg-white border-b">
+                  <div className="flex items-center justify-between">
+                    <CardTitle>Filters</CardTitle>
+                    <Filter className="h-5 w-5 text-blue-500" />
                   </div>
-                </CardContent>
-              </Card>
-            ) : flightOffers.length > 0 ? (
-              <div className="space-y-4">
-                <div className="bg-card p-4 rounded-lg shadow-sm mb-4">
-                  <h2 className="text-xl font-semibold">
-                    {flightOffers.length} Flight{flightOffers.length !== 1 && 's'} Found
-                  </h2>
-                </div>
-                
-                {flightOffers.map((offer) => (
-                  <Card key={offer.id} className="overflow-hidden">
-                    <CardHeader className="bg-muted/50 pb-2">
-                      <div className="flex justify-between items-center">
-                        <div>
-                          <CardTitle className="text-lg">{selectedOrigin?.iataCode} to {selectedDestination?.iataCode}</CardTitle>
-                          <CardDescription>
-                            {offer.itineraries.length > 1 ? 'Round trip' : 'One way'} • {offer.travelerPricings.length} passenger{offer.travelerPricings.length !== 1 && 's'}
-                          </CardDescription>
-                        </div>
-                        <div className="text-right">
-                          <span className="text-2xl font-bold">
-                            {offer.price.currency} {parseFloat(offer.price.total).toFixed(2)}
-                          </span>
-                          <CardDescription>
-                            Total price
-                          </CardDescription>
-                        </div>
-                      </div>
-                    </CardHeader>
-                    
-                    <CardContent className="pt-4">
-                      {offer.itineraries.map((itinerary, itineraryIndex) => (
-                        <div key={itineraryIndex} className="mb-4">
-                          <div className="flex items-center mb-2">
-                            <div className="font-semibold">
-                              {itineraryIndex === 0 ? 'Outbound' : 'Return'} • {itinerary.duration ? formatDuration(itinerary.duration) : ''}
-                            </div>
-                            {itineraryIndex === 0 && offer.itineraries.length > 1 && (
-                              <Separator className="flex-1 mx-2" />
-                            )}
-                          </div>
-                          
-                          {itinerary.segments.map((segment, segmentIndex) => (
-                            <div key={segmentIndex} className="mb-3">
-                              <div className="grid grid-cols-12 gap-2">
-                                <div className="col-span-4">
-                                  <div className="text-xl font-semibold">{formatDateTime(segment.departure.at)}</div>
-                                  <div>{segment.departure.iataCode} {segment.departure.terminal && `Terminal ${segment.departure.terminal}`}</div>
-                                </div>
-                                
-                                <div className="col-span-4 flex flex-col items-center justify-center">
-                                  <div className="text-xs text-muted-foreground">
-                                    {formatDuration(segment.duration)}
-                                  </div>
-                                  <div className="w-full flex items-center">
-                                    <div className="h-0.5 flex-1 bg-muted"></div>
-                                    <ArrowRightIcon className="h-4 w-4 mx-1" />
-                                    <div className="h-0.5 flex-1 bg-muted"></div>
-                                  </div>
-                                  <div className="text-xs font-medium">
-                                    {segment.carrierCode} {segment.number}
-                                  </div>
-                                </div>
-                                
-                                <div className="col-span-4 text-right">
-                                  <div className="text-xl font-semibold">{formatDateTime(segment.arrival.at)}</div>
-                                  <div>{segment.arrival.iataCode} {segment.arrival.terminal && `Terminal ${segment.arrival.terminal}`}</div>
-                                </div>
-                              </div>
-                              
-                              {segmentIndex < itinerary.segments.length - 1 && (
-                                <div className="my-2 pl-4 border-l-2 border-dashed border-muted-foreground/30 text-sm text-muted-foreground">
-                                  Connection time: 
-                                  {(() => {
-                                    const arrivalTime = new Date(segment.arrival.at);
-                                    const departureTime = new Date(itinerary.segments[segmentIndex + 1].departure.at);
-                                    const diffMs = departureTime.getTime() - arrivalTime.getTime();
-                                    const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
-                                    const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
-                                    return ` ${diffHrs}h ${diffMins}m`;
-                                  })()}
+                  <CardDescription>Refine your search</CardDescription>
+                </CardHeader>
+                <CardContent className="bg-white">
+                  <Form {...form}>
+                    <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+                      <FormField
+                        control={form.control}
+                        name="originLocationCode"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>From</FormLabel>
+                            <div className="relative">
+                              <FormControl>
+                                <Input
+                                  placeholder="Search airports..."
+                                  value={selectedOrigin ? `${selectedOrigin.iataCode} - ${selectedOrigin.name}` : ""}
+                                  onChange={(e) => {
+                                    debouncedOriginSearch(e.target.value);
+                                    setSelectedOrigin(null);
+                                    field.onChange("");
+                                  }}
+                                  className="border-blue-200 focus:border-blue-500"
+                                />
+                              </FormControl>
+                              {originQuery.length >= 2 && !selectedOrigin && (
+                                <div className="absolute z-10 mt-1 w-full bg-background rounded-md shadow-lg ring-1 ring-black ring-opacity-5 max-h-60 overflow-auto">
+                                  {isLoadingOriginAirports ? (
+                                    <div className="p-2 text-center">
+                                      <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
+                                      Loading...
+                                    </div>
+                                  ) : originAirports?.length ? (
+                                    <ul>
+                                      {originAirports.map((airport: Airport) => (
+                                        <li
+                                          key={airport.iataCode}
+                                          className="cursor-pointer hover:bg-blue-50 p-2"
+                                          onClick={() => {
+                                            setSelectedOrigin(airport);
+                                            field.onChange(airport.iataCode);
+                                            setOriginQuery("");
+                                          }}
+                                        >
+                                          <div className="font-semibold">
+                                            {airport.iataCode} - {airport.name}
+                                          </div>
+                                          {airport.address && (
+                                            <div className="text-sm text-muted-foreground">
+                                              {airport.address.cityName}, {airport.address.countryName}
+                                            </div>
+                                          )}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  ) : (
+                                    <div className="p-2 text-center text-muted-foreground">
+                                      No airports found
+                                    </div>
+                                  )}
                                 </div>
                               )}
                             </div>
-                          ))}
-                        </div>
-                      ))}
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
                       
-                      <div className="mt-4 pt-4 border-t">
-                        <div className="flex flex-wrap gap-2">
-                          {offer.travelerPricings[0].fareDetailsBySegment.map((fareDetail, index) => (
-                            <div key={index} className="text-sm px-2 py-1 bg-accent rounded-full flex items-center">
-                              <Luggage className="h-3 w-3 mr-1" />
-                              {fareDetail.cabin}
+                      <FormField
+                        control={form.control}
+                        name="destinationLocationCode"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel>To</FormLabel>
+                            <div className="relative">
+                              <FormControl>
+                                <Input
+                                  placeholder="Search airports..."
+                                  value={selectedDestination ? `${selectedDestination.iataCode} - ${selectedDestination.name}` : ""}
+                                  onChange={(e) => {
+                                    debouncedDestinationSearch(e.target.value);
+                                    setSelectedDestination(null);
+                                    field.onChange("");
+                                  }}
+                                  className="border-blue-200 focus:border-blue-500"
+                                />
+                              </FormControl>
+                              {destinationQuery.length >= 2 && !selectedDestination && (
+                                <div className="absolute z-10 mt-1 w-full bg-background rounded-md shadow-lg ring-1 ring-black ring-opacity-5 max-h-60 overflow-auto">
+                                  {isLoadingDestinationAirports ? (
+                                    <div className="p-2 text-center">
+                                      <Loader2 className="h-4 w-4 animate-spin inline mr-2" />
+                                      Loading...
+                                    </div>
+                                  ) : destinationAirports?.length ? (
+                                    <ul>
+                                      {destinationAirports.map((airport: Airport) => (
+                                        <li
+                                          key={airport.iataCode}
+                                          className="cursor-pointer hover:bg-blue-50 p-2"
+                                          onClick={() => {
+                                            setSelectedDestination(airport);
+                                            field.onChange(airport.iataCode);
+                                            setDestinationQuery("");
+                                          }}
+                                        >
+                                          <div className="font-semibold">
+                                            {airport.iataCode} - {airport.name}
+                                          </div>
+                                          {airport.address && (
+                                            <div className="text-sm text-muted-foreground">
+                                              {airport.address.cityName}, {airport.address.countryName}
+                                            </div>
+                                          )}
+                                        </li>
+                                      ))}
+                                    </ul>
+                                  ) : (
+                                    <div className="p-2 text-center text-muted-foreground">
+                                      No airports found
+                                    </div>
+                                  )}
+                                </div>
+                              )}
                             </div>
-                          ))}
-                          <div className="text-sm px-2 py-1 bg-accent rounded-full flex items-center">
-                            <Users className="h-3 w-3 mr-1" />
-                            {offer.travelerPricings.length} passenger{offer.travelerPricings.length !== 1 && 's'}
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="departureDate"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-col">
+                            <FormLabel>Departure Date</FormLabel>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <FormControl>
+                                  <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                      "w-full pl-3 text-left font-normal border-blue-200 focus:border-blue-500",
+                                      !field.value && "text-muted-foreground"
+                                    )}
+                                  >
+                                    {field.value ? (
+                                      format(field.value, "PPP")
+                                    ) : (
+                                      <span>Pick a date</span>
+                                    )}
+                                    <Calendar className="ml-auto h-4 w-4 opacity-50" />
+                                  </Button>
+                                </FormControl>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <CalendarComponent
+                                  mode="single"
+                                  selected={field.value}
+                                  onSelect={field.onChange}
+                                  disabled={(date) =>
+                                    date < new Date(new Date().setHours(0, 0, 0, 0))
+                                  }
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <FormField
+                        control={form.control}
+                        name="returnDate"
+                        render={({ field }) => (
+                          <FormItem className="flex flex-col">
+                            <FormLabel>Return Date (Optional)</FormLabel>
+                            <Popover>
+                              <PopoverTrigger asChild>
+                                <FormControl>
+                                  <Button
+                                    variant={"outline"}
+                                    className={cn(
+                                      "w-full pl-3 text-left font-normal border-blue-200 focus:border-blue-500",
+                                      !field.value && "text-muted-foreground"
+                                    )}
+                                    onClick={() => {
+                                      if (!field.value) {
+                                        const departureDate = form.getValues('departureDate');
+                                        if (departureDate) {
+                                          // Default to the day after departure
+                                          const nextDay = new Date(departureDate);
+                                          nextDay.setDate(nextDay.getDate() + 1);
+                                          field.onChange(nextDay);
+                                        }
+                                      }
+                                    }}
+                                  >
+                                    {field.value ? (
+                                      format(field.value, "PPP")
+                                    ) : (
+                                      <span>Pick a date</span>
+                                    )}
+                                    <Calendar className="ml-auto h-4 w-4 opacity-50" />
+                                  </Button>
+                                </FormControl>
+                              </PopoverTrigger>
+                              <PopoverContent className="w-auto p-0" align="start">
+                                <CalendarComponent
+                                  mode="single"
+                                  selected={field.value ?? undefined}
+                                  onSelect={(date) => {
+                                    field.onChange(date);
+                                  }}
+                                  disabled={(date) => {
+                                    const departureDate = form.getValues('departureDate');
+                                    // Disable dates before departure date
+                                    return departureDate ? date < departureDate : date < new Date();
+                                  }}
+                                  initialFocus
+                                />
+                              </PopoverContent>
+                            </Popover>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                      
+                      <div className="grid grid-cols-2 gap-4">
+                        <FormField
+                          control={form.control}
+                          name="adults"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Passengers</FormLabel>
+                              <FormControl>
+                                <Input
+                                  type="number"
+                                  min={1}
+                                  max={9}
+                                  {...field}
+                                  onChange={(e) => field.onChange(Number(e.target.value))}
+                                  className="border-blue-200 focus:border-blue-500"
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                        
+                        <FormField
+                          control={form.control}
+                          name="travelClass"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel>Class</FormLabel>
+                              <Select onValueChange={field.onChange} defaultValue={field.value}>
+                                <FormControl>
+                                  <SelectTrigger className="border-blue-200 focus:border-blue-500">
+                                    <SelectValue placeholder="Select class" />
+                                  </SelectTrigger>
+                                </FormControl>
+                                <SelectContent>
+                                  <SelectItem value="ECONOMY">Economy</SelectItem>
+                                  <SelectItem value="PREMIUM_ECONOMY">Premium Economy</SelectItem>
+                                  <SelectItem value="BUSINESS">Business</SelectItem>
+                                  <SelectItem value="FIRST">First</SelectItem>
+                                </SelectContent>
+                              </Select>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                      
+                      <Button 
+                        type="submit" 
+                        className="w-full bg-blue-600 hover:bg-blue-700" 
+                        disabled={isSearching || flightSearchMutation.isPending}
+                      >
+                        {isSearching || flightSearchMutation.isPending ? (
+                          <>
+                            <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                            Searching...
+                          </>
+                        ) : (
+                          'Search Flights'
+                        )}
+                      </Button>
+                    </form>
+                  </Form>
+                </CardContent>
+              </Card>
+            </div>
+            
+            <div className="lg:w-3/4">
+              {isSearching && flightSearchMutation.isPending ? (
+                <Card className="shadow-md">
+                  <CardContent className="py-10">
+                    <div className="flex flex-col items-center justify-center">
+                      <Loader2 className="h-10 w-10 animate-spin mb-4 text-blue-500" />
+                      <p className="text-lg font-medium">Searching for flights...</p>
+                      <p className="text-sm text-muted-foreground">This may take a moment</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              ) : flightOffers.length > 0 ? (
+                <div className="space-y-4">
+                  <div className="bg-white p-4 rounded-lg shadow-md mb-4 flex justify-between items-center">
+                    <h2 className="text-xl font-semibold flex items-center">
+                      <span className="text-blue-600 mr-2">{selectedOrigin?.iataCode}</span> ⟶ 
+                      <span className="text-blue-600 ml-2">{selectedDestination?.iataCode}</span>
+                      <span className="ml-3 text-sm text-muted-foreground font-normal">
+                        {format(form.getValues('departureDate'), "MMM d, yyyy")}
+                        {form.getValues('returnDate') && ` - ${format(form.getValues('returnDate'), "MMM d, yyyy")}`}
+                      </span>
+                    </h2>
+                    <div className="text-sm">
+                      <span className="text-blue-600 font-medium">{flightOffers.length}</span> flights found
+                    </div>
+                  </div>
+                  
+                  {flightOffers.map((offer) => (
+                    <Card key={offer.id} className="overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200 border-0">
+                      <div className="flex flex-col md:flex-row">
+                        {/* Left side with airline info */}
+                        <div className="p-4 md:w-1/6 flex flex-row md:flex-col items-center md:justify-center md:border-r">
+                          <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mr-3 md:mr-0 md:mb-2">
+                            <span className="font-bold text-blue-600">{offer.validatingAirlineCodes[0]?.substring(0, 2)}</span>
+                          </div>
+                          <div className="text-sm text-center">
+                            <div>{offer.validatingAirlineCodes.join(', ')}</div>
+                            <div className="text-xs text-muted-foreground">
+                              {offer.travelerPricings[0]?.fareDetailsBySegment[0]?.cabin || "Economy"}
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Middle with flight details */}
+                        <div className="p-4 md:w-3/6 border-t md:border-t-0">
+                          <div className="flex items-center justify-between">
+                            <div className="text-center">
+                              <div className="text-xl font-bold text-blue-600">
+                                {formatDateTime(offer.itineraries[0].segments[0].departure.at)}
+                              </div>
+                              <div className="text-sm">{offer.itineraries[0].segments[0].departure.iataCode}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {formatDate(offer.itineraries[0].segments[0].departure.at)}
+                              </div>
+                            </div>
+                            
+                            <div className="flex-1 px-4 text-center">
+                              <div className="text-xs text-muted-foreground mb-1">
+                                {offer.itineraries[0].duration ? formatDuration(offer.itineraries[0].duration) : ""}
+                              </div>
+                              <div className="relative flex items-center">
+                                <div className="h-0.5 flex-1 bg-blue-200"></div>
+                                <div className="mx-2 w-2 h-2 rounded-full bg-blue-500"></div>
+                                <div className="flex-1 h-0.5 bg-blue-200"></div>
+                              </div>
+                              <div className="text-xs text-muted-foreground mt-1">
+                                {offer.itineraries[0].segments.length > 1 
+                                  ? `${offer.itineraries[0].segments.length - 1} stop(s)`
+                                  : "Nonstop"
+                                }
+                              </div>
+                            </div>
+                            
+                            <div className="text-center">
+                              <div className="text-xl font-bold text-blue-600">
+                                {formatDateTime(offer.itineraries[0].segments[offer.itineraries[0].segments.length - 1].arrival.at)}
+                              </div>
+                              <div className="text-sm">{offer.itineraries[0].segments[offer.itineraries[0].segments.length - 1].arrival.iataCode}</div>
+                              <div className="text-xs text-muted-foreground">
+                                {formatDate(offer.itineraries[0].segments[offer.itineraries[0].segments.length - 1].arrival.at)}
+                              </div>
+                            </div>
+                          </div>
+                          
+                          {/* Connection details */}
+                          {offer.itineraries[0].segments.length > 1 && (
+                            <div className="mt-2 text-xs text-muted-foreground">
+                              <div className="flex flex-wrap gap-1 items-center justify-center">
+                                <Clock className="h-3 w-3" />
+                                <span>Stops in:</span>
+                                {offer.itineraries[0].segments.slice(0, -1).map((segment, idx) => (
+                                  <span key={idx} className="px-1.5 py-0.5 bg-slate-100 rounded-md">
+                                    {segment.arrival.iataCode}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          
+                          {/* Amenities */}
+                          <div className="mt-3 flex justify-center gap-3 text-xs text-muted-foreground">
+                            <div className="flex items-center">
+                              <Briefcase className="h-3 w-3 mr-1" />
+                              <span>Carry-on included</span>
+                            </div>
+                            <div className="flex items-center">
+                              <Wifi className="h-3 w-3 mr-1" />
+                              <span>In-flight Wi-Fi</span>
+                            </div>
+                          </div>
+                        </div>
+                        
+                        {/* Right side with price and button */}
+                        <div className="p-4 md:w-2/6 bg-blue-50 flex flex-row md:flex-col justify-between items-center">
+                          <div className="text-center mb-0 md:mb-4">
+                            <div className="text-2xl font-bold text-blue-600">
+                              {offer.price.currency} {parseFloat(offer.price.total).toFixed(2)}
+                            </div>
+                            <div className="text-xs text-muted-foreground">
+                              Round trip, {offer.travelerPricings.length} {offer.travelerPricings.length > 1 ? 'passengers' : 'passenger'}
+                            </div>
+                          </div>
+                          
+                          <div className="relative">
+                            <div className="absolute -top-5 -right-4 bg-orange-500 text-white text-xs px-2 py-0.5 rounded">
+                              4 left
+                            </div>
+                            <Button className="bg-blue-600 hover:bg-blue-700">
+                              Select
+                            </Button>
                           </div>
                         </div>
                       </div>
-                    </CardContent>
-                    
-                    <CardFooter className="bg-muted/30 flex justify-between">
-                      <div className="text-sm text-muted-foreground">
-                        Operated by: {offer.validatingAirlineCodes.join(', ')}
-                      </div>
-                      <Button>
-                        Select this flight
-                      </Button>
-                    </CardFooter>
-                  </Card>
-                ))}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center h-full bg-muted/30 rounded-lg p-8">
-                <Plane className="h-16 w-16 text-muted-foreground mb-4" />
-                <h3 className="text-xl font-semibold mb-2">Search for flights</h3>
-                <p className="text-muted-foreground text-center max-w-md">
-                  Enter your departure and destination airports, travel dates, and other preferences to search for available flights.
-                </p>
-              </div>
-            )}
+                    </Card>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex flex-col items-center justify-center h-96 bg-white rounded-lg shadow-md p-8">
+                  <Plane className="h-16 w-16 text-blue-300 mb-4" />
+                  <h3 className="text-xl font-semibold mb-2">Search for flights</h3>
+                  <p className="text-muted-foreground text-center max-w-md">
+                    Enter your departure and destination airports, travel dates, and other preferences to search for available flights.
+                  </p>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       </div>
