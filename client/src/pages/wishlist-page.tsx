@@ -117,23 +117,23 @@ export default function WishlistPage() {
           </TabsList>
           
           <TabsContent value="all" className="mt-0">
-            {renderWishlistItems(filteredItems, isLoading, handleRemoveItem)}
+            {renderWishlistItems(filteredItems, isLoading, handleRemoveItem, () => navigate('/'))}
           </TabsContent>
           
           <TabsContent value="destinations" className="mt-0">
-            {renderWishlistItems(filteredItems, isLoading, handleRemoveItem)}
+            {renderWishlistItems(filteredItems, isLoading, handleRemoveItem, () => navigate('/'))}
           </TabsContent>
           
           <TabsContent value="hotels" className="mt-0">
-            {renderWishlistItems(filteredItems, isLoading, handleRemoveItem)}
+            {renderWishlistItems(filteredItems, isLoading, handleRemoveItem, () => navigate('/'))}
           </TabsContent>
           
           <TabsContent value="experiences" className="mt-0">
-            {renderWishlistItems(filteredItems, isLoading, handleRemoveItem)}
+            {renderWishlistItems(filteredItems, isLoading, handleRemoveItem, () => navigate('/'))}
           </TabsContent>
           
           <TabsContent value="trips" className="mt-0">
-            {renderWishlistItems(filteredItems, isLoading, handleRemoveItem)}
+            {renderWishlistItems(filteredItems, isLoading, handleRemoveItem, () => navigate('/'))}
           </TabsContent>
         </Tabs>
       </div>
@@ -144,7 +144,8 @@ export default function WishlistPage() {
 function renderWishlistItems(
   items: WishlistItem[] | undefined, 
   isLoading: boolean, 
-  onRemove: (id: number) => void
+  onRemove: (id: number) => void,
+  navigateToHome: () => void
 ) {
   if (isLoading) {
     return (
@@ -168,7 +169,7 @@ function renderWishlistItems(
         </p>
         <Button 
           className="rounded-full"
-          onClick={() => navigate('/')}
+          onClick={navigateToHome}
         >
           Start exploring
         </Button>

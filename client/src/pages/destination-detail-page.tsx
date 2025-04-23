@@ -29,7 +29,7 @@ export default function DestinationDetailPage() {
   });
 
   // Check if destination is in wishlist
-  const { data: wishlistItems } = useQuery({
+  const { data: wishlistItems = [] } = useQuery<any[]>({
     queryKey: ["/api/wishlist"],
     enabled: !!user,
   });
@@ -48,7 +48,7 @@ export default function DestinationDetailPage() {
         }
       };
       
-      return apiRequest("/api/wishlist", "POST", wishlistItem);
+      return apiRequest("POST", "/api/wishlist", wishlistItem);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/wishlist"] });
@@ -70,7 +70,7 @@ export default function DestinationDetailPage() {
   // Remove from wishlist mutation
   const removeFromWishlist = useMutation({
     mutationFn: async (itemId: number) => {
-      return apiRequest(`/api/wishlist/${itemId}`, "DELETE");
+      return apiRequest("DELETE", `/api/wishlist/${itemId}`);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/wishlist"] });
