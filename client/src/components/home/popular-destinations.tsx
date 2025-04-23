@@ -1,10 +1,13 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useLocation } from "wouter";
 import { createApi } from "unsplash-js";
 import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChevronRight, ChevronLeft, Heart } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
+import { useAuth } from "@/hooks/use-auth";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { apiRequest, queryClient } from "@/lib/queryClient";
 import { BubbleRating } from "@/components/ui/bubble-rating";
 
 // Unsplash API setup
@@ -57,6 +60,7 @@ async function getDestinationImage(destination: string, country: string, type?: 
 
 export default function PopularDestinations() {
   const [, navigate] = useLocation();
+  const { user } = useAuth();
   const [wishlist, setWishlist] = useState<Record<string, boolean>>({});
   
   // Refs for scrollable containers
@@ -64,26 +68,155 @@ export default function PopularDestinations() {
   const hotelsRef = useRef<HTMLDivElement>(null);
   const experiencesRef = useRef<HTMLDivElement>(null);
   
-  // Function to toggle wishlist status
-  const toggleWishlist = (id: string) => {
-    setWishlist(prev => {
-      const newWishlist = { ...prev };
-      newWishlist[id] = !prev[id];
+  // Fetch wishlist items to check if destinations are already saved
+  const { data: wishlistItems } = useQuery<any[]>({
+    queryKey: ["/api/wishlist"],
+    enabled: !!user,
+  });
+  
+  // Add to wishlist mutation
+  const addToWishlist = useMutation({
+    mutationFn: async (wishlistItem: any) => {
+      return apiRequest("POST", "/api/wishlist", wishlistItem);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/wishlist"] });
+      toast({
+        title: "Added to wishlist",
+        description: "Item has been added to your wishlist",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to add to wishlist. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Remove from wishlist mutation
+  const removeFromWishlist = useMutation({
+    mutationFn: async (itemId: number) => {
+      return apiRequest("DELETE", `/api/wishlist/${itemId}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/wishlist"] });
+      toast({
+        title: "Removed from wishlist",
+        description: "Item has been removed from your wishlist",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to remove from wishlist. Please try again.",
+        variant: "destructive",
+      });
+    }
+  });
+  
+  // Update local wishlist state based on database data
+  useEffect(() => {
+    if (wishlistItems) {
+      const newWishlist: Record<string, boolean> = {};
       
-      if (newWishlist[id]) {
-        toast({
-          title: "Added to Wishlist",
-          description: "The item has been added to your wishlist.",
-        });
-      } else {
-        toast({
-          title: "Removed from Wishlist",
-          description: "The item has been removed from your wishlist.",
-        });
+      // Map through all types of items we display
+      [...topDestinations, ...hotelExperiences, ...travelExperiences].forEach(item => {
+        // Check if this item exists in the wishlist items from database
+        const found = wishlistItems.find(
+          wishlistItem => wishlistItem.itemId === item.id
+        );
+        newWishlist[item.id] = !!found;
+      });
+      
+      setWishlist(newWishlist);
+    }
+  }, [wishlistItems]);
+  
+  // Check if an item is in the wishlist
+  const isInWishlist = (itemId: string) => {
+    if (!wishlistItems) return false;
+    return wishlistItems.some(item => item.itemId === itemId);
+  };
+  
+  // Get wishlist item ID if it exists
+  const getWishlistItemId = (itemId: string) => {
+    if (!wishlistItems) return null;
+    const item = wishlistItems.find(item => item.itemId === itemId);
+    return item ? item.id : null;
+  };
+  
+  // Function to toggle wishlist status
+  const toggleWishlist = (id: string, item: any, type: string) => {
+    if (!user) {
+      toast({
+        title: "Sign in required",
+        description: "Please sign in to save items to your wishlist",
+        variant: "destructive",
+      });
+      return;
+    }
+    
+    const isItemInWishlist = isInWishlist(id);
+    
+    if (!isItemInWishlist) {
+      // Add to wishlist
+      let itemType, itemName, itemImage, additionalData;
+      
+      switch (type) {
+        case 'destination':
+          itemType = 'destination';
+          itemName = `${item.name}, ${item.country}`;
+          itemImage = item.imageUrl;
+          additionalData = { country: item.country };
+          break;
+        case 'hotel':
+          itemType = 'restaurant';
+          itemName = item.name;
+          itemImage = item.imageUrl;
+          additionalData = { 
+            location: item.location,
+            rating: item.rating,
+            priceLevel: item.priceLevel,
+            categories: item.categories
+          };
+          break;
+        case 'experience':
+          itemType = 'experience';
+          itemName = item.name;
+          itemImage = item.imageUrl;
+          additionalData = {
+            rating: item.rating,
+            price: item.price
+          };
+          break;
+        default:
+          itemType = 'destination';
+          itemName = item.name;
+          itemImage = item.imageUrl;
       }
       
-      return newWishlist;
-    });
+      addToWishlist.mutate({
+        itemType,
+        itemId: id,
+        itemName,
+        itemImage,
+        additionalData
+      });
+    } else {
+      // Remove from wishlist
+      const wishlistItemId = getWishlistItemId(id);
+      if (wishlistItemId) {
+        removeFromWishlist.mutate(wishlistItemId);
+      }
+    }
+    
+    // Update local state immediately for better UX
+    setWishlist(prev => ({
+      ...prev,
+      [id]: !prev[id]
+    }));
   };
   
   // Function to handle scroll with buttons

@@ -879,10 +879,36 @@ export default function TripDetailPage() {
                                   size="sm" 
                                   className="w-full mt-3"
                                   onClick={() => {
-                                    toast({
-                                      title: "Added to saved",
-                                      description: "Beaches have been added to your saved items.",
-                                    });
+                                    if (!user) {
+                                      toast({
+                                        title: "Sign in required",
+                                        description: "Please sign in to save items to your wishlist",
+                                        variant: "destructive",
+                                      });
+                                      return;
+                                    }
+                                    
+                                    const beachesId = `trip-${trip.id}-beaches`;
+                                    const isAlreadySaved = isInWishlist("attraction", beachesId);
+                                    
+                                    if (!isAlreadySaved) {
+                                      addToWishlist.mutate({
+                                        itemType: "attraction",
+                                        itemId: beachesId,
+                                        itemName: `Beaches in ${trip.destination}`,
+                                        itemImage: getPlaceholderImage(`${trip.destination} beach`),
+                                        additionalData: {
+                                          tripId: trip.id,
+                                          description: `Explore the stunning beaches around ${trip.destination}.`,
+                                          location: trip.destination
+                                        }
+                                      });
+                                    } else {
+                                      toast({
+                                        title: "Already in wishlist",
+                                        description: "This attraction is already in your wishlist",
+                                      });
+                                    }
                                   }}
                                 >
                                   <Heart className="h-4 w-4 mr-2" />
@@ -916,10 +942,36 @@ export default function TripDetailPage() {
                                   size="sm" 
                                   className="w-full mt-3"
                                   onClick={() => {
-                                    toast({
-                                      title: "Added to saved",
-                                      description: "Local cuisine has been added to your saved items.",
-                                    });
+                                    if (!user) {
+                                      toast({
+                                        title: "Sign in required",
+                                        description: "Please sign in to save items to your wishlist",
+                                        variant: "destructive",
+                                      });
+                                      return;
+                                    }
+                                    
+                                    const cuisineId = `trip-${trip.id}-cuisine`;
+                                    const isAlreadySaved = isInWishlist("restaurant", cuisineId);
+                                    
+                                    if (!isAlreadySaved) {
+                                      addToWishlist.mutate({
+                                        itemType: "restaurant",
+                                        itemId: cuisineId,
+                                        itemName: `Local Cuisine in ${trip.destination}`,
+                                        itemImage: getPlaceholderImage(`${trip.destination} restaurant`),
+                                        additionalData: {
+                                          tripId: trip.id,
+                                          description: `Try the authentic cuisine of ${trip.destination}.`,
+                                          location: trip.destination
+                                        }
+                                      });
+                                    } else {
+                                      toast({
+                                        title: "Already in wishlist",
+                                        description: "This restaurant is already in your wishlist",
+                                      });
+                                    }
                                   }}
                                 >
                                   <Heart className="h-4 w-4 mr-2" />
