@@ -85,17 +85,21 @@ export function setupAuth(app: Express) {
 
   app.post("/api/register", async (req, res, next) => {
     try {
+      console.log("Registration request received:", req.body);
       const { username, email, password, firstName, lastName } = req.body;
       
       if (!username || !email || !password) {
+        console.log("Missing required fields");
         return res.status(400).json({ message: "Username, email, and password are required" });
       }
       
       const existingUser = await storage.getUserByUsername(username);
       if (existingUser) {
+        console.log("Username already exists:", username);
         return res.status(400).json({ message: "Username already exists" });
       }
 
+      console.log("Creating user:", username);
       const user = await storage.createUser({
         username,
         email,
@@ -103,12 +107,17 @@ export function setupAuth(app: Express) {
         firstName,
         lastName
       });
+      console.log("User created successfully with ID:", user.id);
 
       // Remove password from the response
       const { password: _, ...userWithoutPassword } = user;
 
       req.login(user, (err) => {
-        if (err) return next(err);
+        if (err) {
+          console.error("Login error after registration:", err);
+          return next(err);
+        }
+        console.log("User logged in after registration");
         res.status(201).json(userWithoutPassword);
       });
     } catch (error) {
