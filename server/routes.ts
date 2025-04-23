@@ -922,16 +922,31 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Validate request data
       const bookingData = req.body;
       
-      // Create the flight booking
-      const newBooking = await storage.createFlightBooking({
+      // Process dates
+      const processedData = {
         ...bookingData,
-        userId: req.user!.id
-      });
+        userId: req.user!.id,
+        departureTime: new Date(bookingData.departureTime),
+        arrivalTime: new Date(bookingData.arrivalTime),
+        returnDepartureTime: bookingData.returnDepartureTime ? new Date(bookingData.returnDepartureTime) : null,
+        returnArrivalTime: bookingData.returnArrivalTime ? new Date(bookingData.returnArrivalTime) : null,
+        createdAt: new Date(),
+        updatedAt: new Date()
+      };
+      
+      console.log("Processing booking with data:", JSON.stringify({
+        ...processedData,
+        departureTime: processedData.departureTime.toISOString(),
+        arrivalTime: processedData.arrivalTime.toISOString()
+      }, null, 2));
+      
+      // Create the flight booking
+      const newBooking = await storage.createFlightBooking(processedData);
       
       return res.status(201).json(newBooking);
-    } catch (error) {
+    } catch (error: any) {
       console.error("Error creating flight booking:", error);
-      return res.status(500).json({ message: "Failed to create flight booking" });
+      return res.status(500).json({ message: "Failed to create flight booking", error: error.message });
     }
   });
 

@@ -610,18 +610,10 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createFlightBooking(booking: InsertFlightBooking): Promise<FlightBooking> {
-    // Ensure dates are properly parsed as Date objects
-    const processedBooking = {
-      ...booking,
-      departureTime: new Date(booking.departureTime),
-      arrivalTime: new Date(booking.arrivalTime),
-      returnDepartureTime: booking.returnDepartureTime ? new Date(booking.returnDepartureTime) : null,
-      returnArrivalTime: booking.returnArrivalTime ? new Date(booking.returnArrivalTime) : null
-    };
-
+    // The dates are already processed in the route handler
     const [newBooking] = await db
       .insert(flightBookings)
-      .values(processedBooking)
+      .values(booking)
       .returning();
     return newBooking;
   }
