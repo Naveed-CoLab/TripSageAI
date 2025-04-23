@@ -24,6 +24,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import { useAuth } from "@/hooks/use-auth";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { queryClient, apiRequest } from "@/lib/queryClient";
+import PopularFlightDestinations from "@/components/flights/popular-flight-destinations";
 import {
   CalendarIcon,
   Search,
@@ -1118,49 +1119,12 @@ export default function FlightsPage() {
         
         {/* Popular Destinations (shown when no results) */}
         {!showResults && (
-          <div className="mt-12">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Popular Flight Destinations</h2>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6">
-              {[
-                { name: "New York", code: "JFK", image: "https://images.unsplash.com/photo-1534430480872-3b397132e8ab?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80", price: 299 },
-                { name: "London", code: "LHR", image: "https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80", price: 499 },
-                { name: "Tokyo", code: "HND", image: "https://images.unsplash.com/photo-1503899036084-c55cdd92da26?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80", price: 899 },
-                { name: "Paris", code: "CDG", image: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80", price: 449 },
-                { name: "Dubai", code: "DXB", image: "https://images.unsplash.com/photo-1512453979798-5ea266f8880c?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80", price: 649 },
-                { name: "Sydney", code: "SYD", image: "https://images.unsplash.com/photo-1506973035872-a4ec16b8e8d9?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80", price: 999 },
-                { name: "Singapore", code: "SIN", image: "https://images.unsplash.com/photo-1525625293386-3f8f99389edd?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80", price: 749 },
-                { name: "Rome", code: "FCO", image: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80", price: 399 },
-              ].map((destination) => (
-                <div
-                  key={destination.code}
-                  className="bg-white rounded-xl shadow-md overflow-hidden cursor-pointer hover:shadow-lg transition-shadow"
-                  onClick={() => {
-                    setDestination(destination.name);
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                  }}
-                >
-                  <div className="h-48 overflow-hidden">
-                    <img
-                      src={destination.image}
-                      alt={destination.name}
-                      className="w-full h-full object-cover transition-transform duration-300 hover:scale-105"
-                    />
-                  </div>
-                  <div className="p-4">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <h3 className="font-bold text-lg">{destination.name}</h3>
-                        <p className="text-gray-500 text-sm">{destination.code}</p>
-                      </div>
-                      <div className="text-blue-600 font-bold">
-                        from ${destination.price}
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
+          <PopularFlightDestinations 
+            onDestinationSelect={(destinationName) => {
+              setDestination(destinationName);
+              window.scrollTo({ top: 0, behavior: 'smooth' });
+            }}
+          />
         )}
       </div>
     </MainLayout>
