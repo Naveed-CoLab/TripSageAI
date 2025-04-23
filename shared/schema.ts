@@ -336,17 +336,17 @@ export const flightBookings = pgTable("flight_bookings", {
   airline: text("airline").notNull(),
   departureAirport: text("departure_airport").notNull(),
   departureCode: text("departure_code").notNull(),
-  departureTime: timestamp("departure_time").notNull(),
+  departureTime: text("departure_time").notNull(), // Store as text and convert when needed
   arrivalAirport: text("arrival_airport").notNull(),
   arrivalCode: text("arrival_code").notNull(),
-  arrivalTime: timestamp("arrival_time").notNull(),
+  arrivalTime: text("arrival_time").notNull(), // Store as text and convert when needed
   tripType: text("trip_type").notNull(), // ONE_WAY, ROUND_TRIP
   
   // Return flight info (if round trip)
   returnFlightNumber: text("return_flight_number"),
   returnAirline: text("return_airline"),
-  returnDepartureTime: timestamp("return_departure_time"),
-  returnArrivalTime: timestamp("return_arrival_time"),
+  returnDepartureTime: text("return_departure_time"), // Store as text and convert when needed
+  returnArrivalTime: text("return_arrival_time"), // Store as text and convert when needed
   
   // Booking details
   bookingReference: text("booking_reference").notNull(),

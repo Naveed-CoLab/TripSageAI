@@ -924,58 +924,33 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Raw booking data received:", JSON.stringify(req.body, null, 2));
       console.log("User authenticated:", req.isAuthenticated(), "User ID:", req.user?.id);
       
-      // Validate request data
-      const booking = req.body;
-      const userId = req.user!.id;
+      // Create a new booking object without the timestamp fields
+      const bookingData = {
+        userId: req.user!.id,
+        flightNumber: req.body.flightNumber,
+        airline: req.body.airline,
+        departureAirport: req.body.departureAirport,
+        departureCode: req.body.departureCode,
+        arrivalAirport: req.body.arrivalAirport,
+        arrivalCode: req.body.arrivalCode,
+        tripType: req.body.tripType,
+        returnFlightNumber: req.body.returnFlightNumber || null,
+        returnAirline: req.body.returnAirline || null,
+        bookingReference: req.body.bookingReference,
+        price: req.body.price,
+        currency: req.body.currency || "USD",
+        status: req.body.status || "CONFIRMED",
+        cabinClass: req.body.cabinClass || "ECONOMY",
+        passengerName: req.body.passengerName,
+        passengerEmail: req.body.passengerEmail,
+        passengerPhone: req.body.passengerPhone,
+        flightDetails: req.body.flightDetails || {}
+      };
       
-      // Use raw SQL query to bypass Drizzle's timestamp handling issues
-      // Insert directly with a parameterized query
-      const query = `
-        INSERT INTO flight_bookings (
-          user_id, flight_number, airline, departure_airport, departure_code, 
-          departure_time, arrival_airport, arrival_code, arrival_time, 
-          trip_type, return_flight_number, return_airline,
-          return_departure_time, return_arrival_time, booking_reference, 
-          price, currency, status, cabin_class, passenger_name, 
-          passenger_email, passenger_phone, flight_details
-        ) VALUES (
-          $1, $2, $3, $4, $5, 
-          $6, $7, $8, $9, 
-          $10, $11, $12, 
-          $13, $14, $15, 
-          $16, $17, $18, $19, $20, 
-          $21, $22, $23
-        ) RETURNING *`;
-        
-      const values = [
-        userId,
-        booking.flightNumber,
-        booking.airline,
-        booking.departureAirport,
-        booking.departureCode,
-        booking.departureTime,
-        booking.arrivalAirport,
-        booking.arrivalCode,
-        booking.arrivalTime,
-        booking.tripType,
-        booking.returnFlightNumber || null,
-        booking.returnAirline || null,
-        booking.returnDepartureTime || null,
-        booking.returnArrivalTime || null,
-        booking.bookingReference,
-        booking.price,
-        booking.currency || "USD",
-        booking.status || "CONFIRMED",
-        booking.cabinClass || "ECONOMY",
-        booking.passengerName,
-        booking.passengerEmail,
-        booking.passengerPhone,
-        JSON.stringify(booking.flightDetails || {})
-      ];
+      console.log("Simplified booking data:", JSON.stringify(bookingData, null, 2));
       
-      // Execute the query using the pool directly
-      const result = await pool.query(query, values);
-      const newBooking = result.rows[0];
+      // Create the booking record
+      const newBooking = await storage.createFlightBooking(bookingData);
       
       return res.status(201).json(newBooking);
     } catch (error: any) {
