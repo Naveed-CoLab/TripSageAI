@@ -1124,6 +1124,7 @@ export default function FlightsPage() {
               setDestination(destinationName);
               window.scrollTo({ top: 0, behavior: 'smooth' });
             }}
+            layout="grid"
           />
         )}
       </div>

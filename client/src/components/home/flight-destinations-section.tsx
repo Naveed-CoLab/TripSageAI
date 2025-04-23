@@ -21,7 +21,11 @@ export default function FlightDestinationsSection() {
           </p>
         </div>
 
-        <PopularFlightDestinations onDestinationSelect={handleDestinationSelect} />
+        <PopularFlightDestinations 
+          onDestinationSelect={handleDestinationSelect} 
+          layout="scroll"
+          showTitle={false}
+        />
         
         <div className="mt-10 text-center">
           <Button 
