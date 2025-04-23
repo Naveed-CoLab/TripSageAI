@@ -408,7 +408,7 @@ export default function PopularDestinations() {
                       className="absolute top-2 right-2 p-2 rounded-full bg-white/80 hover:bg-white shadow transition-colors duration-200"
                       onClick={(e) => {
                         e.stopPropagation();
-                        toggleWishlist(destination.id);
+                        toggleWishlist(destination.id, destination, 'destination');
                       }}
                     >
                       <Heart 
@@ -471,7 +471,7 @@ export default function PopularDestinations() {
                         className="absolute top-2 right-2 p-2 rounded-full bg-white shadow-sm transition-colors duration-200 hover:bg-gray-100"
                         onClick={(e) => {
                           e.stopPropagation();
-                          toggleWishlist(hotel.id);
+                          toggleWishlist(hotel.id, hotel, 'hotel');
                         }}
                       >
                         <Heart 
@@ -544,7 +544,7 @@ export default function PopularDestinations() {
                         className="absolute top-2 right-2 p-2 rounded-full bg-white shadow-sm transition-colors duration-200 hover:bg-gray-100"
                         onClick={(e) => {
                           e.stopPropagation();
-                          toggleWishlist(exp.id);
+                          toggleWishlist(exp.id, exp, 'experience');
                         }}
                       >
                         <Heart 
