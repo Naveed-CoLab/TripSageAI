@@ -9,6 +9,7 @@ import {
   flightSearches,
   userSettings,
   wishlistItems,
+  flightBookings,
   type User, 
   type InsertUser, 
   type Trip, 
@@ -28,7 +29,9 @@ import {
   type UserSettings,
   type InsertUserSettings,
   type WishlistItem,
-  type InsertWishlistItem
+  type InsertWishlistItem,
+  type FlightBooking,
+  type InsertFlightBooking
 } from "@shared/schema";
 import { db } from "./db";
 import { eq, and, desc, gte, count } from "drizzle-orm";
