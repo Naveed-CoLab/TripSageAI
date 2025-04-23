@@ -33,7 +33,7 @@ import {
   type FlightBooking,
   type InsertFlightBooking
 } from "@shared/schema";
-import { db } from "./db";
+import { db, pool } from "./db";
 import { eq, and, desc, gte, count } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
@@ -135,10 +135,11 @@ export class DatabaseStorage implements IStorage {
   sessionStore: any; // Using any type to bypass the SessionStore type issue
 
   constructor() {
+    // Fix session store configuration with the pool from db.ts
+    // The pool is already imported at the top of the file
     this.sessionStore = new PostgresSessionStore({ 
-      conObject: {
-        connectionString: process.env.DATABASE_URL,
-      },
+      pool,
+      tableName: 'session',  // Specify the session table name
       createTableIfMissing: true
     });
   }
