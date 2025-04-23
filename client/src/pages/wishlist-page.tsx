@@ -83,61 +83,63 @@ export default function WishlistPage() {
 
   return (
     <MainLayout>
-      <div className="container max-w-6xl py-10">
-        <div className="flex flex-col md:flex-row justify-between items-center mb-8">
-          <h1 className="text-3xl font-bold">My Saved Items</h1>
-          
-          <div className="relative w-full md:w-1/3 mt-4 md:mt-0">
-            <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
-            <Input
-              placeholder="Search saved items..."
-              className="pl-9 bg-white rounded-full border-gray-200 shadow-sm"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-            />
+      <div className="flex justify-center w-full py-10 px-4 sm:px-6">
+        <div className="w-full max-w-6xl">
+          <div className="flex flex-col md:flex-row justify-between items-center mb-8">
+            <h1 className="text-3xl font-bold">My Saved Items</h1>
+            
+            <div className="relative w-full md:w-1/3 mt-4 md:mt-0">
+              <Search className="absolute left-3 top-2.5 h-4 w-4 text-muted-foreground" />
+              <Input
+                placeholder="Search saved items..."
+                className="pl-9 bg-white rounded-full border-gray-200 shadow-sm"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+              />
+            </div>
           </div>
-        </div>
-        
-        <div className="bg-white rounded-xl shadow-sm p-6 mb-8">
-          <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
-            <TabsList className="w-full md:w-auto mb-6 bg-gray-100 p-1 rounded-full">
-              <TabsTrigger value="all" className="rounded-full data-[state=active]:bg-primary data-[state=active]:text-white">
-                All Items
-              </TabsTrigger>
-              <TabsTrigger value="destinations" className="rounded-full data-[state=active]:bg-primary data-[state=active]:text-white">
-                Destinations
-              </TabsTrigger>
-              <TabsTrigger value="hotels" className="rounded-full data-[state=active]:bg-primary data-[state=active]:text-white">
-                Restaurants
-              </TabsTrigger>
-              <TabsTrigger value="experiences" className="rounded-full data-[state=active]:bg-primary data-[state=active]:text-white">
-                Experiences
-              </TabsTrigger>
-              <TabsTrigger value="trips" className="rounded-full data-[state=active]:bg-primary data-[state=active]:text-white">
-                Trips
-              </TabsTrigger>
-            </TabsList>
-            
-            <TabsContent value="all" className="mt-0">
-              {renderWishlistItems(filteredItems, isLoading, handleRemoveItem, () => navigate('/'))}
-            </TabsContent>
-            
-            <TabsContent value="destinations" className="mt-0">
-              {renderWishlistItems(filteredItems, isLoading, handleRemoveItem, () => navigate('/'))}
-            </TabsContent>
-            
-            <TabsContent value="hotels" className="mt-0">
-              {renderWishlistItems(filteredItems, isLoading, handleRemoveItem, () => navigate('/'))}
-            </TabsContent>
-            
-            <TabsContent value="experiences" className="mt-0">
-              {renderWishlistItems(filteredItems, isLoading, handleRemoveItem, () => navigate('/'))}
-            </TabsContent>
-            
-            <TabsContent value="trips" className="mt-0">
-              {renderWishlistItems(filteredItems, isLoading, handleRemoveItem, () => navigate('/'))}
-            </TabsContent>
-          </Tabs>
+          
+          <div className="bg-white rounded-xl shadow-sm p-6 mb-8 w-full">
+            <Tabs defaultValue="all" value={activeTab} onValueChange={setActiveTab}>
+              <TabsList className="w-full md:w-auto mb-6 bg-gray-100 p-1 rounded-full">
+                <TabsTrigger value="all" className="rounded-full data-[state=active]:bg-primary data-[state=active]:text-white">
+                  All Items
+                </TabsTrigger>
+                <TabsTrigger value="destinations" className="rounded-full data-[state=active]:bg-primary data-[state=active]:text-white">
+                  Destinations
+                </TabsTrigger>
+                <TabsTrigger value="hotels" className="rounded-full data-[state=active]:bg-primary data-[state=active]:text-white">
+                  Restaurants
+                </TabsTrigger>
+                <TabsTrigger value="experiences" className="rounded-full data-[state=active]:bg-primary data-[state=active]:text-white">
+                  Experiences
+                </TabsTrigger>
+                <TabsTrigger value="trips" className="rounded-full data-[state=active]:bg-primary data-[state=active]:text-white">
+                  Trips
+                </TabsTrigger>
+              </TabsList>
+              
+              <TabsContent value="all" className="mt-0">
+                {renderWishlistItems(filteredItems, isLoading, handleRemoveItem, () => navigate('/'))}
+              </TabsContent>
+              
+              <TabsContent value="destinations" className="mt-0">
+                {renderWishlistItems(filteredItems, isLoading, handleRemoveItem, () => navigate('/'))}
+              </TabsContent>
+              
+              <TabsContent value="hotels" className="mt-0">
+                {renderWishlistItems(filteredItems, isLoading, handleRemoveItem, () => navigate('/'))}
+              </TabsContent>
+              
+              <TabsContent value="experiences" className="mt-0">
+                {renderWishlistItems(filteredItems, isLoading, handleRemoveItem, () => navigate('/'))}
+              </TabsContent>
+              
+              <TabsContent value="trips" className="mt-0">
+                {renderWishlistItems(filteredItems, isLoading, handleRemoveItem, () => navigate('/'))}
+              </TabsContent>
+            </Tabs>
+          </div>
         </div>
       </div>
     </MainLayout>
