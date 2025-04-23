@@ -915,7 +915,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.post("/api/flight-bookings", async (req: Request, res: Response) => {
     try {
       // Check authentication
-      if (!req.session.userId) {
+      if (!req.isAuthenticated()) {
         return res.status(401).json({ message: "You must be logged in to book flights" });
       }
 
@@ -925,7 +925,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create the flight booking
       const newBooking = await storage.createFlightBooking({
         ...bookingData,
-        userId: req.session.userId
+        userId: req.user!.id
       });
       
       return res.status(201).json(newBooking);
@@ -938,12 +938,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/flight-bookings", async (req: Request, res: Response) => {
     try {
       // Check authentication
-      if (!req.session.userId) {
+      if (!req.isAuthenticated()) {
         return res.status(401).json({ message: "You must be logged in to view bookings" });
       }
 
       // Get bookings for the user
-      const bookings = await storage.getFlightBookingsByUserId(req.session.userId);
+      const bookings = await storage.getFlightBookingsByUserId(req.user!.id);
       
       return res.status(200).json(bookings);
     } catch (error) {
@@ -955,7 +955,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/flight-bookings/:id", async (req: Request, res: Response) => {
     try {
       // Check authentication
-      if (!req.session.userId) {
+      if (!req.isAuthenticated()) {
         return res.status(401).json({ message: "You must be logged in to view bookings" });
       }
 
@@ -972,7 +972,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if the booking belongs to the user
-      if (booking.userId !== req.session.userId) {
+      if (booking.userId !== req.user!.id) {
         return res.status(403).json({ message: "You do not have permission to view this booking" });
       }
       
