@@ -80,7 +80,9 @@ export default function AuthPage() {
   }
 
   function onRegisterSubmit(data: RegisterFormValues) {
+    console.log("Registering user with data:", data);
     const { confirmPassword, ...registerData } = data;
+    console.log("Submitting registration data:", registerData);
     registerMutation.mutate(registerData);
   }
 
