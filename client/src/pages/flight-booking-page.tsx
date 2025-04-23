@@ -143,6 +143,8 @@ export default function FlightBookingPage() {
     },
     onSuccess: () => {
       setCurrentStep(3); // Show success state
+      // Invalidate bookings cache to refresh profile page
+      queryClient.invalidateQueries({ queryKey: ['/api/flight-bookings'] });
     },
     onError: (error: Error) => {
       toast({
@@ -252,7 +254,7 @@ export default function FlightBookingPage() {
           outboundFlight,
           returnFlight
         }));
-        setLocation("/login?redirect=flight-booking");
+        setLocation("/auth?redirect=flight-booking");
         return;
       }
       
@@ -293,7 +295,9 @@ export default function FlightBookingPage() {
           passportNumber: data.passportNumber,
           nationality: data.nationality,
           dateOfBirth: data.dateOfBirth,
-        }
+        },
+        status: "CONFIRMED",
+        createdAt: new Date().toISOString()
       };
       
       // Submit booking
@@ -313,6 +317,68 @@ export default function FlightBookingPage() {
       </MainLayout>
     );
   }
+  
+  // Render flight card
+  const renderFlightCard = (flight: Flight | null, isReturn: boolean = false) => {
+    if (!flight) return null;
+    
+    return (
+      <div className="bg-white rounded-lg shadow-md p-4 mb-4">
+        <div className="flex items-center justify-between mb-2">
+          <div className="flex items-center">
+            <div className="w-10 h-10 mr-3">
+              <img
+                src={flight.airline.logo}
+                alt={flight.airline.name}
+                className="w-full h-full object-contain"
+                onError={(e) => {
+                  e.currentTarget.src = `https://ui-avatars.com/api/?name=${flight.airline.name}&background=random`;
+                }}
+              />
+            </div>
+            <div>
+              <div className="text-sm font-medium">{flight.airline.name}</div>
+              <div className="text-xs text-gray-500">{flight.flightNumber}</div>
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="text-xs text-gray-500">{isReturn ? "Return" : "Outbound"}</div>
+            <div className="text-sm font-medium">{formatDate(flight.departureTime)}</div>
+          </div>
+        </div>
+        
+        <div className="flex items-center justify-between mt-4">
+          <div>
+            <div className="text-lg font-bold">{formatTime(flight.departureTime)}</div>
+            <div className="text-sm text-gray-600">{flight.departureAirport.code}</div>
+            <div className="text-xs text-gray-500">{flight.departureAirport.city}</div>
+          </div>
+          
+          <div className="flex flex-col items-center px-4">
+            <div className="text-xs text-gray-500">{flight.duration}</div>
+            <div className="w-24 sm:w-32 md:w-40 flex items-center">
+              <div className="h-0.5 flex-1 bg-gray-300"></div>
+              <Plane className="h-4 w-4 text-gray-400 mx-1" />
+              <div className="h-0.5 flex-1 bg-gray-300"></div>
+            </div>
+            <div className="text-xs text-gray-500">
+              {flight.stops === 0
+                ? "Nonstop"
+                : flight.stops === 1
+                ? "1 Stop"
+                : `${flight.stops} Stops`}
+            </div>
+          </div>
+          
+          <div className="text-right">
+            <div className="text-lg font-bold">{formatTime(flight.arrivalTime)}</div>
+            <div className="text-sm text-gray-600">{flight.arrivalAirport.code}</div>
+            <div className="text-xs text-gray-500">{flight.arrivalAirport.city}</div>
+          </div>
+        </div>
+      </div>
+    );
+  };
   
   // Show appropriate step content
   const renderStepContent = () => {
@@ -475,21 +541,21 @@ export default function FlightBookingPage() {
                 onClick={() => setCurrentStep(1)}
               >
                 <ArrowLeft className="h-4 w-4 mr-2" />
-                Edit Details
+                Back to Passenger Info
               </Button>
               
               <Button 
-                type="button"
-                onClick={() => onSubmit(form.getValues())}
+                onClick={form.handleSubmit(onSubmit)}
                 disabled={bookingMutation.isPending}
+                className="bg-blue-600 hover:bg-blue-700"
               >
                 {bookingMutation.isPending ? (
                   <>
-                    <div className="animate-spin h-4 w-4 mr-2 border-2 border-current border-t-transparent rounded-full"></div>
+                    <span className="animate-spin mr-2">⊝</span>
                     Processing...
                   </>
                 ) : (
-                  <>Confirm and Pay</>
+                  "Confirm Booking"
                 )}
               </Button>
             </div>
@@ -499,25 +565,28 @@ export default function FlightBookingPage() {
       case 3: // Success step
         return (
           <div className="text-center py-8">
-            <div className="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-6">
+            <div className="bg-green-100 rounded-full w-16 h-16 flex items-center justify-center mx-auto mb-4">
               <Check className="h-8 w-8 text-green-600" />
             </div>
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Booking Confirmed!</h2>
+            
+            <h3 className="text-2xl font-bold text-green-600 mb-2">Booking Confirmed!</h3>
             <p className="text-gray-600 mb-6">
-              Your booking has been successfully confirmed. You'll receive a confirmation email shortly.
+              Thank you for your booking. Your confirmation has been sent to your email.
             </p>
             
-            <div className="max-w-md mx-auto bg-gray-50 p-4 rounded-lg border mb-6">
-              <p className="text-sm font-medium">Booking Reference</p>
-              <p className="text-xl font-bold">{`BK${Math.floor(Math.random() * 10000000).toString().padStart(7, '0')}`}</p>
+            <div className="bg-green-50 p-4 rounded-lg border border-green-100 mb-6 inline-block">
+              <p className="text-sm text-gray-500">Booking Reference</p>
+              <p className="text-xl font-mono font-bold tracking-wider">
+                {`BK${Math.floor(Math.random() * 10000000).toString().padStart(7, '0')}`}
+              </p>
             </div>
             
-            <div className="flex flex-col md:flex-row gap-4 justify-center">
-              <Button onClick={() => setLocation("/profile/bookings")}>
+            <div className="flex flex-col sm:flex-row justify-center gap-4 mt-6">
+              <Button onClick={() => setLocation("/profile/flights")}>
                 View My Bookings
               </Button>
-              <Button variant="outline" onClick={() => setLocation("/")}>
-                Return to Home
+              <Button variant="outline" onClick={() => setLocation("/flights")}>
+                Book Another Flight
               </Button>
             </div>
           </div>
@@ -527,67 +596,66 @@ export default function FlightBookingPage() {
         return null;
     }
   };
-  
+
   return (
     <MainLayout>
       <div className="container mx-auto px-4 py-8">
-        {/* Progress steps */}
-        <div className="max-w-4xl mx-auto mb-8">
-          <ol className="flex items-center w-full text-sm font-medium text-center text-gray-500 dark:text-gray-400 sm:text-base">
-            <li className={`flex md:w-full items-center ${currentStep >= 1 ? 'text-blue-600' : 'text-gray-500'}`}>
-              <span className={`flex items-center justify-center w-10 h-10 rounded-full ${currentStep >= 1 ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>
-                <User className="w-5 h-5" />
-              </span>
-              <span className="hidden sm:inline-flex sm:ml-2">Fill in your info</span>
-              <svg className="w-3 h-3 sm:w-4 sm:h-4 ml-2 sm:ml-4 rtl:rotate-180" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 12 10">
-                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 5 4 4 6-8"/>
-              </svg>
-            </li>
-            <li className={`flex md:w-full items-center ${currentStep >= 2 ? 'text-blue-600' : 'text-gray-500'}`}>
-              <span className={`flex items-center justify-center w-10 h-10 rounded-full ${currentStep >= 2 ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>
-                <ShieldCheck className="w-5 h-5" />
-              </span>
-              <span className="hidden sm:inline-flex sm:ml-2">Confirm & pay</span>
-              <svg className="w-3 h-3 sm:w-4 sm:h-4 ml-2 sm:ml-4 rtl:rotate-180" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 12 10">
-                <path stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="m1 5 4 4 6-8"/>
-              </svg>
-            </li>
-            <li className={`flex items-center ${currentStep >= 3 ? 'text-blue-600' : 'text-gray-500'}`}>
-              <span className={`flex items-center justify-center w-10 h-10 rounded-full ${currentStep >= 3 ? 'bg-blue-600 text-white' : 'bg-gray-200'}`}>
-                <Check className="w-5 h-5" />
-              </span>
-              <span className="hidden sm:inline-flex sm:ml-2">Complete</span>
-            </li>
-          </ol>
-        </div>
-        
-        {/* Title section */}
-        <div className="max-w-4xl mx-auto">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">
-            {currentStep === 3 ? 'Booking Complete' : 'Complete Your Booking'}
-          </h1>
-          <p className="text-gray-600 mb-8">
-            {currentStep === 1 && 'Enter passenger details to continue with your booking'}
-            {currentStep === 2 && 'Review your booking details before confirming'}
-            {currentStep === 3 && 'Your flight has been successfully booked'}
+        <div className="mb-8">
+          <h1 className="text-3xl font-bold">Complete Your Booking</h1>
+          <p className="text-gray-600">
+            {currentStep === 1 && "Enter passenger information to continue with your booking."}
+            {currentStep === 2 && "Please review your booking details before confirming."}
+            {currentStep === 3 && "Your booking has been confirmed. Safe travels!"}
           </p>
         </div>
         
-        {/* Main content */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto">
-          {/* Left column: Form or confirmation */}
-          <div className="md:col-span-2">
+        {/* Progress indicators */}
+        {currentStep < 3 && (
+          <div className="mb-8 flex justify-between relative">
+            <div className="w-full h-1 bg-gray-200 absolute top-4 z-0"></div>
+            <div 
+              className="h-1 bg-blue-500 absolute top-4 z-0"
+              style={{ width: currentStep === 1 ? '50%' : '100%' }}
+            ></div>
+            
+            <div className="flex flex-col items-center z-10">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep >= 1 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-400'}`}>
+                1
+              </div>
+              <span className="text-sm mt-1">Passenger Info</span>
+            </div>
+            
+            <div className="flex flex-col items-center z-10">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep >= 2 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-400'}`}>
+                2
+              </div>
+              <span className="text-sm mt-1">Review & Confirm</span>
+            </div>
+            
+            <div className="flex flex-col items-center z-10">
+              <div className={`w-8 h-8 rounded-full flex items-center justify-center ${currentStep >= 3 ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-400'}`}>
+                3
+              </div>
+              <span className="text-sm mt-1">Booking Complete</span>
+            </div>
+          </div>
+        )}
+        
+        {/* Two-column layout for booking content */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Left column - Flight details */}
+          <div className="lg:col-span-2">
             <Card>
               <CardHeader>
                 <CardTitle>
-                  {currentStep === 1 && 'Passenger Details'}
-                  {currentStep === 2 && 'Booking Review'}
-                  {currentStep === 3 && 'Booking Complete'}
+                  {currentStep === 1 && "Passenger Information"}
+                  {currentStep === 2 && "Review Booking"}
+                  {currentStep === 3 && "Booking Confirmed"}
                 </CardTitle>
                 <CardDescription>
-                  {currentStep === 1 && 'Please enter details for the traveler'}
-                  {currentStep === 2 && 'Please review your information before proceeding'}
-                  {currentStep === 3 && 'Your booking has been confirmed'}
+                  {currentStep === 1 && "Please enter your details below"}
+                  {currentStep === 2 && "Please review the details of your booking"}
+                  {currentStep === 3 && "Your booking has been confirmed"}
                 </CardDescription>
               </CardHeader>
               <CardContent>
@@ -596,115 +664,72 @@ export default function FlightBookingPage() {
             </Card>
           </div>
           
-          {/* Right column: Price details */}
-          <div>
+          {/* Right column - Price summary */}
+          <div className="lg:col-span-1">
             <Card>
               <CardHeader>
-                <CardTitle>Price Details</CardTitle>
+                <CardTitle>Trip Summary</CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Flight details */}
-                {outboundFlight && (
-                  <div className="space-y-4">
-                    <div className="bg-gray-50 rounded-lg p-4">
-                      <div className="flex items-center gap-3 mb-2">
-                        <div className="w-8 h-8">
-                          <img
-                            src={outboundFlight.airline.logo}
-                            alt={outboundFlight.airline.name}
-                            className="w-full h-full object-contain"
-                            onError={(e) => {
-                              e.currentTarget.src = `https://ui-avatars.com/api/?name=${outboundFlight.airline.name}&background=random`;
-                            }}
-                          />
-                        </div>
-                        <div>
-                          <p className="font-medium">{outboundFlight.airline.name}</p>
-                          <p className="text-sm text-gray-500">{outboundFlight.flightNumber}</p>
-                        </div>
-                      </div>
-                      
-                      <div className="flex justify-between items-center mb-1">
-                        <div>
-                          <p className="text-lg font-bold">{formatTime(outboundFlight.departureTime)}</p>
-                          <p className="text-sm text-gray-600">{outboundFlight.departureAirport.code}</p>
-                        </div>
-                        <div className="text-sm text-gray-500 text-center">
-                          <p>{outboundFlight.duration}</p>
-                          <div className="w-16 h-px bg-gray-300 my-1 mx-auto"></div>
-                          <p>{formatDate(outboundFlight.departureTime)}</p>
-                        </div>
-                        <div className="text-right">
-                          <p className="text-lg font-bold">{formatTime(outboundFlight.arrivalTime)}</p>
-                          <p className="text-sm text-gray-600">{outboundFlight.arrivalAirport.code}</p>
-                        </div>
-                      </div>
+                {/* Trip details */}
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-500 mb-2">FLIGHTS</h3>
+                  {renderFlightCard(outboundFlight)}
+                  {returnFlight && renderFlightCard(returnFlight, true)}
+                </div>
+                
+                {/* Passenger details */}
+                <div className="pt-4 border-t">
+                  <h3 className="text-sm font-semibold text-gray-500 mb-2">PASSENGERS</h3>
+                  <div className="text-sm">1 Adult</div>
+                </div>
+                
+                {/* Price breakdown */}
+                <div className="pt-4 border-t">
+                  <h3 className="text-sm font-semibold text-gray-500 mb-2">PRICE DETAILS</h3>
+                  <div className="space-y-2">
+                    <div className="flex justify-between">
+                      <span className="text-sm">Outbound Flight</span>
+                      <span className="text-sm font-medium">${outboundFlight?.price || 0}</span>
                     </div>
                     
-                    {/* Return flight if applicable */}
                     {returnFlight && (
-                      <div className="bg-gray-50 rounded-lg p-4">
-                        <div className="flex items-center gap-3 mb-2">
-                          <div className="w-8 h-8">
-                            <img
-                              src={returnFlight.airline.logo}
-                              alt={returnFlight.airline.name}
-                              className="w-full h-full object-contain"
-                              onError={(e) => {
-                                e.currentTarget.src = `https://ui-avatars.com/api/?name=${returnFlight.airline.name}&background=random`;
-                              }}
-                            />
-                          </div>
-                          <div>
-                            <p className="font-medium">{returnFlight.airline.name}</p>
-                            <p className="text-sm text-gray-500">{returnFlight.flightNumber}</p>
-                          </div>
-                        </div>
-                        
-                        <div className="flex justify-between items-center mb-1">
-                          <div>
-                            <p className="text-lg font-bold">{formatTime(returnFlight.departureTime)}</p>
-                            <p className="text-sm text-gray-600">{returnFlight.departureAirport.code}</p>
-                          </div>
-                          <div className="text-sm text-gray-500 text-center">
-                            <p>{returnFlight.duration}</p>
-                            <div className="w-16 h-px bg-gray-300 my-1 mx-auto"></div>
-                            <p>{formatDate(returnFlight.departureTime)}</p>
-                          </div>
-                          <div className="text-right">
-                            <p className="text-lg font-bold">{formatTime(returnFlight.arrivalTime)}</p>
-                            <p className="text-sm text-gray-600">{returnFlight.arrivalAirport.code}</p>
-                          </div>
-                        </div>
+                      <div className="flex justify-between">
+                        <span className="text-sm">Return Flight</span>
+                        <span className="text-sm font-medium">${returnFlight?.price || 0}</span>
                       </div>
                     )}
                     
-                    {/* Price breakdown */}
-                    <div className="border-t pt-4 mt-4">
-                      <div className="flex justify-between mb-2">
-                        <span>Outbound Flight</span>
-                        <span>${outboundFlight.price}</span>
-                      </div>
-                      
-                      {returnFlight && (
-                        <div className="flex justify-between mb-2">
-                          <span>Return Flight</span>
-                          <span>${returnFlight.price}</span>
-                        </div>
-                      )}
-                      
-                      <div className="flex justify-between mb-2">
-                        <span>Taxes & Fees</span>
-                        <span>Included</span>
-                      </div>
-                      
-                      <div className="flex justify-between font-bold text-lg border-t pt-2 mt-2">
-                        <span>Total</span>
-                        <span>${calculateTotalPrice()}</span>
-                      </div>
+                    <div className="flex justify-between">
+                      <span className="text-sm">Taxes & Fees</span>
+                      <span className="text-sm font-medium">Included</span>
+                    </div>
+                    
+                    <div className="flex justify-between pt-2 border-t mt-2">
+                      <span className="text-base font-bold">Total</span>
+                      <span className="text-base font-bold">${calculateTotalPrice()}</span>
                     </div>
                   </div>
-                )}
+                </div>
+                
+                {/* Additional information */}
+                <div className="pt-4 border-t">
+                  <h3 className="text-sm font-semibold text-gray-500 mb-2">INCLUDES</h3>
+                  <div className="text-sm space-y-1">
+                    <div className="flex items-center">
+                      <ShieldCheck className="h-4 w-4 text-gray-400 mr-2" />
+                      <span>Free cancellation up to 24h before departure</span>
+                    </div>
+                    <div className="flex items-center">
+                      <User className="h-4 w-4 text-gray-400 mr-2" />
+                      <span>Personalized customer service</span>
+                    </div>
+                    <div className="flex items-center">
+                      <CreditCard className="h-4 w-4 text-gray-400 mr-2" />
+                      <span>Secure payment</span>
+                    </div>
+                  </div>
+                </div>
               </CardContent>
             </Card>
           </div>

@@ -14,6 +14,7 @@ import ExplorePage from "@/pages/explore-page";
 import ProfilePage from "@/pages/profile-page";
 import FlightsPage from "@/pages/flights-page";
 import FlightSearchPage from "@/pages/flight-search-page";
+import FlightBookingPage from "@/pages/flight-booking-page";
 import ProfileFlightsPage from "@/pages/profile-flights-page";
 import WishlistPage from "@/pages/wishlist-page";
 import AdminLoginPage from "@/pages/admin/login-page";
@@ -37,6 +38,7 @@ function Router() {
       <Route path="/destinations/:id" component={DestinationDetailPage} />
       <ProtectedRoute path="/flights" component={FlightsPage} />
       <ProtectedRoute path="/flights/search" component={FlightSearchPage} />
+      <ProtectedRoute path="/flight-booking/:outboundId/:returnId?" component={FlightBookingPage} />
       
       {/* Admin routes */}
       <Route path="/admin/login" component={AdminLoginPage} />

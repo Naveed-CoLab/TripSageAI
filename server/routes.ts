@@ -911,6 +911,78 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Flight bookings
+  app.post("/api/flight-bookings", async (req: Request, res: Response) => {
+    try {
+      // Check authentication
+      if (!req.session.userId) {
+        return res.status(401).json({ message: "You must be logged in to book flights" });
+      }
+
+      // Validate request data
+      const bookingData = req.body;
+      
+      // Create the flight booking
+      const newBooking = await storage.createFlightBooking({
+        ...bookingData,
+        userId: req.session.userId
+      });
+      
+      return res.status(201).json(newBooking);
+    } catch (error) {
+      console.error("Error creating flight booking:", error);
+      return res.status(500).json({ message: "Failed to create flight booking" });
+    }
+  });
+
+  app.get("/api/flight-bookings", async (req: Request, res: Response) => {
+    try {
+      // Check authentication
+      if (!req.session.userId) {
+        return res.status(401).json({ message: "You must be logged in to view bookings" });
+      }
+
+      // Get bookings for the user
+      const bookings = await storage.getFlightBookingsByUserId(req.session.userId);
+      
+      return res.status(200).json(bookings);
+    } catch (error) {
+      console.error("Error fetching flight bookings:", error);
+      return res.status(500).json({ message: "Failed to fetch flight bookings" });
+    }
+  });
+
+  app.get("/api/flight-bookings/:id", async (req: Request, res: Response) => {
+    try {
+      // Check authentication
+      if (!req.session.userId) {
+        return res.status(401).json({ message: "You must be logged in to view bookings" });
+      }
+
+      const bookingId = parseInt(req.params.id);
+      if (isNaN(bookingId)) {
+        return res.status(400).json({ message: "Invalid booking ID" });
+      }
+
+      // Get the booking
+      const booking = await storage.getFlightBookingById(bookingId);
+      
+      if (!booking) {
+        return res.status(404).json({ message: "Booking not found" });
+      }
+
+      // Check if the booking belongs to the user
+      if (booking.userId !== req.session.userId) {
+        return res.status(403).json({ message: "You do not have permission to view this booking" });
+      }
+      
+      return res.status(200).json(booking);
+    } catch (error) {
+      console.error("Error fetching flight booking:", error);
+      return res.status(500).json({ message: "Failed to fetch flight booking" });
+    }
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;
