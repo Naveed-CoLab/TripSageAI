@@ -275,15 +275,15 @@ export default function FlightBookingPage() {
         airline: outboundFlight.airline.name,
         departureAirport: outboundFlight.departureAirport.name,
         departureCode: outboundFlight.departureAirport.code,
-        departureTime: outboundFlight.departureTime,
+        departureTime: new Date(outboundFlight.departureTime),
         arrivalAirport: outboundFlight.arrivalAirport.name,
         arrivalCode: outboundFlight.arrivalAirport.code,
-        arrivalTime: outboundFlight.arrivalTime,
+        arrivalTime: new Date(outboundFlight.arrivalTime),
         tripType: returnFlight ? "ROUND_TRIP" : "ONE_WAY",
         returnFlightNumber: returnFlight?.flightNumber,
         returnAirline: returnFlight?.airline.name,
-        returnDepartureTime: returnFlight?.departureTime,
-        returnArrivalTime: returnFlight?.arrivalTime,
+        returnDepartureTime: returnFlight?.departureTime ? new Date(returnFlight.departureTime) : undefined,
+        returnArrivalTime: returnFlight?.arrivalTime ? new Date(returnFlight.arrivalTime) : undefined,
         bookingReference: `BK${Math.floor(Math.random() * 10000000).toString().padStart(7, '0')}`,
         price: calculateTotalPrice(),
         currency: outboundFlight.currency,
@@ -296,8 +296,7 @@ export default function FlightBookingPage() {
           nationality: data.nationality,
           dateOfBirth: data.dateOfBirth,
         },
-        status: "CONFIRMED",
-        createdAt: new Date().toISOString()
+        status: "CONFIRMED"
       };
       
       // Submit booking
