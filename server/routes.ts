@@ -922,6 +922,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
 
       // Print raw request data for debugging
       console.log("Raw booking data received:", JSON.stringify(req.body, null, 2));
+      console.log("User authenticated:", req.isAuthenticated(), "User ID:", req.user?.id);
       
       // Validate request data
       const booking = req.body;
