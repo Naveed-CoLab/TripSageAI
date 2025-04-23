@@ -594,56 +594,153 @@ export class DatabaseStorage implements IStorage {
   
   // Flight booking methods
   async getFlightBookingsByUserId(userId: number): Promise<FlightBooking[]> {
-    return db
-      .select()
-      .from(flightBookings)
-      .where(eq(flightBookings.userId, userId))
-      .orderBy(desc(flightBookings.createdAt));
+    try {
+      // Use direct SQL to bypass ORM
+      const query = `
+        SELECT * FROM flight_bookings
+        WHERE user_id = $1
+        ORDER BY created_at DESC
+      `;
+      const result = await pool.query(query, [userId]);
+      return result.rows as FlightBooking[];
+    } catch (error) {
+      console.error("Error in getFlightBookingsByUserId:", error);
+      throw error;
+    }
   }
 
   async getFlightBookingById(id: number): Promise<FlightBooking | undefined> {
-    const [booking] = await db
-      .select()
-      .from(flightBookings)
-      .where(eq(flightBookings.id, id));
-    return booking;
+    try {
+      // Use direct SQL to bypass ORM
+      const query = `
+        SELECT * FROM flight_bookings
+        WHERE id = $1
+      `;
+      const result = await pool.query(query, [id]);
+      return result.rows[0] as FlightBooking || undefined;
+    } catch (error) {
+      console.error("Error in getFlightBookingById:", error);
+      throw error;
+    }
   }
 
-  async createFlightBooking(booking: InsertFlightBooking): Promise<FlightBooking> {
-    // The dates are already processed in the route handler
-    const [newBooking] = await db
-      .insert(flightBookings)
-      .values(booking)
-      .returning();
-    return newBooking;
+  async createFlightBooking(booking: any): Promise<FlightBooking> {
+    try {
+      // Use direct SQL query to bypass Drizzle ORM
+      const query = `
+        INSERT INTO flight_bookings (
+          user_id, flight_number, airline, departure_airport, departure_code, 
+          arrival_airport, arrival_code, trip_type, 
+          return_flight_number, return_airline, booking_reference, 
+          price, currency, status, cabin_class, passenger_name, 
+          passenger_email, passenger_phone, flight_details,
+          created_at, updated_at
+        ) VALUES (
+          $1, $2, $3, $4, $5, 
+          $6, $7, $8, 
+          $9, $10, $11, 
+          $12, $13, $14, $15, $16, 
+          $17, $18, $19,
+          NOW(), NOW()
+        ) RETURNING *`;
+        
+      const values = [
+        booking.userId,
+        booking.flightNumber,
+        booking.airline,
+        booking.departureAirport,
+        booking.departureCode,
+        booking.arrivalAirport,
+        booking.arrivalCode,
+        booking.tripType,
+        booking.returnFlightNumber || null,
+        booking.returnAirline || null,
+        booking.bookingReference,
+        booking.price,
+        booking.currency || "USD",
+        booking.status || "CONFIRMED",
+        booking.cabinClass || "ECONOMY",
+        booking.passengerName,
+        booking.passengerEmail,
+        booking.passengerPhone,
+        JSON.stringify(booking.flightDetails || {})
+      ];
+      
+      console.log("Executing SQL with values:", values);
+      
+      // Execute the query using the pool directly
+      const result = await pool.query(query, values);
+      return result.rows[0] as FlightBooking;
+    } catch (error) {
+      console.error("Database error in createFlightBooking:", error);
+      throw error;
+    }
   }
 
   async updateFlightBooking(id: number, booking: Partial<FlightBooking>): Promise<FlightBooking> {
-    const [updatedBooking] = await db
-      .update(flightBookings)
-      .set({ ...booking, updatedAt: new Date() })
-      .where(eq(flightBookings.id, id))
-      .returning();
-    return updatedBooking;
+    try {
+      // Build the SET part of the query dynamically from the booking object
+      const setValues: string[] = [];
+      const queryValues: any[] = [];
+      let paramIndex = 1;
+      
+      Object.entries(booking).forEach(([key, value]) => {
+        if (value !== undefined && key !== 'id') {
+          // Convert camelCase to snake_case for column names
+          const columnName = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+          setValues.push(`${columnName} = $${paramIndex++}`);
+          queryValues.push(value);
+        }
+      });
+      
+      // Add updated_at
+      setValues.push(`updated_at = NOW()`);
+      
+      // Add the ID as the last parameter
+      queryValues.push(id);
+      
+      const query = `
+        UPDATE flight_bookings
+        SET ${setValues.join(', ')}
+        WHERE id = $${paramIndex}
+        RETURNING *
+      `;
+      
+      const result = await pool.query(query, queryValues);
+      return result.rows[0] as FlightBooking;
+    } catch (error) {
+      console.error("Error in updateFlightBooking:", error);
+      throw error;
+    }
   }
 
   async deleteFlightBooking(id: number): Promise<void> {
-    await db
-      .delete(flightBookings)
-      .where(eq(flightBookings.id, id));
+    try {
+      const query = `
+        DELETE FROM flight_bookings
+        WHERE id = $1
+      `;
+      await pool.query(query, [id]);
+    } catch (error) {
+      console.error("Error in deleteFlightBooking:", error);
+      throw error;
+    }
   }
 
   async getFlightBookingsByStatus(userId: number, status: string): Promise<FlightBooking[]> {
-    return db
-      .select()
-      .from(flightBookings)
-      .where(
-        and(
-          eq(flightBookings.userId, userId),
-          eq(flightBookings.status, status)
-        )
-      )
-      .orderBy(desc(flightBookings.createdAt));
+    try {
+      // Use direct SQL to bypass ORM
+      const query = `
+        SELECT * FROM flight_bookings
+        WHERE user_id = $1 AND status = $2
+        ORDER BY created_at DESC
+      `;
+      const result = await pool.query(query, [userId, status]);
+      return result.rows as FlightBooking[];
+    } catch (error) {
+      console.error("Error in getFlightBookingsByStatus:", error);
+      throw error;
+    }
   }
 }
 
