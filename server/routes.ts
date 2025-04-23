@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { setupAuth } from "./auth";
 import { generateTripIdea, generateItinerary } from "./gemini";
 import { searchFlights, searchAirports, getAirlineInfo } from "./services/amadeus";
+import { pool } from "./db";
 import { 
   trips, 
   insertTripSchema, 
@@ -923,45 +924,57 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Raw booking data received:", JSON.stringify(req.body, null, 2));
       
       // Validate request data
-      const bookingData = req.body;
+      const booking = req.body;
+      const userId = req.user!.id;
       
-      // Process data manually and ensure everything is correct
-      const cleanedData = {
-        userId: req.user!.id,
-        flightNumber: bookingData.flightNumber,
-        airline: bookingData.airline,
-        departureAirport: bookingData.departureAirport,
-        departureCode: bookingData.departureCode,
-        departureTime: new Date(bookingData.departureTime),
-        arrivalAirport: bookingData.arrivalAirport,
-        arrivalCode: bookingData.arrivalCode,
-        arrivalTime: new Date(bookingData.arrivalTime),
-        tripType: bookingData.tripType,
-        returnFlightNumber: bookingData.returnFlightNumber || null,
-        returnAirline: bookingData.returnAirline || null,
-        returnDepartureTime: bookingData.returnDepartureTime ? new Date(bookingData.returnDepartureTime) : null,
-        returnArrivalTime: bookingData.returnArrivalTime ? new Date(bookingData.returnArrivalTime) : null,
-        bookingReference: bookingData.bookingReference,
-        price: bookingData.price,
-        currency: bookingData.currency || "USD",
-        status: bookingData.status || "CONFIRMED",
-        cabinClass: bookingData.cabinClass || "ECONOMY",
-        passengerName: bookingData.passengerName,
-        passengerEmail: bookingData.passengerEmail,
-        passengerPhone: bookingData.passengerPhone,
-        flightDetails: bookingData.flightDetails || {}
-      };
+      // Use raw SQL query to bypass Drizzle's timestamp handling issues
+      // Insert directly with a parameterized query
+      const query = `
+        INSERT INTO flight_bookings (
+          user_id, flight_number, airline, departure_airport, departure_code, 
+          departure_time, arrival_airport, arrival_code, arrival_time, 
+          trip_type, return_flight_number, return_airline,
+          return_departure_time, return_arrival_time, booking_reference, 
+          price, currency, status, cabin_class, passenger_name, 
+          passenger_email, passenger_phone, flight_details
+        ) VALUES (
+          $1, $2, $3, $4, $5, 
+          $6, $7, $8, $9, 
+          $10, $11, $12, 
+          $13, $14, $15, 
+          $16, $17, $18, $19, $20, 
+          $21, $22, $23
+        ) RETURNING *`;
+        
+      const values = [
+        userId,
+        booking.flightNumber,
+        booking.airline,
+        booking.departureAirport,
+        booking.departureCode,
+        booking.departureTime,
+        booking.arrivalAirport,
+        booking.arrivalCode,
+        booking.arrivalTime,
+        booking.tripType,
+        booking.returnFlightNumber || null,
+        booking.returnAirline || null,
+        booking.returnDepartureTime || null,
+        booking.returnArrivalTime || null,
+        booking.bookingReference,
+        booking.price,
+        booking.currency || "USD",
+        booking.status || "CONFIRMED",
+        booking.cabinClass || "ECONOMY",
+        booking.passengerName,
+        booking.passengerEmail,
+        booking.passengerPhone,
+        JSON.stringify(booking.flightDetails || {})
+      ];
       
-      console.log("Cleaned booking data:", JSON.stringify({
-        ...cleanedData,
-        departureTime: cleanedData.departureTime.toISOString(),
-        arrivalTime: cleanedData.arrivalTime.toISOString(),
-        returnDepartureTime: cleanedData.returnDepartureTime ? cleanedData.returnDepartureTime.toISOString() : null,
-        returnArrivalTime: cleanedData.returnArrivalTime ? cleanedData.returnArrivalTime.toISOString() : null
-      }, null, 2));
-      
-      // Create the flight booking
-      const newBooking = await storage.createFlightBooking(cleanedData);
+      // Execute the query using the pool directly
+      const result = await pool.query(query, values);
+      const newBooking = result.rows[0];
       
       return res.status(201).json(newBooking);
     } catch (error: any) {
