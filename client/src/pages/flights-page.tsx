@@ -32,7 +32,7 @@ import { toast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
 import { apiRequest, queryClient } from "@/lib/queryClient";
 import { useMutation, useQuery } from "@tanstack/react-query";
-import { Calendar as CalendarIcon, Plane, MapPin, X, Filter, ShieldCheck, Sparkles, Users, ChevronDown, XCircle, LucideIcon } from "lucide-react";
+import { Calendar as CalendarIcon, Plane, MapPin, X, Filter, ShieldCheck, Sparkles, Users, ChevronDown, XCircle, User, LucideIcon } from "lucide-react";
 import PopularFlightDestinations from "@/components/flights/popular-flight-destinations";
 
 // Types
@@ -733,7 +733,7 @@ export default function FlightsPage() {
                   <div className="lg:col-span-3 space-y-2">
                     <Label htmlFor="passengers" className="text-sm font-medium">Passengers</Label>
                     <div className="relative">
-                      <User className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
+                      <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                       <Select value={passengers} onValueChange={setPassengers}>
                         <SelectTrigger className="pl-10 h-12">
                           <SelectValue placeholder="Select" />
