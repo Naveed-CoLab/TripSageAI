@@ -33,7 +33,7 @@ import {
   type FlightBooking,
   type InsertFlightBooking
 } from "@shared/schema";
-import { db, pool } from "./db";
+import { db, pool, query, transaction } from "./db";
 import { eq, and, desc, gte, count } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
@@ -146,26 +146,43 @@ export class DatabaseStorage implements IStorage {
 
   // User methods
   async getUser(id: number): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.id, id));
-    return user;
+    const SQL = `
+      SELECT * FROM users WHERE id = $1
+    `;
+    const result = await query(SQL, [id]);
+    return result.rows[0];
   }
 
   async getUserByUsername(username: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.username, username));
-    return user;
+    const SQL = `
+      SELECT * FROM users WHERE username = $1
+    `;
+    const result = await query(SQL, [username]);
+    return result.rows[0];
   }
 
   async getUserByEmail(email: string): Promise<User | undefined> {
-    const [user] = await db.select().from(users).where(eq(users.email, email));
-    return user;
+    const SQL = `
+      SELECT * FROM users WHERE email = $1
+    `;
+    const result = await query(SQL, [email]);
+    return result.rows[0];
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const [user] = await db
-      .insert(users)
-      .values(insertUser)
-      .returning();
-    return user;
+    const keys = Object.keys(insertUser);
+    const values = Object.values(insertUser);
+    const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
+    const columnNames = keys.join(', ');
+    
+    const SQL = `
+      INSERT INTO users (${columnNames})
+      VALUES (${placeholders})
+      RETURNING *
+    `;
+    
+    const result = await query(SQL, values);
+    return result.rows[0];
   }
 
   async updateUser(id: number, userData: Partial<User>): Promise<User> {
@@ -292,26 +309,31 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTrip(id: number): Promise<void> {
     try {
-      // Start transaction for atomicity
-      await db.transaction(async (tx) => {
+      // Use our transaction helper for atomicity
+      await transaction(async (client) => {
         // First, get all trip days to find related activities
-        const tripDaysResult = await tx.select().from(tripDays).where(eq(tripDays.tripId, id));
+        const tripDaysQuery = 'SELECT * FROM trip_days WHERE trip_id = $1';
+        const tripDaysResult = await client.query(tripDaysQuery, [id]);
         
         // Delete activities for each trip day
-        for (const day of tripDaysResult) {
-          await tx.delete(activities).where(eq(activities.tripDayId, day.id));
+        for (const day of tripDaysResult.rows) {
+          const deleteActivitiesQuery = 'DELETE FROM activities WHERE trip_day_id = $1';
+          await client.query(deleteActivitiesQuery, [day.id]);
         }
         
-        // Delete bookings that might be related to activities
-        await tx.delete(bookings).where(eq(bookings.tripId, id));
+        // Delete bookings that might be related to this trip
+        const deleteBookingsQuery = 'DELETE FROM bookings WHERE trip_id = $1';
+        await client.query(deleteBookingsQuery, [id]);
         
         // Delete the trip days after activities are removed
-        await tx.delete(tripDays).where(eq(tripDays.tripId, id));
+        const deleteTripDaysQuery = 'DELETE FROM trip_days WHERE trip_id = $1';
+        await client.query(deleteTripDaysQuery, [id]);
         
         // Finally delete the trip itself
-        const result = await tx.delete(trips).where(eq(trips.id, id)).returning({ id: trips.id });
+        const deleteTripQuery = 'DELETE FROM trips WHERE id = $1 RETURNING id';
+        const result = await client.query(deleteTripQuery, [id]);
         
-        if (result.length === 0) {
+        if (result.rowCount === 0) {
           throw new Error(`Trip with ID ${id} not found or could not be deleted`);
         }
       });
@@ -349,14 +371,17 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTripDay(id: number): Promise<void> {
     try {
-      await db.transaction(async (tx) => {
+      // Use raw SQL with transaction
+      await transaction(async (client) => {
         // Delete associated activities first
-        await tx.delete(activities).where(eq(activities.tripDayId, id));
+        const deleteActivitiesQuery = 'DELETE FROM activities WHERE trip_day_id = $1';
+        await client.query(deleteActivitiesQuery, [id]);
         
         // Then delete the trip day
-        const result = await tx.delete(tripDays).where(eq(tripDays.id, id)).returning({ id: tripDays.id });
+        const deleteTripDayQuery = 'DELETE FROM trip_days WHERE id = $1 RETURNING id';
+        const result = await client.query(deleteTripDayQuery, [id]);
         
-        if (result.length === 0) {
+        if (result.rowCount === 0) {
           throw new Error(`Trip day with ID ${id} not found or could not be deleted`);
         }
       });
@@ -422,17 +447,25 @@ export class DatabaseStorage implements IStorage {
 
   async deleteBooking(id: number): Promise<void> {
     try {
-      await db.transaction(async (tx) => {
+      // Use our transaction helper with raw SQL queries
+      await transaction(async (client) => {
         // First, update any activities that reference this booking
-        await tx
-          .update(activities)
-          .set({ bookingId: null })
-          .where(eq(activities.bookingId, id));
+        const updateActivitiesQuery = `
+          UPDATE activities
+          SET booking_id = NULL
+          WHERE booking_id = $1
+        `;
+        await client.query(updateActivitiesQuery, [id]);
         
         // Then delete the booking
-        const result = await tx.delete(bookings).where(eq(bookings.id, id)).returning({ id: bookings.id });
+        const deleteBookingQuery = `
+          DELETE FROM bookings
+          WHERE id = $1
+          RETURNING id
+        `;
+        const result = await client.query(deleteBookingQuery, [id]);
         
-        if (result.length === 0) {
+        if (result.rowCount === 0) {
           throw new Error(`Booking with ID ${id} not found or could not be deleted`);
         }
       });
