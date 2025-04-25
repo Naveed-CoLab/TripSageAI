@@ -4,6 +4,7 @@ import { storage } from "./storage";
 import { setupAuth } from "./auth";
 import { generateTripIdea, generateItinerary } from "./gemini";
 import { searchFlights, searchAirports, getAirlineInfo } from "./services/amadeus";
+import { hotelService } from "./services/hotels";
 import { pool } from "./db";
 import { 
   trips, 
@@ -1008,6 +1009,170 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching flight booking:", error);
       return res.status(500).json({ message: "Failed to fetch flight booking" });
+    }
+  });
+
+  // Hotel routes
+  app.post("/api/hotels/search", async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    
+    try {
+      const { location, checkInDate, checkOutDate, guests, rooms } = req.body;
+      
+      // Validate required fields
+      if (!location || !checkInDate || !checkOutDate) {
+        return res.status(400).json({ message: "Location, check-in date, and check-out date are required" });
+      }
+      
+      // Search for hotels
+      const hotels = await hotelService.searchHotels(
+        req.user!.id,
+        location,
+        checkInDate,
+        checkOutDate,
+        guests || 1,
+        rooms || 1
+      );
+      
+      return res.status(200).json(hotels);
+    } catch (error) {
+      console.error("Error searching hotels:", error);
+      return res.status(500).json({ message: "Failed to search hotels" });
+    }
+  });
+
+  app.get("/api/hotels/:hotelId", async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    
+    try {
+      const hotelId = req.params.hotelId;
+      const hotel = await hotelService.getHotelDetails(hotelId);
+      
+      if (!hotel) {
+        return res.status(404).json({ message: "Hotel not found" });
+      }
+      
+      return res.status(200).json(hotel);
+    } catch (error) {
+      console.error("Error fetching hotel details:", error);
+      return res.status(500).json({ message: "Failed to fetch hotel details" });
+    }
+  });
+
+  app.post("/api/hotel-bookings", async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    
+    try {
+      const {
+        hotelId,
+        hotelName,
+        hotelImage,
+        hotelAddress,
+        hotelCity,
+        hotelCountry,
+        hotelRating,
+        roomType,
+        checkInDate,
+        checkOutDate,
+        guests,
+        rooms,
+        price,
+        currency,
+        guestName,
+        guestEmail,
+        guestPhone,
+        specialRequests
+      } = req.body;
+      
+      // Validate required fields
+      if (!hotelId || !hotelName || !hotelAddress || !hotelCity || !hotelCountry || 
+          !roomType || !checkInDate || !checkOutDate || !price || 
+          !guestName || !guestEmail) {
+        return res.status(400).json({ message: "Missing required booking information" });
+      }
+      
+      // Create the booking
+      const booking = await hotelService.bookHotel({
+        userId: req.user!.id,
+        hotelId,
+        hotelName,
+        hotelImage,
+        hotelAddress,
+        hotelCity,
+        hotelCountry,
+        hotelRating,
+        roomType,
+        checkInDate,
+        checkOutDate,
+        guests: guests || 1,
+        rooms: rooms || 1,
+        price,
+        currency: currency || 'USD',
+        guestName,
+        guestEmail,
+        guestPhone,
+        specialRequests
+      });
+      
+      return res.status(201).json(booking);
+    } catch (error) {
+      console.error("Error creating hotel booking:", error);
+      return res.status(500).json({ message: "Failed to create hotel booking" });
+    }
+  });
+
+  app.get("/api/hotel-bookings", async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    
+    try {
+      const bookings = await hotelService.getUserHotelBookings(req.user!.id);
+      return res.status(200).json(bookings);
+    } catch (error) {
+      console.error("Error fetching hotel bookings:", error);
+      return res.status(500).json({ message: "Failed to fetch hotel bookings" });
+    }
+  });
+
+  app.get("/api/hotel-bookings/:id", async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    
+    try {
+      const bookingId = parseInt(req.params.id);
+      const booking = await hotelService.getBookingDetails(bookingId);
+      
+      if (!booking) {
+        return res.status(404).json({ message: "Booking not found" });
+      }
+      
+      // Check if the booking belongs to the user
+      if (booking.userId !== req.user!.id) {
+        return res.status(403).json({ message: "You do not have permission to view this booking" });
+      }
+      
+      return res.status(200).json(booking);
+    } catch (error) {
+      console.error("Error fetching hotel booking:", error);
+      return res.status(500).json({ message: "Failed to fetch hotel booking" });
+    }
+  });
+
+  // Get combined bookings for a user (both flight and hotel)
+  app.get("/api/bookings", async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    
+    try {
+      // Get both flight and hotel bookings
+      const flightBookings = await storage.getFlightBookingsByUserId(req.user!.id);
+      const hotelBookings = await storage.getHotelBookingsByUserId(req.user!.id);
+      
+      // Return both types with type indicators
+      return res.status(200).json({
+        flights: flightBookings.map(booking => ({ ...booking, bookingType: 'flight' })),
+        hotels: hotelBookings.map(booking => ({ ...booking, bookingType: 'hotel' }))
+      });
+    } catch (error) {
+      console.error("Error fetching bookings:", error);
+      return res.status(500).json({ message: "Failed to fetch bookings" });
     }
   });
 
