@@ -320,34 +320,84 @@ export async function searchHotels(params: {
       console.log('Using test mode for hotel search - real API keys not available');
       return getFallbackHotels(params.cityCode || '');
     }
-    
-    // Clean parameters and format them for Amadeus API
-    const cleanParams = Object.fromEntries(
-      Object.entries(params).filter(([_, v]) => v !== undefined)
+
+    // Format parameters according to the new Amadeus Hotel API structure
+    const searchParams: any = {
+      cityCode: params.cityCode,
+      includeClosed: false,
+      // According to migration guide, only needed parameters should be included
+      // First use the Hotels List API to find hotels in the location
+      radius: params.radius || 50,
+      radiusUnit: params.radiusUnit || 'KM',
+      ratings: params.ratings,
+      amenities: params.amenities,
+      hotelSource: 'ALL'
+    };
+
+    // Clean parameters by removing undefined values
+    const cleanSearchParams = Object.fromEntries(
+      Object.entries(searchParams).filter(([_, v]) => v !== undefined)
     );
     
-    // Make the API call
-    const response = await amadeus.shopping.hotelOffers.get(cleanParams);
+    // Make the API call to the new hotelListings endpoint
+    const listResponse = await amadeus.shopping.hotelListings.get(cleanSearchParams);
     
-    // Map response to a standardized format
-    return response.data.map((hotel: any) => ({
-      hotelId: hotel.hotel.hotelId,
-      name: hotel.hotel.name,
-      rating: hotel.hotel.rating,
-      description: hotel.hotel.description,
-      address: hotel.hotel.address,
-      contact: hotel.hotel.contact,
-      amenities: hotel.hotel.amenities,
-      media: hotel.hotel.media,
-      price: hotel.offers && hotel.offers[0] ? {
-        total: hotel.offers[0].price.total,
-        currency: hotel.offers[0].price.currency
-      } : undefined,
-      location: {
-        latitude: hotel.hotel.latitude,
-        longitude: hotel.hotel.longitude
-      }
-    }));
+    // If no hotels found, return empty result
+    if (!listResponse.data || listResponse.data.length === 0) {
+      console.log('No hotels found in the specified location');
+      return [];
+    }
+    
+    // Now search for offers for these hotels
+    const hotelIds = listResponse.data.map((hotel: any) => hotel.hotelId);
+    
+    // Format offer search params
+    const offerParams = {
+      hotelIds: hotelIds.join(','),
+      adults: params.adults || 2,
+      checkInDate: params.checkInDate,
+      checkOutDate: params.checkOutDate,
+      roomQuantity: params.roomQuantity || 1,
+      currency: params.currency || 'USD',
+      bestRateOnly: params.bestRateOnly !== false,
+    };
+    
+    // Clean offer params
+    const cleanOfferParams = Object.fromEntries(
+      Object.entries(offerParams).filter(([_, v]) => v !== undefined)
+    );
+    
+    // Get hotel offers to add pricing information
+    const offerResponse = await amadeus.shopping.hotelOffers.get(cleanOfferParams);
+    
+    // Combine hotel listings with offer data
+    const hotels = listResponse.data.map((hotel: any) => {
+      // Find corresponding offer for this hotel (if any)
+      const hotelOffer = offerResponse.data?.find((offer: any) => 
+        offer.hotel?.hotelId === hotel.hotelId
+      );
+      
+      return {
+        hotelId: hotel.hotelId,
+        name: hotel.name,
+        rating: hotel.rating,
+        description: hotel.description,
+        address: hotel.address,
+        contact: hotel.contact,
+        amenities: hotel.amenities,
+        media: hotel.media,
+        price: hotelOffer?.offers?.[0] ? {
+          total: hotelOffer.offers[0].price.total,
+          currency: hotelOffer.offers[0].price.currency
+        } : undefined,
+        location: {
+          latitude: hotel.latitude,
+          longitude: hotel.longitude
+        }
+      };
+    });
+    
+    return hotels;
   } catch (error) {
     console.error('Error searching hotels with Amadeus API:', error);
     // Return fallback hotels in case of API error
@@ -426,34 +476,55 @@ export async function getHotelDetails(hotelId: string, params: {
       } as HotelDetail;
     }
 
-    // Clean parameters
-    const searchParams = Object.fromEntries(
-      Object.entries(params).filter(([_, v]) => v !== undefined)
-    );
-    
-    // Add hotel ID to params
-    const requestParams = {
-      ...searchParams,
+    // Step 1: Get hotel details from the Hotel Listings API
+    const listingParams = {
       hotelIds: hotelId
     };
     
-    // Make the API call
-    const response = await amadeus.shopping.hotelOffersSearch.get(requestParams);
+    // Get hotel listing details
+    const listingResponse = await amadeus.shopping.hotelListings.get(listingParams);
     
-    // Return the first hotel (should be the only one since we specified the ID)
-    if (response.data && response.data.length > 0) {
-      const hotel = response.data[0];
+    // Step 2: Get hotel offers
+    const offerParams = {
+      hotelIds: hotelId,
+      adults: params.adults || 2,
+      checkInDate: params.checkInDate,
+      checkOutDate: params.checkOutDate,
+      roomQuantity: params.roomQuantity || 1,
+      currency: params.currency || 'USD',
+      bestRateOnly: true
+    };
+    
+    // Clean offer params
+    const cleanOfferParams = Object.fromEntries(
+      Object.entries(offerParams).filter(([_, v]) => v !== undefined)
+    );
+    
+    // Get hotel offers
+    const offerResponse = await amadeus.shopping.hotelOffers.get(cleanOfferParams);
+    
+    // Combine hotel details with offers
+    if (listingResponse.data && listingResponse.data.length > 0) {
+      const hotelListing = listingResponse.data[0];
+      const hotelOffers = offerResponse.data ? offerResponse.data.find((offer: any) => 
+        offer.hotel?.hotelId === hotelId
+      ) : null;
       
       return {
-        hotelId: hotel.hotel.hotelId,
-        name: hotel.hotel.name,
-        rating: hotel.hotel.rating,
-        description: hotel.hotel.description,
-        address: hotel.hotel.address,
-        contact: hotel.hotel.contact,
-        amenities: hotel.hotel.amenities || [],
-        media: hotel.hotel.media || [],
-        offers: hotel.offers || []
+        hotelId: hotelListing.hotelId,
+        name: hotelListing.name,
+        rating: hotelListing.rating,
+        description: hotelListing.description,
+        address: hotelListing.address || {
+          cityName: hotelListing.cityName || '',
+          countryCode: hotelListing.countryCode || '',
+          lines: hotelListing.address?.lines || [],
+          postalCode: hotelListing.postalCode || ''
+        },
+        contact: hotelListing.contact,
+        amenities: hotelListing.amenities || [],
+        media: hotelListing.media || [],
+        offers: hotelOffers?.offers || []
       };
     } else {
       throw new Error('Hotel not found');

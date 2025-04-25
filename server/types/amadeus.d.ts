@@ -17,17 +17,13 @@ declare module 'amadeus' {
         };
       };
       
-      // Add Hotel APIs
+      // Updated Hotel APIs as per migration guide
+      hotelListings: {
+        get(params: Record<string, any>): Promise<{ data: any[] }>;
+      };
+      
       hotelOffers: {
         get(params: Record<string, any>): Promise<{ data: any[] }>;
-      };
-      
-      hotelOffersSearch: {
-        get(params: Record<string, any>): Promise<{ data: any[] }>;
-      };
-      
-      hotelOffersByHotel: {
-        get(params: { hotelId: string } & Record<string, any>): Promise<{ data: any }>;
       };
     };
     
