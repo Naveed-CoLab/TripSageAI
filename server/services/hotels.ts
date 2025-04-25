@@ -2,71 +2,12 @@ import { createApi } from 'unsplash-js';
 import { storage } from '../storage';
 import { HotelBooking, HotelSearch, InsertHotelBooking, InsertHotelSearch } from '@shared/schema';
 import { randomBytes } from 'crypto';
+import { searchHotels as searchAmadeusHotels, getHotelDetails as getAmadeusHotelDetails } from './amadeus';
 
 // Setup Unsplash API client
 const unsplash = createApi({
   accessKey: process.env.UNSPLASH_ACCESS_KEY || '',
 });
-
-// Sample hotel data (for demonstration purposes)
-// In a real application, this would be fetched from a hotel booking API
-const sampleHotels = [
-  {
-    id: 'hotel1',
-    name: 'Grand Plaza Hotel',
-    address: '123 Main Street',
-    city: 'New York',
-    country: 'USA',
-    rating: 4.7,
-    price: 299,
-    currency: 'USD',
-    roomTypes: ['Standard', 'Deluxe', 'Suite'],
-  },
-  {
-    id: 'hotel2',
-    name: 'Oceanview Resort',
-    address: '500 Beachfront Drive',
-    city: 'Miami',
-    country: 'USA',
-    rating: 4.8,
-    price: 349,
-    currency: 'USD',
-    roomTypes: ['Standard', 'Ocean View', 'Presidential Suite'],
-  },
-  {
-    id: 'hotel3',
-    name: 'Mountain Retreat Lodge',
-    address: '789 Alpine Road',
-    city: 'Aspen',
-    country: 'USA',
-    rating: 4.6,
-    price: 279,
-    currency: 'USD',
-    roomTypes: ['Cabin', 'Luxury Cabin', 'Family Suite'],
-  },
-  {
-    id: 'hotel4',
-    name: 'City Center Suites',
-    address: '1000 Downtown Avenue',
-    city: 'Chicago',
-    country: 'USA',
-    rating: 4.5,
-    price: 259,
-    currency: 'USD',
-    roomTypes: ['Business Suite', 'Executive Suite', 'Penthouse'],
-  },
-  {
-    id: 'hotel5',
-    name: 'Historic Grand Hotel',
-    address: '300 Heritage Street',
-    city: 'Boston',
-    country: 'USA',
-    rating: 4.6,
-    price: 289,
-    currency: 'USD',
-    roomTypes: ['Classic Room', 'Heritage Suite', 'Presidential'],
-  },
-];
 
 export class HotelService {
   /**
@@ -74,7 +15,7 @@ export class HotelService {
    */
   async searchHotels(userId: number, location: string, checkInDate: string, checkOutDate: string, guests: number, rooms: number) {
     try {
-      // Save the hotel search
+      // Save the hotel search to track user history
       const hotelSearch: any = {
         userId,
         location,
@@ -86,22 +27,40 @@ export class HotelService {
       
       await storage.createHotelSearch(hotelSearch);
       
-      // In a real application, this would call a hotel API
-      // For this demo, we'll use our sample hotels and add location-based filtering
-      const matchedHotels = sampleHotels.filter(hotel => 
-        hotel.city.toLowerCase().includes(location.toLowerCase()) || 
-        hotel.country.toLowerCase().includes(location.toLowerCase())
-      );
+      // Search hotels using the Amadeus API
+      const hotels = await searchAmadeusHotels({
+        cityCode: this.getCityCode(location), // Try to convert location to a city code
+        checkInDate,
+        checkOutDate,
+        adults: guests,
+        roomQuantity: rooms,
+        currency: 'USD', // Default currency
+        bestRateOnly: true, // Only get the best rate for each hotel
+        view: 'FULL' // Get full hotel details
+      });
       
-      // If no match with the provided location, return all hotels (for demo purposes)
-      const hotelsToReturn = matchedHotels.length > 0 ? matchedHotels : sampleHotels;
-      
-      // Get hotel images from Unsplash
-      const hotelsWithImages = await Promise.all(
-        hotelsToReturn.map(async (hotel) => {
+      // Process hotels and add additional images from Unsplash if needed
+      const enhancedHotels = await Promise.all(
+        hotels.map(async (hotel) => {
+          // Check if hotel already has media
+          if (hotel.media && hotel.media.length > 0) {
+            return {
+              id: hotel.hotelId,
+              name: hotel.name,
+              address: hotel.address?.lines?.[0] || '',
+              city: hotel.address?.cityName || '',
+              country: hotel.address?.countryCode || '',
+              rating: parseFloat(hotel.rating || '0'),
+              price: parseFloat(hotel.price?.total || '0'),
+              currency: hotel.price?.currency || 'USD',
+              imageUrl: hotel.media[0].uri,
+              roomTypes: []  // We'll get room types from hotel details
+            };
+          }
+          
+          // If no image, fetch one from Unsplash
           try {
-            // Search for hotel images based on hotel name and location
-            const searchTerm = `${hotel.name} hotel ${hotel.city}`;
+            const searchTerm = `${hotel.name} hotel ${hotel.address?.cityName || location}`;
             const result = await unsplash.search.getPhotos({
               query: searchTerm,
               page: 1,
@@ -109,30 +68,76 @@ export class HotelService {
             });
             
             const imageUrl = result.response?.results[0]?.urls?.regular || 
-                            // Fallback to a more generic hotel search if specific hotel not found
-                            (await this.getGenericHotelImage());
+                            await this.getGenericHotelImage();
             
             return {
-              ...hotel,
+              id: hotel.hotelId,
+              name: hotel.name,
+              address: hotel.address?.lines?.[0] || '',
+              city: hotel.address?.cityName || '',
+              country: hotel.address?.countryCode || '',
+              rating: parseFloat(hotel.rating || '0'),
+              price: parseFloat(hotel.price?.total || '0'),
+              currency: hotel.price?.currency || 'USD',
               imageUrl,
+              roomTypes: []  // We'll get room types from hotel details
             };
           } catch (error) {
             console.error('Error fetching hotel image:', error);
             // Provide a fallback image
             const fallbackImage = await this.getGenericHotelImage();
+            
             return {
-              ...hotel,
+              id: hotel.hotelId,
+              name: hotel.name,
+              address: hotel.address?.lines?.[0] || '',
+              city: hotel.address?.cityName || '',
+              country: hotel.address?.countryCode || '',
+              rating: parseFloat(hotel.rating || '0'),
+              price: parseFloat(hotel.price?.total || '0'),
+              currency: hotel.price?.currency || 'USD',
               imageUrl: fallbackImage,
+              roomTypes: []  // We'll get room types from hotel details
             };
           }
         })
       );
       
-      return hotelsWithImages;
+      return enhancedHotels;
     } catch (error) {
       console.error('Hotel search error:', error);
       throw error;
     }
+  }
+  
+  /**
+   * Get city code from location name (simplified)
+   * In a real implementation, we would use a comprehensive city code lookup
+   */
+  private getCityCode(location: string): string {
+    const cityMapping: Record<string, string> = {
+      'new york': 'NYC',
+      'miami': 'MIA',
+      'aspen': 'ASE',
+      'chicago': 'CHI',
+      'boston': 'BOS',
+      'los angeles': 'LAX',
+      'san francisco': 'SFO',
+      'london': 'LON',
+      'paris': 'PAR',
+      'tokyo': 'TYO',
+    };
+    
+    const normalized = location.toLowerCase();
+    
+    for (const [city, code] of Object.entries(cityMapping)) {
+      if (normalized.includes(city)) {
+        return code;
+      }
+    }
+    
+    // If no match found, just return the first 3 characters capitalized
+    return location.substring(0, 3).toUpperCase();
   }
   
   /**
@@ -164,34 +169,55 @@ export class HotelService {
    * Get details of a specific hotel
    */
   async getHotelDetails(hotelId: string) {
-    const hotel = sampleHotels.find(h => h.id === hotelId);
-    
-    if (!hotel) {
-      throw new Error('Hotel not found');
-    }
-    
     try {
-      // Get hotel image from Unsplash
-      const searchTerm = `${hotel.name} hotel ${hotel.city}`;
-      const result = await unsplash.search.getPhotos({
-        query: searchTerm,
-        page: 1,
-        perPage: 1,
+      // Get current dates for availability search (two days from now, for 2 nights)
+      const today = new Date();
+      const checkInDate = new Date(today);
+      checkInDate.setDate(today.getDate() + 2);
+      const checkOutDate = new Date(checkInDate);
+      checkOutDate.setDate(checkInDate.getDate() + 2);
+      
+      const formatDate = (date: Date) => {
+        return date.toISOString().split('T')[0]; // YYYY-MM-DD format
+      };
+      
+      // Get hotel details from Amadeus API
+      const hotelDetail = await getAmadeusHotelDetails(hotelId, {
+        checkInDate: formatDate(checkInDate),
+        checkOutDate: formatDate(checkOutDate),
+        adults: 2,
+        roomQuantity: 1,
+        currency: 'USD'
       });
       
-      const imageUrl = result.response?.results[0]?.urls?.regular || await this.getGenericHotelImage();
+      // Extract room types from available offers
+      const roomTypes = hotelDetail.offers?.map(offer => offer.room.type) || [];
       
+      // Format the response
       return {
-        ...hotel,
-        imageUrl,
+        id: hotelDetail.hotelId,
+        name: hotelDetail.name,
+        address: hotelDetail.address?.lines?.join(', ') || '',
+        city: hotelDetail.address?.cityName || '',
+        country: hotelDetail.address?.countryCode || '',
+        rating: parseFloat(hotelDetail.rating || '0'),
+        price: hotelDetail.offers && hotelDetail.offers.length > 0 
+          ? parseFloat(hotelDetail.offers[0].price.total) 
+          : 0,
+        currency: hotelDetail.offers && hotelDetail.offers.length > 0 
+          ? hotelDetail.offers[0].price.currency 
+          : 'USD',
+        roomTypes: [...new Set(roomTypes)], // Remove duplicates
+        imageUrl: hotelDetail.media && hotelDetail.media.length > 0 
+          ? hotelDetail.media[0].uri 
+          : await this.getGenericHotelImage(),
+        description: hotelDetail.description?.text || '',
+        amenities: hotelDetail.amenities || [],
+        offers: hotelDetail.offers || [],
       };
     } catch (error) {
       console.error('Error fetching hotel details:', error);
-      // Return hotel without image if there's an API error
-      return {
-        ...hotel,
-        imageUrl: await this.getGenericHotelImage(),
-      };
+      throw error;
     }
   }
   
