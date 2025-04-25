@@ -60,7 +60,7 @@ export default function NotificationPopover() {
           {unreadCount > 0 && (
             <span 
               className={cn(
-                "absolute -top-1 -right-1 h-5 w-5 flex items-center justify-center rounded-full text-[10px] font-bold text-white bg-primary-500",
+                "absolute -top-1 -right-1 h-6 w-6 flex items-center justify-center rounded-full text-[11px] font-bold text-white bg-red-500 shadow-sm",
                 hasNewNotification && "animate-pulse"
               )}
             >
