@@ -321,6 +321,65 @@ export class DatabaseStorage implements IStorage {
     
     return result[0].count;
   }
+  
+  // Admin logs methods
+  async createAdminLog(adminLog: InsertAdminLog): Promise<AdminLog> {
+    try {
+      const SQL = `
+        INSERT INTO admin_logs (admin_id, action, entity_type, entity_id, details)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING *
+      `;
+      
+      const values = [
+        adminLog.adminId,
+        adminLog.action,
+        adminLog.entityType || null,
+        adminLog.entityId || null,
+        adminLog.details || null
+      ];
+      
+      const result = await query(SQL, values);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error creating admin log:', error);
+      throw error;
+    }
+  }
+  
+  async getAdminLogsByAdminId(adminId: number): Promise<AdminLog[]> {
+    try {
+      const SQL = `
+        SELECT * FROM admin_logs
+        WHERE admin_id = $1
+        ORDER BY created_at DESC
+      `;
+      
+      const result = await query(SQL, [adminId]);
+      return result.rows;
+    } catch (error) {
+      console.error('Error getting admin logs by admin ID:', error);
+      throw error;
+    }
+  }
+  
+  async getRecentAdminLogs(limit: number = 50): Promise<AdminLog[]> {
+    try {
+      const SQL = `
+        SELECT al.*, u.username as admin_username
+        FROM admin_logs al
+        JOIN users u ON al.admin_id = u.id
+        ORDER BY al.created_at DESC
+        LIMIT $1
+      `;
+      
+      const result = await query(SQL, [limit]);
+      return result.rows;
+    } catch (error) {
+      console.error('Error getting recent admin logs:', error);
+      throw error;
+    }
+  }
 
   // Trip methods
   async getTripsByUserId(userId: number): Promise<Trip[]> {

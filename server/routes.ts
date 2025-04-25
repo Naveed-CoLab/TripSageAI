@@ -1,4 +1,4 @@
-import type { Express, Request, Response } from "express";
+import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
@@ -1173,6 +1173,68 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error("Error fetching bookings:", error);
       return res.status(500).json({ message: "Failed to fetch bookings" });
+    }
+  });
+
+  // Admin routes
+  
+  // Middleware to check if user is an admin
+  const isAdmin = (req: Request, res: Response, next: NextFunction) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: "User not authenticated" });
+    }
+    
+    if (req.user!.role !== 'admin') {
+      return res.status(403).json({ error: "Access denied. Admin role required." });
+    }
+    
+    next();
+  };
+  
+  // Create an admin log entry
+  app.post("/api/admin/logs", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const { action, entityType, entityId, details } = req.body;
+      
+      if (!action) {
+        return res.status(400).json({ error: "Action is required" });
+      }
+      
+      const adminLog = await storage.createAdminLog({
+        adminId: req.user!.id,
+        action,
+        entityType,
+        entityId,
+        details
+      });
+      
+      res.status(201).json(adminLog);
+    } catch (error) {
+      console.error('Error creating admin log:', error);
+      res.status(500).json({ error: "Failed to create admin log" });
+    }
+  });
+  
+  // Get admin logs for the authenticated admin
+  app.get("/api/admin/logs/my", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const adminLogs = await storage.getAdminLogsByAdminId(req.user!.id);
+      res.json(adminLogs);
+    } catch (error) {
+      console.error('Error getting admin logs:', error);
+      res.status(500).json({ error: "Failed to get admin logs" });
+    }
+  });
+  
+  // Get recent admin logs across all admins
+  app.get("/api/admin/logs", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const adminLogs = await storage.getRecentAdminLogs(limit);
+      res.json(adminLogs);
+    } catch (error) {
+      console.error('Error getting recent admin logs:', error);
+      res.status(500).json({ error: "Failed to get recent admin logs" });
     }
   });
 
