@@ -174,6 +174,39 @@ export default function DashboardPage() {
     enabled: !!user && user.role === "admin" && activeMenuItem === "searchLogs",
   });
   
+  // Add specific log type queries
+  const { data: flightSearchLogs, isLoading: isLoadingFlightSearchLogs } = useQuery<SearchLog[]>({
+    queryKey: ["/api/admin/logs", "flight"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/logs?type=flight");
+      if (!res.ok) {
+        if (res.status === 401) throw new Error("Unauthorized");
+        throw new Error("Failed to fetch flight search logs");
+      }
+      return res.json();
+    },
+    enabled: !!user && user.role === "admin" && activeMenuItem === "searchLogs",
+  });
+  
+  const { data: hotelSearchLogs, isLoading: isLoadingHotelSearchLogs } = useQuery<SearchLog[]>({
+    queryKey: ["/api/admin/logs", "hotel"],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/logs?type=hotel");
+      if (!res.ok) {
+        if (res.status === 401) throw new Error("Unauthorized");
+        throw new Error("Failed to fetch hotel search logs");
+      }
+      return res.json();
+    },
+    enabled: !!user && user.role === "admin" && activeMenuItem === "searchLogs",
+  });
+  
+  const { data: allUsers, isLoading: isLoadingAllUsers } = useQuery<any[]>({
+    queryKey: ["/api/admin/users"],
+    queryFn: getQueryFn({ on401: "throw" }),
+    enabled: !!user && user.role === "admin" && activeMenuItem === "users",
+  });
+  
   // Add user mutation
   const addUserMutation = useMutation({
     mutationFn: async (userData: typeof newUser) => {
@@ -195,10 +228,34 @@ export default function DashboardPage() {
       setAddUserDialogOpen(false);
       // Invalidate users query to refresh the list
       queryClient.invalidateQueries({ queryKey: ["/api/admin/stats/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
     },
     onError: (error: Error) => {
       toast({
         title: "Failed to add user",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  const deleteUserMutation = useMutation({
+    mutationFn: async (userId: number) => {
+      const res = await apiRequest("DELETE", `/api/admin/users/${userId}`);
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "User deleted successfully",
+        description: "The user has been removed from the system.",
+      });
+      // Invalidate users query to refresh the list
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats/users"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/users"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to delete user",
         description: error.message,
         variant: "destructive",
       });
@@ -556,48 +613,54 @@ export default function DashboardPage() {
                   <div>Status</div>
                   <div>Actions</div>
                 </div>
-                <div className="divide-y">
-                  <div className="grid grid-cols-6 gap-4 p-4 items-center">
-                    <div>1</div>
-                    <div>admin</div>
-                    <div>admin@trippplanner.com</div>
-                    <div>
-                      <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
-                        Admin
-                      </span>
-                    </div>
-                    <div>
-                      <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
-                        Active
-                      </span>
-                    </div>
-                    <div className="flex space-x-2">
-                      <Button variant="outline" size="sm">Edit</Button>
-                      <Button variant="outline" size="sm" className="text-red-500">Block</Button>
-                    </div>
+                
+                {isLoadingAllUsers ? (
+                  <div className="flex justify-center py-10">
+                    <Loader2 className="h-8 w-8 animate-spin text-primary" />
                   </div>
-                  {user.id !== 1 && (
-                    <div className="grid grid-cols-6 gap-4 p-4 items-center">
-                      <div>{user.id}</div>
-                      <div>{user.username}</div>
-                      <div>{user.email}</div>
-                      <div>
-                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
-                          {user.role === "admin" ? "Admin" : "User"}
-                        </span>
+                ) : allUsers && allUsers.length > 0 ? (
+                  <div className="divide-y">
+                    {allUsers.map((userItem) => (
+                      <div key={userItem.id} className="grid grid-cols-6 gap-4 p-4 items-center">
+                        <div>{userItem.id}</div>
+                        <div>{userItem.username}</div>
+                        <div>{userItem.email}</div>
+                        <div>
+                          <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
+                            {userItem.role === "admin" ? "Admin" : "User"}
+                          </span>
+                        </div>
+                        <div>
+                          <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
+                            {userItem.is_active ? "Active" : "Inactive"}
+                          </span>
+                        </div>
+                        <div className="flex space-x-2">
+                          <Button variant="outline" size="sm">Edit</Button>
+                          {userItem.id !== user.id && (
+                            <Button 
+                              variant="outline" 
+                              size="sm" 
+                              className="text-red-500"
+                              onClick={() => deleteUserMutation.mutate(userItem.id)}
+                              disabled={deleteUserMutation.isPending}
+                            >
+                              {deleteUserMutation.isPending ? (
+                                <Loader2 className="h-4 w-4 animate-spin" />
+                              ) : (
+                                "Delete"
+                              )}
+                            </Button>
+                          )}
+                        </div>
                       </div>
-                      <div>
-                        <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
-                          Active
-                        </span>
-                      </div>
-                      <div className="flex space-x-2">
-                        <Button variant="outline" size="sm">Edit</Button>
-                        <Button variant="outline" size="sm" className="text-red-500">Block</Button>
-                      </div>
-                    </div>
-                  )}
-                </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="text-center py-10 text-muted-foreground">
+                    No users found
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -883,19 +946,40 @@ export default function DashboardPage() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="border rounded-lg">
-                        <div className="grid grid-cols-6 gap-2 p-3 border-b bg-slate-50 font-medium text-sm">
-                          <div>User</div>
-                          <div>From</div>
-                          <div>To</div>
-                          <div>Date</div>
-                          <div>Results</div>
-                          <div>When</div>
+                      {isLoadingFlightSearchLogs ? (
+                        <div className="flex justify-center py-10">
+                          <Loader2 className="h-8 w-8 animate-spin text-primary" />
                         </div>
+                      ) : flightSearchLogs && flightSearchLogs.length > 0 ? (
+                        <div className="border rounded-lg">
+                          <div className="grid grid-cols-6 gap-2 p-3 border-b bg-slate-50 font-medium text-sm">
+                            <div>User</div>
+                            <div>From/To</div>
+                            <div>Date</div>
+                            <div>Results</div>
+                            <div>When</div>
+                            <div>Actions</div>
+                          </div>
+                          <div className="divide-y">
+                            {flightSearchLogs.map((log) => (
+                              <div key={log.id} className="grid grid-cols-6 gap-2 p-3 items-center text-sm">
+                                <div>{log.user_username}</div>
+                                <div>{log.query}</div>
+                                <div>{new Date(log.created_at).toLocaleDateString()}</div>
+                                <div>{log.results_count}</div>
+                                <div>{new Date(log.created_at).toLocaleTimeString()}</div>
+                                <div>
+                                  <Button variant="outline" size="sm">Details</Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
                         <div className="text-center py-10 text-muted-foreground">
                           No flight search logs found
                         </div>
-                      </div>
+                      )}
                     </CardContent>
                   </Card>
                 </TabsContent>
@@ -909,19 +993,40 @@ export default function DashboardPage() {
                       </CardDescription>
                     </CardHeader>
                     <CardContent>
-                      <div className="border rounded-lg">
-                        <div className="grid grid-cols-6 gap-2 p-3 border-b bg-slate-50 font-medium text-sm">
-                          <div>User</div>
-                          <div>Location</div>
-                          <div>Check-in</div>
-                          <div>Check-out</div>
-                          <div>Results</div>
-                          <div>When</div>
+                      {isLoadingHotelSearchLogs ? (
+                        <div className="flex justify-center py-10">
+                          <Loader2 className="h-8 w-8 animate-spin text-primary" />
                         </div>
+                      ) : hotelSearchLogs && hotelSearchLogs.length > 0 ? (
+                        <div className="border rounded-lg">
+                          <div className="grid grid-cols-6 gap-2 p-3 border-b bg-slate-50 font-medium text-sm">
+                            <div>User</div>
+                            <div>Location</div>
+                            <div>Date</div>
+                            <div>Results</div>
+                            <div>When</div>
+                            <div>Actions</div>
+                          </div>
+                          <div className="divide-y">
+                            {hotelSearchLogs.map((log) => (
+                              <div key={log.id} className="grid grid-cols-6 gap-2 p-3 items-center text-sm">
+                                <div>{log.user_username}</div>
+                                <div>{log.query}</div>
+                                <div>{new Date(log.created_at).toLocaleDateString()}</div>
+                                <div>{log.results_count}</div>
+                                <div>{new Date(log.created_at).toLocaleTimeString()}</div>
+                                <div>
+                                  <Button variant="outline" size="sm">Details</Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
                         <div className="text-center py-10 text-muted-foreground">
                           No hotel search logs found
                         </div>
-                      </div>
+                      )}
                     </CardContent>
                   </Card>
                 </TabsContent>
