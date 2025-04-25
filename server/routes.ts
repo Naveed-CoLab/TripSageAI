@@ -1434,12 +1434,18 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       const notificationsQuery = `
-        SELECT n.*, 
-               a.username as admin_username,
-               a.first_name as admin_first_name,
-               a.last_name as admin_last_name
+        SELECT 
+          n.id, 
+          n.title, 
+          n.message, 
+          n.type, 
+          n.created_at, 
+          CASE WHEN n.is_read THEN n.read_at ELSE NULL END as read_at,
+          n.user_id,
+          n.admin_id,
+          a.username as admin_username
         FROM notifications n
-        JOIN users a ON n.admin_id = a.id
+        LEFT JOIN users a ON n.admin_id = a.id
         WHERE n.user_id = $1 OR n.user_id IS NULL
         ORDER BY n.created_at DESC
       `;
@@ -1492,12 +1498,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Notification not found" });
       }
       
-      // Mark as read
+      // Mark as read with timestamp
       const updateQuery = `
         UPDATE notifications
-        SET is_read = TRUE
+        SET is_read = TRUE, read_at = NOW()
         WHERE id = $1
-        RETURNING *
+        RETURNING 
+          id, 
+          title, 
+          message, 
+          type, 
+          created_at, 
+          read_at,
+          user_id,
+          admin_id
       `;
       
       const result = await query(updateQuery, [notificationId]);

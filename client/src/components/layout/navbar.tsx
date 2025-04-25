@@ -15,7 +15,8 @@ import {
   SheetTrigger,
 } from "@/components/ui/sheet";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import { Menu, X, Bell, ChevronDown, Globe, User } from "lucide-react";
+import { Menu, X, ChevronDown, Globe, User, Bell } from "lucide-react";
+import NotificationPopover from "@/components/notifications/notification-popover";
 
 export default function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -80,9 +81,7 @@ export default function Navbar() {
             {user ? (
               <>
                 <div className="mr-1">
-                  <Button variant="ghost" size="icon" className="rounded-full h-9 w-9 hover:bg-gray-100">
-                    <Bell className="h-5 w-5 text-gray-500" />
-                  </Button>
+                  <NotificationPopover />
                 </div>
                 
                 <DropdownMenu>
