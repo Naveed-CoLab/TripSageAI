@@ -1,13 +1,20 @@
 import Amadeus from 'amadeus';
 
 // Initialize the Amadeus client
-const amadeus = new Amadeus({
-  clientId: process.env.AMADEUS_API_KEY || '',
-  clientSecret: process.env.AMADEUS_API_SECRET || ''
-});
+let amadeus: any;
+try {
+  amadeus = new Amadeus({
+    clientId: process.env.AMADEUS_API_KEY || '',
+    clientSecret: process.env.AMADEUS_API_SECRET || ''
+  });
+  console.log('Amadeus client initialized successfully');
+} catch (error) {
+  console.error('Failed to initialize Amadeus client:', error);
+  amadeus = null;
+}
 
-// Track if we are in test mode (no API keys or invalid keys)
-const isTestMode = !process.env.AMADEUS_API_KEY || !process.env.AMADEUS_API_SECRET;
+// Track if we are in test mode (no API keys, invalid keys, or initialization failed)
+const isTestMode = !process.env.AMADEUS_API_KEY || !process.env.AMADEUS_API_SECRET || !amadeus;
 
 export interface FlightOffer {
   id: string;
@@ -321,17 +328,21 @@ export async function searchHotels(params: {
       return getFallbackHotels(params.cityCode || '');
     }
 
-    // Format parameters according to the new Amadeus Hotel API structure
+    // According to the migration guide, we should use hotelOffers directly
+    // without first using hotelListings, as the structure has changed
     const searchParams: any = {
       cityCode: params.cityCode,
-      includeClosed: false,
-      // According to migration guide, only needed parameters should be included
-      // First use the Hotels List API to find hotels in the location
-      radius: params.radius || 50,
-      radiusUnit: params.radiusUnit || 'KM',
+      checkInDate: params.checkInDate,
+      checkOutDate: params.checkOutDate,
+      adults: params.adults || 2,
+      roomQuantity: params.roomQuantity || 1,
+      currency: params.currency || 'USD',
+      bestRateOnly: params.bestRateOnly !== false,
       ratings: params.ratings,
       amenities: params.amenities,
-      hotelSource: 'ALL'
+      radius: params.radius || 20,
+      radiusUnit: params.radiusUnit || 'KM',
+      includeClosed: false
     };
 
     // Clean parameters by removing undefined values
@@ -339,60 +350,40 @@ export async function searchHotels(params: {
       Object.entries(searchParams).filter(([_, v]) => v !== undefined)
     );
     
-    // Make the API call to the new hotelListings endpoint
-    const listResponse = await amadeus.shopping.hotelListings.get(cleanSearchParams);
+    // Make the API call directly to the hotelOffers endpoint as per migration guide
+    const hotelResponse = await amadeus.shopping.hotelOffers.get(cleanSearchParams);
     
     // If no hotels found, return empty result
-    if (!listResponse.data || listResponse.data.length === 0) {
+    if (!hotelResponse.data || hotelResponse.data.length === 0) {
       console.log('No hotels found in the specified location');
       return [];
     }
     
-    // Now search for offers for these hotels
-    const hotelIds = listResponse.data.map((hotel: any) => hotel.hotelId);
-    
-    // Format offer search params
-    const offerParams = {
-      hotelIds: hotelIds.join(','),
-      adults: params.adults || 2,
-      checkInDate: params.checkInDate,
-      checkOutDate: params.checkOutDate,
-      roomQuantity: params.roomQuantity || 1,
-      currency: params.currency || 'USD',
-      bestRateOnly: params.bestRateOnly !== false,
-    };
-    
-    // Clean offer params
-    const cleanOfferParams = Object.fromEntries(
-      Object.entries(offerParams).filter(([_, v]) => v !== undefined)
-    );
-    
-    // Get hotel offers to add pricing information
-    const offerResponse = await amadeus.shopping.hotelOffers.get(cleanOfferParams);
-    
-    // Combine hotel listings with offer data
-    const hotels = listResponse.data.map((hotel: any) => {
-      // Find corresponding offer for this hotel (if any)
-      const hotelOffer = offerResponse.data?.find((offer: any) => 
-        offer.hotel?.hotelId === hotel.hotelId
-      );
+    // Map the hotel offers directly to our HotelSearchResult format
+    const hotels = hotelResponse.data.map((hotelOffer: any) => {
+      const hotel = hotelOffer.hotel;
       
       return {
         hotelId: hotel.hotelId,
         name: hotel.name,
         rating: hotel.rating,
-        description: hotel.description,
-        address: hotel.address,
-        contact: hotel.contact,
-        amenities: hotel.amenities,
-        media: hotel.media,
-        price: hotelOffer?.offers?.[0] ? {
+        description: hotel.description || { text: hotel.name },
+        address: {
+          cityName: hotel.cityCode || params.cityCode || '',
+          countryCode: hotel.countryCode || '',
+          lines: [hotel.address?.lines?.[0] || ''],
+          postalCode: hotel.postalCode || ''
+        },
+        contact: hotel.contact || { phone: '' },
+        amenities: hotel.amenities || [],
+        media: hotel.media || [],
+        price: hotelOffer.offers?.[0] ? {
           total: hotelOffer.offers[0].price.total,
           currency: hotelOffer.offers[0].price.currency
         } : undefined,
         location: {
-          latitude: hotel.latitude,
-          longitude: hotel.longitude
+          latitude: hotel.latitude || 0,
+          longitude: hotel.longitude || 0
         }
       };
     });
@@ -476,15 +467,8 @@ export async function getHotelDetails(hotelId: string, params: {
       } as HotelDetail;
     }
 
-    // Step 1: Get hotel details from the Hotel Listings API
-    const listingParams = {
-      hotelIds: hotelId
-    };
-    
-    // Get hotel listing details
-    const listingResponse = await amadeus.shopping.hotelListings.get(listingParams);
-    
-    // Step 2: Get hotel offers
+    // According to the migration guide, we should get hotel details directly
+    // from the hotelOffers endpoint with the hotelId
     const offerParams = {
       hotelIds: hotelId,
       adults: params.adults || 2,
@@ -500,31 +484,38 @@ export async function getHotelDetails(hotelId: string, params: {
       Object.entries(offerParams).filter(([_, v]) => v !== undefined)
     );
     
-    // Get hotel offers
-    const offerResponse = await amadeus.shopping.hotelOffers.get(cleanOfferParams);
+    // Get hotel offers which includes hotel details
+    const hotelResponse = await amadeus.shopping.hotelOffers.get(cleanOfferParams);
     
-    // Combine hotel details with offers
-    if (listingResponse.data && listingResponse.data.length > 0) {
-      const hotelListing = listingResponse.data[0];
-      const hotelOffers = offerResponse.data ? offerResponse.data.find((offer: any) => 
+    // Check if we received hotel data
+    if (hotelResponse.data && hotelResponse.data.length > 0) {
+      // Find the correct hotel in the response
+      const hotelData = hotelResponse.data.find((offer: any) => 
         offer.hotel?.hotelId === hotelId
-      ) : null;
+      );
       
+      if (!hotelData) {
+        throw new Error('Hotel not found in response');
+      }
+      
+      const hotel = hotelData.hotel;
+      
+      // Return the hotel details in our standardized format
       return {
-        hotelId: hotelListing.hotelId,
-        name: hotelListing.name,
-        rating: hotelListing.rating,
-        description: hotelListing.description,
-        address: hotelListing.address || {
-          cityName: hotelListing.cityName || '',
-          countryCode: hotelListing.countryCode || '',
-          lines: hotelListing.address?.lines || [],
-          postalCode: hotelListing.postalCode || ''
+        hotelId: hotel.hotelId,
+        name: hotel.name,
+        rating: hotel.rating,
+        description: hotel.description || { text: hotel.name },
+        address: {
+          cityName: hotel.cityCode || '',
+          countryCode: hotel.countryCode || '',
+          lines: hotel.address?.lines || [],
+          postalCode: hotel.postalCode || ''
         },
-        contact: hotelListing.contact,
-        amenities: hotelListing.amenities || [],
-        media: hotelListing.media || [],
-        offers: hotelOffers?.offers || []
+        contact: hotel.contact || { phone: '' },
+        amenities: hotel.amenities || [],
+        media: hotel.media || [],
+        offers: hotelData.offers || []
       };
     } else {
       throw new Error('Hotel not found');
