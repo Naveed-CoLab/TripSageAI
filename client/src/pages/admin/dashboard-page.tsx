@@ -16,9 +16,11 @@ import {
   BellRing,
   User,
   Loader2,
+  Check,
+  X,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import {
@@ -27,13 +29,33 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { useQuery } from "@tanstack/react-query";
-import { getQueryFn } from "@/lib/queryClient";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { useToast } from "@/hooks/use-toast";
+import { useQuery, useMutation } from "@tanstack/react-query";
+import { getQueryFn, apiRequest, queryClient } from "@/lib/queryClient";
 
 export default function DashboardPage() {
   const [, navigate] = useLocation();
   const { user, logoutMutation } = useAuth();
   const [activeMenuItem, setActiveMenuItem] = useState("dashboard");
+  const [addUserDialogOpen, setAddUserDialogOpen] = useState(false);
+  const [newUser, setNewUser] = useState({
+    username: "",
+    email: "",
+    password: "",
+    role: "user"
+  });
+  const { toast } = useToast();
 
   // Redirect if user is not logged in or not an admin
   useEffect(() => {
@@ -104,6 +126,17 @@ export default function DashboardPage() {
     flights: PendingBooking[];
     hotels: PendingBooking[];
   }
+  
+  interface SearchLog {
+    id: number;
+    user_id: number;
+    user_username: string;
+    search_type: string;
+    query: string;
+    search_params: any;
+    created_at: string;
+    results_count: number;
+  }
 
   const { data: userStats, isLoading: isLoadingUserStats } = useQuery<UserStats>({
     queryKey: ["/api/admin/stats/users"],
@@ -134,6 +167,56 @@ export default function DashboardPage() {
     queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!user && user.role === "admin" && activeMenuItem === "bookings",
   });
+  
+  const { data: searchLogs, isLoading: isLoadingSearchLogs } = useQuery<SearchLog[]>({
+    queryKey: ["/api/admin/logs"],
+    queryFn: getQueryFn({ on401: "throw" }),
+    enabled: !!user && user.role === "admin" && activeMenuItem === "searchLogs",
+  });
+  
+  // Add user mutation
+  const addUserMutation = useMutation({
+    mutationFn: async (userData: typeof newUser) => {
+      const res = await apiRequest("POST", "/api/admin/users", userData);
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "User added successfully",
+        description: `User ${newUser.username} has been created.`,
+      });
+      // Reset form and close dialog
+      setNewUser({
+        username: "",
+        email: "",
+        password: "",
+        role: "user"
+      });
+      setAddUserDialogOpen(false);
+      // Invalidate users query to refresh the list
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats/users"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to add user",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
+  const handleAddUser = () => {
+    // Basic validation
+    if (!newUser.username || !newUser.email || !newUser.password) {
+      toast({
+        title: "Validation error",
+        description: "Please fill in all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+    addUserMutation.mutate(newUser);
+  };
 
   const handleLogout = () => {
     logoutMutation.mutate();
@@ -379,10 +462,89 @@ export default function DashboardPage() {
             <div className="bg-white p-6 rounded-lg shadow-sm">
               <div className="flex justify-between items-center mb-6">
                 <h3 className="text-xl font-semibold">User Management</h3>
-                <Button className="flex items-center">
-                  <PlusCircle className="mr-2 h-4 w-4" />
-                  Add User
-                </Button>
+                <Dialog open={addUserDialogOpen} onOpenChange={setAddUserDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button className="flex items-center">
+                      <PlusCircle className="mr-2 h-4 w-4" />
+                      Add User
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="sm:max-w-[425px]">
+                    <DialogHeader>
+                      <DialogTitle>Add New User</DialogTitle>
+                      <DialogDescription>
+                        Create a new user account. User will receive login credentials via email.
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-4 py-4">
+                      <div className="grid gap-2">
+                        <Label htmlFor="username">Username</Label>
+                        <Input
+                          id="username"
+                          value={newUser.username}
+                          onChange={(e) => setNewUser({ ...newUser, username: e.target.value })}
+                          placeholder="Enter username"
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="email">Email</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          value={newUser.email}
+                          onChange={(e) => setNewUser({ ...newUser, email: e.target.value })}
+                          placeholder="Enter email address"
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="password">Password</Label>
+                        <Input
+                          id="password"
+                          type="password"
+                          value={newUser.password}
+                          onChange={(e) => setNewUser({ ...newUser, password: e.target.value })}
+                          placeholder="Enter password"
+                        />
+                      </div>
+                      <div className="grid gap-2">
+                        <Label htmlFor="role">Role</Label>
+                        <Select
+                          value={newUser.role}
+                          onValueChange={(value) => setNewUser({ ...newUser, role: value })}
+                        >
+                          <SelectTrigger>
+                            <SelectValue placeholder="Select role" />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="user">User</SelectItem>
+                            <SelectItem value="admin">Admin</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
+                    </div>
+                    <DialogFooter>
+                      <Button 
+                        variant="outline" 
+                        onClick={() => setAddUserDialogOpen(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button 
+                        onClick={handleAddUser}
+                        disabled={addUserMutation.isPending}
+                      >
+                        {addUserMutation.isPending ? (
+                          <>
+                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                            Adding...
+                          </>
+                        ) : (
+                          "Add User"
+                        )}
+                      </Button>
+                    </DialogFooter>
+                  </DialogContent>
+                </Dialog>
               </div>
 
               <div className="border rounded-lg">
@@ -398,7 +560,7 @@ export default function DashboardPage() {
                   <div className="grid grid-cols-6 gap-4 p-4 items-center">
                     <div>1</div>
                     <div>admin</div>
-                    <div>admin@example.com</div>
+                    <div>admin@trippplanner.com</div>
                     <div>
                       <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
                         Admin
@@ -414,7 +576,27 @@ export default function DashboardPage() {
                       <Button variant="outline" size="sm" className="text-red-500">Block</Button>
                     </div>
                   </div>
-                  {/* More user rows would go here */}
+                  {user.id !== 1 && (
+                    <div className="grid grid-cols-6 gap-4 p-4 items-center">
+                      <div>{user.id}</div>
+                      <div>{user.username}</div>
+                      <div>{user.email}</div>
+                      <div>
+                        <span className="bg-blue-100 text-blue-800 px-2 py-1 rounded-full text-xs">
+                          {user.role === "admin" ? "Admin" : "User"}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs">
+                          Active
+                        </span>
+                      </div>
+                      <div className="flex space-x-2">
+                        <Button variant="outline" size="sm">Edit</Button>
+                        <Button variant="outline" size="sm" className="text-red-500">Block</Button>
+                      </div>
+                    </div>
+                  )}
                 </div>
               </div>
             </div>
@@ -614,6 +796,166 @@ export default function DashboardPage() {
                       </div>
                     </CardContent>
                   </Card>
+                </TabsContent>
+              </Tabs>
+            </div>
+          )}
+          
+          {activeMenuItem === "searchLogs" && (
+            <div className="bg-white p-6 rounded-lg shadow-sm">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-semibold">Search History Logs</h3>
+              </div>
+              
+              <Tabs defaultValue="all" className="w-full">
+                <TabsList className="mb-4">
+                  <TabsTrigger value="all">All Searches</TabsTrigger>
+                  <TabsTrigger value="flight">Flight Searches</TabsTrigger>
+                  <TabsTrigger value="hotel">Hotel Searches</TabsTrigger>
+                  <TabsTrigger value="analytics">Search Analytics</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="all">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Recent Search Activity</CardTitle>
+                      <CardDescription>
+                        View recent search queries from all users
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      {isLoadingSearchLogs ? (
+                        <div className="flex justify-center py-10">
+                          <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                        </div>
+                      ) : searchLogs && searchLogs.length > 0 ? (
+                        <div className="border rounded-lg">
+                          <div className="grid grid-cols-7 gap-2 p-3 border-b bg-slate-50 font-medium text-sm">
+                            <div>ID</div>
+                            <div>User</div>
+                            <div>Type</div>
+                            <div>Query</div>
+                            <div>Results</div>
+                            <div>Date</div>
+                            <div>Actions</div>
+                          </div>
+                          <div className="divide-y">
+                            {searchLogs.map((log) => (
+                              <div key={log.id} className="grid grid-cols-7 gap-2 p-3 items-center text-sm">
+                                <div>{log.id}</div>
+                                <div>{log.user_username}</div>
+                                <div>
+                                  <span className={`px-2 py-1 rounded-full text-xs ${
+                                    log.search_type === 'flight' 
+                                      ? 'bg-blue-100 text-blue-800'
+                                      : 'bg-green-100 text-green-800'
+                                  }`}>
+                                    {log.search_type}
+                                  </span>
+                                </div>
+                                <div className="truncate max-w-xs">{log.query}</div>
+                                <div>{log.results_count}</div>
+                                <div>{new Date(log.created_at).toLocaleString()}</div>
+                                <div>
+                                  <Button variant="outline" size="sm">
+                                    Details
+                                  </Button>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                      ) : (
+                        <div className="text-center py-10 text-muted-foreground">
+                          No search logs found
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                
+                <TabsContent value="flight">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Flight Search Activity</CardTitle>
+                      <CardDescription>
+                        Flight search patterns and popular routes
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="border rounded-lg">
+                        <div className="grid grid-cols-6 gap-2 p-3 border-b bg-slate-50 font-medium text-sm">
+                          <div>User</div>
+                          <div>From</div>
+                          <div>To</div>
+                          <div>Date</div>
+                          <div>Results</div>
+                          <div>When</div>
+                        </div>
+                        <div className="text-center py-10 text-muted-foreground">
+                          No flight search logs found
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                
+                <TabsContent value="hotel">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Hotel Search Activity</CardTitle>
+                      <CardDescription>
+                        Hotel search patterns and popular destinations
+                      </CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="border rounded-lg">
+                        <div className="grid grid-cols-6 gap-2 p-3 border-b bg-slate-50 font-medium text-sm">
+                          <div>User</div>
+                          <div>Location</div>
+                          <div>Check-in</div>
+                          <div>Check-out</div>
+                          <div>Results</div>
+                          <div>When</div>
+                        </div>
+                        <div className="text-center py-10 text-muted-foreground">
+                          No hotel search logs found
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                
+                <TabsContent value="analytics">
+                  <div className="grid gap-4 md:grid-cols-2">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Popular Search Destinations</CardTitle>
+                        <CardDescription>
+                          Most frequently searched destinations
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="h-80 flex items-center justify-center border rounded-md">
+                          <p className="text-muted-foreground">Destination chart will appear here</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                    
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Search Volume Over Time</CardTitle>
+                        <CardDescription>
+                          Search activity trends
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        <div className="h-80 flex items-center justify-center border rounded-md">
+                          <p className="text-muted-foreground">Volume chart will appear here</p>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  </div>
                 </TabsContent>
               </Tabs>
             </div>
