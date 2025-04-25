@@ -119,8 +119,13 @@ function HotelsPage() {
     searchParams.append("price", hotel.price.toString());
     searchParams.append("currency", hotel.currency || "USD");
     
-    if (hotel.roomType) {
+    // Always add a roomType, defaulting to the first one available or "Standard Room"
+    if (hotel.roomTypes && hotel.roomTypes.length > 0) {
+      searchParams.append("roomType", hotel.roomTypes[0]);
+    } else if (hotel.roomType) {
       searchParams.append("roomType", hotel.roomType);
+    } else {
+      searchParams.append("roomType", "Standard Room");
     }
     
     navigate(`/hotel-booking?${searchParams.toString()}`);

@@ -99,6 +99,7 @@ function HotelBookingPage() {
 
   const bookingMutation = useMutation({
     mutationFn: async (formData: FormValues) => {
+      // Create complete request data with all required fields
       const requestData = {
         ...bookingData,
         ...formData,
@@ -107,8 +108,10 @@ function HotelBookingPage() {
         guests: parseInt(bookingData.guests),
         rooms: parseInt(bookingData.rooms),
         hotelRating: parseFloat(bookingData.hotelRating),
+        roomType: bookingData.roomType || "Standard Room", // Ensure roomType is set
       };
       
+      console.log("Sending booking data:", JSON.stringify(requestData, null, 2));
       const res = await apiRequest("POST", "/api/hotel-bookings", requestData);
       return await res.json();
     },
