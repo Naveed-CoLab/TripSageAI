@@ -34,7 +34,7 @@ async function createAdminUser() {
 
     console.log("Creating admin user...");
     const hashedPassword = await hashPassword("admin123");
-    
+
     await db.insert(users).values({
       username: "admin",
       password: hashedPassword,
@@ -43,7 +43,7 @@ async function createAdminUser() {
       lastName: "User",
       role: "admin",
     });
-    
+
     console.log("Admin user created successfully!");
     console.log("Username: admin");
     console.log("Password: admin123");

@@ -4,7 +4,7 @@ import { useToast } from "@/hooks/use-toast";
 import { useMutation } from "@tanstack/react-query";
 import { useLocation } from "wouter";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import Layout from "@/components/layout";
+import MainLayout from "@/components/layout/main-layout";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -136,18 +136,18 @@ function HotelBookingPage() {
 
   if (loading) {
     return (
-      <Layout>
+      <MainLayout>
         <div className="container mx-auto py-10 flex items-center justify-center">
           <Loader2 className="h-8 w-8 animate-spin text-primary" />
         </div>
-      </Layout>
+      </MainLayout>
     );
   }
 
   const totalPrice = parseFloat(bookingData.price) * nights * parseInt(bookingData.rooms);
 
   return (
-    <Layout>
+    <MainLayout>
       <div className="container mx-auto py-6">
         <div className="mb-6">
           <h1 className="text-3xl font-bold">Confirm Your Booking</h1>
@@ -373,7 +373,7 @@ function HotelBookingPage() {
           </div>
         </div>
       </div>
-    </Layout>
+    </MainLayout>
   );
 }
 

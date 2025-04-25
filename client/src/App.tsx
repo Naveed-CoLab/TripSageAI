@@ -18,6 +18,8 @@ import FlightBookingPage from "@/pages/flight-booking-page";
 import ProfileFlightsPage from "@/pages/profile-flights-page";
 import WishlistPage from "@/pages/wishlist-page";
 import BookingsPage from "@/pages/bookings-page";
+import HotelsPage from "@/pages/hotels-page";
+import HotelBookingPage from "@/pages/hotel-booking-page";
 import AdminLoginPage from "@/pages/admin/login-page";
 import DashboardPage from "@/pages/admin/dashboard-page";
 import { AuthProvider } from "@/hooks/use-auth";
@@ -41,6 +43,8 @@ function Router() {
       <ProtectedRoute path="/flights" component={FlightsPage} />
       <ProtectedRoute path="/flights/search" component={FlightSearchPage} />
       <ProtectedRoute path="/flight-booking/:outboundId/:returnId?" component={FlightBookingPage} />
+      <ProtectedRoute path="/hotels" component={HotelsPage} />
+      <ProtectedRoute path="/hotel-booking" component={HotelBookingPage} />
       
       {/* Admin routes */}
       <Route path="/admin/login" component={AdminLoginPage} />

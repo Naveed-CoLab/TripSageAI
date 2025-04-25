@@ -12,7 +12,7 @@ import {
   CardHeader, 
   CardTitle 
 } from "@/components/ui/card";
-import Layout from "@/components/layout";
+import MainLayout from "@/components/layout/main-layout";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -102,27 +102,32 @@ function HotelsPage() {
 
   function handleBooking(hotel: any) {
     const searchData = form.getValues();
-    const searchParams = new URLSearchParams({
-      hotelId: hotel.id,
-      hotelName: hotel.name,
-      hotelAddress: hotel.address,
-      hotelCity: hotel.city,
-      hotelCountry: hotel.country,
-      hotelRating: hotel.rating.toString(),
-      hotelImage: hotel.imageUrl,
-      checkInDate: format(searchData.checkInDate, "yyyy-MM-dd"),
-      checkOutDate: format(searchData.checkOutDate, "yyyy-MM-dd"),
-      guests: searchData.guests.toString(),
-      rooms: searchData.rooms.toString(),
-      price: hotel.price.toString(),
-      currency: hotel.currency,
-    });
+    const searchParams = new URLSearchParams();
+    
+    // Add parameters to URL
+    searchParams.append("hotelId", hotel.id);
+    searchParams.append("hotelName", hotel.name);
+    searchParams.append("hotelAddress", hotel.address);
+    searchParams.append("hotelCity", hotel.city);
+    searchParams.append("hotelCountry", hotel.country);
+    searchParams.append("hotelRating", hotel.rating.toString());
+    searchParams.append("hotelImage", hotel.imageUrl);
+    searchParams.append("checkInDate", format(searchData.checkInDate, "yyyy-MM-dd"));
+    searchParams.append("checkOutDate", format(searchData.checkOutDate, "yyyy-MM-dd"));
+    searchParams.append("guests", searchData.guests.toString());
+    searchParams.append("rooms", searchData.rooms.toString());
+    searchParams.append("price", hotel.price.toString());
+    searchParams.append("currency", hotel.currency || "USD");
+    
+    if (hotel.roomType) {
+      searchParams.append("roomType", hotel.roomType);
+    }
     
     navigate(`/hotel-booking?${searchParams.toString()}`);
   }
 
   return (
-    <Layout>
+    <MainLayout>
       <div className="container mx-auto py-6 space-y-6">
         <div className="flex flex-col space-y-4">
           <h1 className="text-3xl font-bold">Find your perfect hotel</h1>
@@ -356,7 +361,7 @@ function HotelsPage() {
           </div>
         )}
       </div>
-    </Layout>
+    </MainLayout>
   );
 }
 
