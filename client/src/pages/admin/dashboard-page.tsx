@@ -917,7 +917,7 @@ export default function DashboardPage() {
                                   </span>
                                 </div>
                                 <div className="truncate max-w-xs">{log.query}</div>
-                                <div>{log.results_count}</div>
+                                <div>{log.result_count}</div>
                                 <div>{new Date(log.created_at).toLocaleString()}</div>
                                 <div>
                                   <Button variant="outline" size="sm">

@@ -29,7 +29,9 @@ import { AdminRoute } from "@/lib/admin-route";
 function Router() {
   return (
     <Switch>
-      <Route path="/" component={HomePage} />
+      <Route path="/">
+        <HomePage />
+      </Route>
       <Route path="/auth" component={AuthPage} />
       <ProtectedRoute path="/trips" component={TripsPage} />
       <ProtectedRoute path="/trips/create" component={TripCreatePage} />
