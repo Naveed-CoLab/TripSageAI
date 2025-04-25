@@ -140,6 +140,31 @@ export async function searchAirports(keyword: string): Promise<LocationSearchRes
   }
 }
 
+export async function searchLocations(keyword: string): Promise<LocationSearchResult[]> {
+  try {
+    // If we're in test mode or Amadeus client failed to initialize, return an empty array
+    if (isTestMode) {
+      console.log('Using test mode for location search - real API keys not available');
+      return [];
+    }
+    
+    const response = await amadeus.referenceData.locations.get({
+      keyword,
+      subType: Amadeus.location.city, // Only look for cities
+      page: {
+        limit: 5
+      }
+    });
+    
+    console.log(`Found ${response.data.length} locations for keyword: ${keyword}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error searching locations with Amadeus API:', error);
+    // Return empty array on error to allow fallback to work
+    return [];
+  }
+}
+
 export async function getAirlineInfo(airlineCode: string): Promise<any> {
   try {
     const response = await amadeus.referenceData.airlines.get({

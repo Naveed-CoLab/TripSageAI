@@ -111,33 +111,122 @@ export class HotelService {
   }
   
   /**
-   * Get city code from location name (simplified)
-   * In a real implementation, we would use a comprehensive city code lookup
+   * Get city code from location name using the Amadeus Location Search API first
+   * Falls back to a simplified mapping if the API fails
    */
-  private getCityCode(location: string): string {
-    const cityMapping: Record<string, string> = {
-      'new york': 'NYC',
-      'miami': 'MIA',
-      'aspen': 'ASE',
-      'chicago': 'CHI',
-      'boston': 'BOS',
-      'los angeles': 'LAX',
-      'san francisco': 'SFO',
-      'london': 'LON',
-      'paris': 'PAR',
-      'tokyo': 'TYO',
-    };
-    
-    const normalized = location.toLowerCase();
-    
-    for (const [city, code] of Object.entries(cityMapping)) {
-      if (normalized.includes(city)) {
-        return code;
+  private async getCityCode(location: string): Promise<string> {
+    try {
+      // Try to find the location code using Amadeus Location Search API
+      const locationResults = await searchLocations(location);
+      
+      // If we found a matching location with an IATA code, use it
+      if (locationResults && locationResults.length > 0) {
+        const cityLocation = locationResults.find(loc => 
+          (loc.subType === 'CITY' || loc.subType === 'CITY_AIRPORT') && loc.iataCode
+        );
+        
+        if (cityLocation && cityLocation.iataCode) {
+          console.log(`Found city code ${cityLocation.iataCode} for location ${location}`);
+          return cityLocation.iataCode;
+        }
       }
+      
+      // Fallback to our mapping if API doesn't return a suitable result
+      const cityMapping: Record<string, string> = {
+        'new york': 'NYC',
+        'miami': 'MIA',
+        'aspen': 'ASE',
+        'chicago': 'CHI',
+        'boston': 'BOS',
+        'los angeles': 'LAX',
+        'san francisco': 'SFO',
+        'london': 'LON',
+        'paris': 'PAR',
+        'tokyo': 'TYO',
+        'madrid': 'MAD',
+        'barcelona': 'BCN',
+        'berlin': 'BER',
+        'rome': 'ROM',
+        'sydney': 'SYD',
+        'singapore': 'SIN',
+        'dubai': 'DXB',
+        'hong kong': 'HKG',
+        'bangkok': 'BKK',
+        'toronto': 'YTO',
+        'munich': 'MUC',
+        'amsterdam': 'AMS',
+        'zurich': 'ZRH',
+        'vienna': 'VIE',
+        'prague': 'PRG',
+        'seoul': 'SEL',
+        'shanghai': 'SHA',
+        'beijing': 'BJS',
+        'delhi': 'DEL',
+        'mumbai': 'BOM',
+        'lisbon': 'LIS',
+        'athens': 'ATH',
+        'istanbul': 'IST',
+        'venice': 'VCE',
+        'florence': 'FLR',
+        'milan': 'MIL',
+        'naples': 'NAP',
+        'dublin': 'DUB',
+        'budapest': 'BUD',
+        'mexico city': 'MEX',
+        'rio de janeiro': 'RIO',
+        'sao paulo': 'SAO',
+        'buenos aires': 'BUE',
+        'johannesburg': 'JNB',
+        'cape town': 'CPT',
+        'cairo': 'CAI',
+        'marrakech': 'RAK',
+        'hawaii': 'HNL',
+        'honolulu': 'HNL',
+        'bali': 'DPS',
+        'phuket': 'HKT',
+        'kuala lumpur': 'KUL',
+        'manila': 'MNL',
+        'washington': 'WAS',
+        'washington dc': 'WAS',
+        'san diego': 'SAN',
+        'seattle': 'SEA',
+        'dallas': 'DFW',
+        'atlanta': 'ATL',
+        'houston': 'HOU',
+        'phoenix': 'PHX',
+        'las vegas': 'LAS',
+        'orlando': 'MCO',
+        'spain': 'MAD',
+        'france': 'PAR',
+        'italy': 'ROM',
+        'germany': 'BER',
+        'uk': 'LON',
+        'england': 'LON',
+        'usa': 'NYC',
+        'australia': 'SYD',
+        'japan': 'TYO',
+        'china': 'BJS',
+        'canada': 'YTO',
+      };
+      
+      const normalized = location.toLowerCase();
+      
+      for (const [city, code] of Object.entries(cityMapping)) {
+        if (normalized.includes(city)) {
+          console.log(`Using mapped city code ${code} for location ${location}`);
+          return code;
+        }
+      }
+      
+      // If no match found, just use first 3 letters capitalized
+      const defaultCode = location.substring(0, 3).toUpperCase();
+      console.log(`No city code found for ${location}, using default: ${defaultCode}`);
+      return defaultCode;
+    } catch (error) {
+      console.error(`Error getting city code for ${location}:`, error);
+      // Fallback to first 3 letters if everything fails
+      return location.substring(0, 3).toUpperCase();
     }
-    
-    // If no match found, just return the first 3 characters capitalized
-    return location.substring(0, 3).toUpperCase();
   }
   
   /**
