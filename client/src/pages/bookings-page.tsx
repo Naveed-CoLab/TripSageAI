@@ -91,43 +91,78 @@ export default function BookingsPage() {
     }
   };
 
+  const parseDate = (dateTimeStr: string) => {
+    try {
+      // Try parsing as ISO date first
+      if (dateTimeStr.includes('T') || dateTimeStr.includes('-')) {
+        return new Date(dateTimeStr);
+      } else {
+        // Try parsing as a timestamp (assuming ms)
+        return new Date(parseInt(dateTimeStr));
+      }
+    } catch (e) {
+      console.error('Error parsing date:', e);
+      return null;
+    }
+  };
+
   const formatDateTime = (dateTimeStr: string) => {
     try {
-      const date = new Date(dateTimeStr);
+      const date = parseDate(dateTimeStr);
+      if (!date || isNaN(date.getTime())) {
+        return dateTimeStr;
+      }
       return format(date, "MMM d, yyyy h:mm a");
     } catch (e) {
+      console.error('Error formatting datetime:', e);
       return dateTimeStr;
     }
   };
 
   const formatTime = (dateTimeStr: string) => {
     try {
-      const date = new Date(dateTimeStr);
+      const date = parseDate(dateTimeStr);
+      if (!date || isNaN(date.getTime())) {
+        return dateTimeStr;
+      }
       return format(date, "h:mm a");
     } catch (e) {
+      console.error('Error formatting time:', e);
       return dateTimeStr;
     }
   };
 
   const formatDate = (dateTimeStr: string) => {
     try {
-      const date = new Date(dateTimeStr);
+      const date = parseDate(dateTimeStr);
+      if (!date || isNaN(date.getTime())) {
+        return dateTimeStr;
+      }
       return format(date, "MMM d, yyyy");
     } catch (e) {
+      console.error('Error formatting date:', e);
       return dateTimeStr;
     }
   };
 
   const formatDuration = (departureTime: string, arrivalTime: string) => {
     try {
-      const departure = new Date(departureTime);
-      const arrival = new Date(arrivalTime);
+      const departure = parseDate(departureTime);
+      const arrival = parseDate(arrivalTime);
+      
+      // Validate dates are valid before calculating
+      if (!departure || !arrival || isNaN(departure.getTime()) || isNaN(arrival.getTime())) {
+        console.log('Invalid date format:', { departureTime, arrivalTime });
+        return "Unknown";
+      }
+      
       const durationMs = arrival.getTime() - departure.getTime();
       const hours = Math.floor(durationMs / (1000 * 60 * 60));
       const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
       return `${hours}h ${minutes}m`;
     } catch (e) {
-      return "Unknown duration";
+      console.error('Error formatting duration:', e);
+      return "Unknown";
     }
   };
 
