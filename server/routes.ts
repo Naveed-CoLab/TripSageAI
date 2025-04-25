@@ -1761,10 +1761,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         FROM flight_bookings fb
         LEFT JOIN booking_approvals ba ON ba.booking_id = fb.id AND ba.booking_type = 'flight'
         JOIN users u ON fb.user_id = u.id
-        WHERE (
-          (ba.status = 'pending' OR (ba.status IS NULL AND fb.status = 'pending'))
-          AND fb.status NOT IN ('CONFIRMED', 'CANCELLED', 'REJECTED')
-        ) 
+        WHERE (ba.status = 'pending' OR (ba.status IS NULL AND fb.status NOT IN ('CONFIRMED', 'CANCELLED', 'REJECTED')))
         ORDER BY fb.created_at DESC
       `;
       
@@ -1779,10 +1776,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         FROM hotel_bookings hb
         LEFT JOIN booking_approvals ba ON ba.booking_id = hb.id AND ba.booking_type = 'hotel'
         JOIN users u ON hb.user_id = u.id
-        WHERE (
-          (ba.status = 'pending' OR (ba.status IS NULL AND hb.status = 'pending'))
-          AND hb.status NOT IN ('CONFIRMED', 'CANCELLED', 'REJECTED')
-        )
+        WHERE (ba.status = 'pending' OR (ba.status IS NULL AND hb.status NOT IN ('CONFIRMED', 'CANCELLED', 'REJECTED')))
         ORDER BY hb.created_at DESC
       `;
       
