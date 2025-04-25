@@ -12,6 +12,7 @@ import {
   flightBookings,
   hotelSearches,
   hotelBookings,
+  adminLogs,
   type User, 
   type InsertUser, 
   type Trip, 
@@ -37,7 +38,9 @@ import {
   type HotelSearch,
   type InsertHotelSearch,
   type HotelBooking,
-  type InsertHotelBooking
+  type InsertHotelBooking,
+  type AdminLog,
+  type InsertAdminLog
 } from "@shared/schema";
 import { db, pool, query, transaction } from "./db";
 import { eq, and, desc, gte, count } from "drizzle-orm";
@@ -69,6 +72,11 @@ export interface IStorage {
   // Admin methods
   getTripCount(): Promise<number>;
   getNewTripCountToday(): Promise<number>;
+  
+  // Admin logs methods
+  createAdminLog(adminLog: InsertAdminLog): Promise<AdminLog>;
+  getAdminLogsByAdminId(adminId: number): Promise<AdminLog[]>;
+  getRecentAdminLogs(limit?: number): Promise<AdminLog[]>;
 
   // Trip methods
   getTripsByUserId(userId: number): Promise<Trip[]>;
