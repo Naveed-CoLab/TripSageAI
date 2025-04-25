@@ -1,7 +1,8 @@
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { apiRequest, queryClient } from "@/lib/queryClient";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useToast } from "@/hooks/use-toast";
+import { NOTIFICATION_SOUND } from "@/assets/notification-sound";
 
 type Notification = {
   id: number;
@@ -10,9 +11,11 @@ type Notification = {
   type: string;
   created_at: string;
   read_at: string | null;
+  is_read: boolean;
   user_id: number;
   admin_id: number;
   admin_username: string;
+  link?: string;
 }
 
 export function useNotifications() {
@@ -21,10 +24,13 @@ export function useNotifications() {
   const [hasNewNotification, setHasNewNotification] = useState(false);
   const [notificationSound] = useState(() => {
     if (typeof window !== 'undefined') {
-      return new Audio('/notification-sound.mp3');
+      return new Audio(NOTIFICATION_SOUND);
     }
     return null;
   });
+  
+  // Keep track of previous unread count to detect new notifications
+  const prevUnreadCountRef = useRef(0);
 
   // Fetch all notifications
   const { data: notifications = [], isLoading, refetch } = useQuery({
@@ -63,35 +69,45 @@ export function useNotifications() {
   useEffect(() => {
     // Calculate unread count
     if (notifications && notifications.length > 0) {
-      const unread = notifications.filter((n: Notification) => !n.read_at).length;
+      const unread = notifications.filter((n: Notification) => !n.read_at && !n.is_read).length;
       
-      // If unread count has increased, there's a new notification
-      if (unread > unreadCount) {
+      // If unread count has increased since last check, there's a new notification
+      if (unread > prevUnreadCountRef.current) {
         setHasNewNotification(true);
-        // Play sound if a notification arrives
-        if (notificationSound && unreadCount > 0) {
+        
+        // Play sound for new notifications
+        if (notificationSound) {
+          // Try to play the sound - mobile browsers may restrict this without user interaction
           notificationSound.play().catch(e => console.log('Error playing sound:', e));
           
           // Show toast for the newest notification
-          const newestNotification = notifications.filter((n: Notification) => !n.read_at)
+          const newestNotification = notifications
+            .filter((n: Notification) => !n.read_at && !n.is_read)
             .sort((a: Notification, b: Notification) => 
               new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
             )[0];
             
           if (newestNotification) {
+            // Map notification types to toast variants
+            let variant: 'default' | 'destructive' | undefined = 'default';
+            if (newestNotification.type === 'error') {
+              variant = 'destructive';
+            }
+            
             toast({
               title: newestNotification.title,
               description: newestNotification.message,
-              variant: newestNotification.type === 'success' ? 'default' : 
-                      newestNotification.type === 'error' ? 'destructive' : 'default',
+              variant: variant,
             });
           }
         }
       }
       
+      // Update state and refs
       setUnreadCount(unread);
+      prevUnreadCountRef.current = unread;
     }
-  }, [notifications, notificationSound, toast, unreadCount]);
+  }, [notifications, notificationSound, toast]);
 
   return {
     notifications,
