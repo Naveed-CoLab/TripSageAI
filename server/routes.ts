@@ -1692,8 +1692,63 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Admin Booking Management
   
+  // Utility function to add missing booking approvals
+  const addMissingBookingApprovals = async () => {
+    try {
+      // Find flight bookings with CONFIRMED status but no approval record
+      const flightQuery = `
+        SELECT fb.id
+        FROM flight_bookings fb
+        LEFT JOIN booking_approvals ba ON ba.booking_id = fb.id AND ba.booking_type = 'flight'
+        WHERE fb.status = 'CONFIRMED' AND ba.id IS NULL
+      `;
+      
+      const flightResult = await query(flightQuery);
+      
+      // For each missing approval, create one with approved status
+      for (const row of flightResult.rows) {
+        console.log(`Adding missing approval for confirmed flight booking ${row.id}`);
+        await query(
+          `INSERT INTO booking_approvals (booking_type, booking_id, status, admin_notes, created_at, updated_at) 
+           VALUES ($1, $2, $3, $4, NOW(), NOW())`,
+          ['flight', row.id, 'approved', 'Auto-created approval for confirmed booking']
+        );
+      }
+      
+      // Find hotel bookings with CONFIRMED status but no approval record
+      const hotelQuery = `
+        SELECT hb.id
+        FROM hotel_bookings hb
+        LEFT JOIN booking_approvals ba ON ba.booking_id = hb.id AND ba.booking_type = 'hotel'
+        WHERE hb.status = 'CONFIRMED' AND ba.id IS NULL
+      `;
+      
+      const hotelResult = await query(hotelQuery);
+      
+      // For each missing approval, create one with approved status
+      for (const row of hotelResult.rows) {
+        console.log(`Adding missing approval for confirmed hotel booking ${row.id}`);
+        await query(
+          `INSERT INTO booking_approvals (booking_type, booking_id, status, admin_notes, created_at, updated_at) 
+           VALUES ($1, $2, $3, $4, NOW(), NOW())`,
+          ['hotel', row.id, 'approved', 'Auto-created approval for confirmed booking']
+        );
+      }
+      
+      return {
+        fixedFlightBookings: flightResult.rowCount,
+        fixedHotelBookings: hotelResult.rowCount
+      };
+    } catch (error) {
+      console.error('Error fixing booking approvals:', error);
+      return { error: (error as Error).message };
+    }
+  };
+
   // Get all pending bookings that need approval
   app.get("/api/admin/bookings/pending", isAdmin, async (req: Request, res: Response) => {
+    // Fix any missing approvals first
+    await addMissingBookingApprovals();
     try {
       // Get pending flight bookings
       const flightBookingsQuery = `
@@ -1706,8 +1761,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         FROM flight_bookings fb
         LEFT JOIN booking_approvals ba ON ba.booking_id = fb.id AND ba.booking_type = 'flight'
         JOIN users u ON fb.user_id = u.id
-        WHERE (ba.status = 'pending' OR ba.status IS NULL)
-        AND fb.status NOT IN ('CONFIRMED', 'CANCELLED', 'REJECTED') 
+        WHERE (
+          (ba.status = 'pending' OR (ba.status IS NULL AND fb.status = 'pending'))
+          AND fb.status NOT IN ('CONFIRMED', 'CANCELLED', 'REJECTED')
+        ) 
         ORDER BY fb.created_at DESC
       `;
       
@@ -1722,8 +1779,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         FROM hotel_bookings hb
         LEFT JOIN booking_approvals ba ON ba.booking_id = hb.id AND ba.booking_type = 'hotel'
         JOIN users u ON hb.user_id = u.id
-        WHERE (ba.status = 'pending' OR ba.status IS NULL)
-        AND hb.status NOT IN ('CONFIRMED', 'CANCELLED', 'REJECTED')
+        WHERE (
+          (ba.status = 'pending' OR (ba.status IS NULL AND hb.status = 'pending'))
+          AND hb.status NOT IN ('CONFIRMED', 'CANCELLED', 'REJECTED')
+        )
         ORDER BY hb.created_at DESC
       `;
       
