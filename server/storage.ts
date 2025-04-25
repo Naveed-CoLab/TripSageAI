@@ -674,18 +674,18 @@ export class DatabaseStorage implements IStorage {
       // Use direct SQL query to bypass Drizzle ORM
       const query = `
         INSERT INTO flight_bookings (
-          user_id, flight_number, airline, departure_airport, departure_code, 
-          arrival_airport, arrival_code, trip_type, 
-          return_flight_number, return_airline, booking_reference, 
+          user_id, flight_number, airline, departure_airport, departure_code, departure_time,
+          arrival_airport, arrival_code, arrival_time, trip_type, 
+          return_flight_number, return_airline, return_departure_time, return_arrival_time, booking_reference, 
           price, currency, status, cabin_class, passenger_name, 
           passenger_email, passenger_phone, flight_details,
           created_at, updated_at
         ) VALUES (
-          $1, $2, $3, $4, $5, 
-          $6, $7, $8, 
-          $9, $10, $11, 
-          $12, $13, $14, $15, $16, 
-          $17, $18, $19,
+          $1, $2, $3, $4, $5, $6,
+          $7, $8, $9, $10, 
+          $11, $12, $13, $14, $15, 
+          $16, $17, $18, $19, $20, 
+          $21, $22, $23,
           NOW(), NOW()
         ) RETURNING *`;
         
@@ -695,11 +695,15 @@ export class DatabaseStorage implements IStorage {
         booking.airline,
         booking.departureAirport,
         booking.departureCode,
+        booking.departureTime,
         booking.arrivalAirport,
         booking.arrivalCode,
+        booking.arrivalTime,
         booking.tripType,
         booking.returnFlightNumber || null,
         booking.returnAirline || null,
+        booking.returnDepartureTime || null,
+        booking.returnArrivalTime || null,
         booking.bookingReference,
         booking.price,
         booking.currency || "USD",

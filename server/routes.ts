@@ -931,11 +931,15 @@ export async function registerRoutes(app: Express): Promise<Server> {
         airline: req.body.airline,
         departureAirport: req.body.departureAirport,
         departureCode: req.body.departureCode,
+        departureTime: req.body.departureTime || new Date().toISOString(), // Add default if missing
         arrivalAirport: req.body.arrivalAirport,
         arrivalCode: req.body.arrivalCode,
+        arrivalTime: req.body.arrivalTime || new Date().toISOString(), // Add default if missing
         tripType: req.body.tripType,
         returnFlightNumber: req.body.returnFlightNumber || null,
         returnAirline: req.body.returnAirline || null,
+        returnDepartureTime: req.body.returnDepartureTime || null,
+        returnArrivalTime: req.body.returnArrivalTime || null,
         bookingReference: req.body.bookingReference,
         price: req.body.price,
         currency: req.body.currency || "USD",
