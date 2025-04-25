@@ -50,9 +50,9 @@ function HotelBookingPage() {
     const data: Record<string, any> = {};
     
     // Extract all query parameters
-    for (const [key, value] of params.entries()) {
+    params.forEach((value, key) => {
       data[key] = value;
-    }
+    });
     
     if (
       !data.hotelId ||
