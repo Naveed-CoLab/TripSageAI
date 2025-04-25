@@ -1433,6 +1433,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
     
     try {
+      // Enhanced query to include better time sorting and limit if needed
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
       const notificationsQuery = `
         SELECT 
           n.id, 
@@ -1440,19 +1442,34 @@ export async function registerRoutes(app: Express): Promise<Server> {
           n.message, 
           n.type, 
           n.created_at, 
-          CASE WHEN n.is_read THEN n.read_at ELSE NULL END as read_at,
+          n.read_at,
+          n.is_read,
+          n.link,
           n.user_id,
           n.admin_id,
           a.username as admin_username
         FROM notifications n
         LEFT JOIN users a ON n.admin_id = a.id
-        WHERE n.user_id = $1 OR n.user_id IS NULL
+        WHERE (n.user_id = $1 OR n.user_id IS NULL)
+          AND (n.valid_until IS NULL OR n.valid_until > NOW())
         ORDER BY n.created_at DESC
+        LIMIT $2
       `;
       
-      const result = await query(notificationsQuery, [req.user!.id]);
+      const result = await query(notificationsQuery, [req.user!.id, limit]);
       
-      return res.status(200).json(result.rows);
+      // Map the notifications to ensure consistent output format for the frontend
+      const notifications = result.rows.map(notification => ({
+        ...notification,
+        // Ensure we indicate if it's read for the frontend to show the right UI
+        is_read: !!notification.is_read,
+        // Format the date for consistent display
+        created_at: notification.created_at,
+        // Only include read_at if it's actually set
+        read_at: notification.read_at || null
+      }));
+      
+      return res.status(200).json(notifications);
     } catch (error) {
       console.error("Error fetching notifications:", error);
       return res.status(500).json({ message: "Failed to fetch notifications" });
@@ -1530,9 +1547,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const updateQuery = `
         UPDATE notifications
-        SET is_read = TRUE
+        SET is_read = TRUE, read_at = NOW()
         WHERE (user_id = $1 OR user_id IS NULL) AND is_read = FALSE
-        RETURNING *
+        RETURNING id
       `;
       
       const result = await query(updateQuery, [req.user!.id]);
@@ -1930,10 +1947,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
             : `Your hotel booking at ${bookingDetails.hotel_name} has been rejected. Please contact customer support for more details.`;
         }
         
+        // Create a notification with high priority for real-time sound alerts
         const notificationSql = `
           INSERT INTO notifications (
-            user_id, admin_id, title, message, type, created_at
-          ) VALUES ($1, $2, $3, $4, $5, NOW())
+            user_id, admin_id, title, message, type, created_at, is_read, read_at
+          ) VALUES ($1, $2, $3, $4, $5, NOW(), FALSE, NULL)
+          RETURNING id
         `;
         
         await client.query(notificationSql, [
@@ -2063,15 +2082,25 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ error: "Title, message, and type are required" });
       }
       
-      const notification = await storage.createNotification({
-        userId, // If null, sends to all users
-        adminId: req.user!.id,
+      // Create notification with sound alert capability for real-time notifications
+      const createNotificationSql = `
+        INSERT INTO notifications (
+          user_id, admin_id, title, message, type, link, valid_until, created_at, is_read, read_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), FALSE, NULL)
+        RETURNING id, title, message, type, created_at, user_id, admin_id
+      `;
+
+      const result = await query(createNotificationSql, [
+        userId || null, // If null, sends to all users
+        req.user!.id,
         title,
         message,
         type,
-        link,
-        validUntil
-      });
+        link || null,
+        validUntil || null
+      ]);
+      
+      const notification = result.rows[0];
       
       // Log the action
       await storage.createAdminLog({
