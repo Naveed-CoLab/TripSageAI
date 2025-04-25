@@ -2318,11 +2318,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/logs", isAdmin, async (req: Request, res: Response) => {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      const type = req.query.type as string | undefined;
+      
+      // If type is specified, get specific search logs
+      if (type) {
+        const SQL = `
+          SELECT sa.id, sa.user_id, u.username as user_username, 
+                 sa.search_type, sa.search_term as query, 
+                 sa.results_count, sa.created_at
+          FROM search_analytics sa
+          JOIN users u ON sa.user_id = u.id
+          WHERE sa.search_type = $1
+          ORDER BY sa.created_at DESC
+          LIMIT $2
+        `;
+        
+        const result = await query(SQL, [type, limit]);
+        res.json(result.rows);
+        return;
+      }
+      
+      // Otherwise return admin logs
       const adminLogs = await storage.getRecentAdminLogs(limit);
       res.json(adminLogs);
     } catch (error) {
-      console.error('Error getting recent admin logs:', error);
-      res.status(500).json({ error: "Failed to get recent admin logs" });
+      console.error('Error getting logs:', error);
+      res.status(500).json({ error: "Failed to get logs" });
     }
   });
   
