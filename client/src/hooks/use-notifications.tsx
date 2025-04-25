@@ -31,6 +31,14 @@ export function useNotifications() {
   
   // Keep track of previous unread count to detect new notifications
   const prevUnreadCountRef = useRef(0);
+  
+  // Initialize prevUnreadCountRef once on initial load
+  useEffect(() => {
+    if (notifications && notifications.length > 0) {
+      const unread = notifications.filter((n: Notification) => !n.read_at && !n.is_read).length;
+      prevUnreadCountRef.current = unread;
+    }
+  }, [notifications]);
 
   // Fetch all notifications
   const { data: notifications = [], isLoading, refetch } = useQuery({

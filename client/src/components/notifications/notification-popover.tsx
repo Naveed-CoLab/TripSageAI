@@ -18,9 +18,11 @@ type Notification = {
   type: string;
   created_at: string;
   read_at: string | null;
+  is_read: boolean;
   user_id: number;
   admin_id: number;
   admin_username: string;
+  link?: string;
 }
 
 export default function NotificationPopover() {
@@ -35,8 +37,14 @@ export default function NotificationPopover() {
   }, [open, hasNewNotification, setHasNewNotification]);
 
   function handleNotificationClick(notification: Notification) {
-    if (!notification.read_at) {
+    // Check if notification is unread (using either field for compatibility)
+    if (!notification.read_at && !notification.is_read) {
       markAsRead(notification.id);
+    }
+    
+    // If notification has a link, navigate to it
+    if (notification.link) {
+      window.location.href = notification.link;
     }
   }
 
@@ -83,7 +91,7 @@ export default function NotificationPopover() {
                   key={notification.id}
                   className={cn(
                     "p-3 rounded-lg text-sm cursor-pointer hover:bg-gray-50 transition-colors",
-                    !notification.read_at && "bg-primary-50",
+                    (!notification.read_at && !notification.is_read) && "bg-primary-50",
                     notification.type === 'success' && "border-l-2 border-green-500",
                     notification.type === 'error' && "border-l-2 border-red-500",
                     notification.type === 'info' && "border-l-2 border-blue-500",
@@ -100,7 +108,7 @@ export default function NotificationPopover() {
                   <p className="mt-1 text-gray-700">{notification.message}</p>
                   <div className="mt-2 text-xs text-gray-500 flex items-center justify-between">
                     <span>From: {notification.admin_username || 'System'}</span>
-                    {!notification.read_at && <span className="text-primary-600 font-medium">New</span>}
+                    {(!notification.read_at && !notification.is_read) && <span className="text-primary-600 font-medium">New</span>}
                   </div>
                 </div>
               ))}
