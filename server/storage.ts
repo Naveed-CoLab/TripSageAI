@@ -170,10 +170,22 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createUser(insertUser: InsertUser): Promise<User> {
-    const keys = Object.keys(insertUser);
-    const values = Object.values(insertUser);
+    // Convert camelCase keys to snake_case for PostgreSQL column names
+    const processedData: Record<string, any> = {};
+    
+    for (const [key, value] of Object.entries(insertUser)) {
+      // Convert camelCase to snake_case
+      const snakeCaseKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+      processedData[snakeCaseKey] = value;
+    }
+    
+    const keys = Object.keys(processedData);
+    const values = Object.values(processedData);
     const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
     const columnNames = keys.join(', ');
+    
+    console.log("Creating user:", insertUser.username);
+    console.log("Column names:", columnNames);
     
     const SQL = `
       INSERT INTO users (${columnNames})
