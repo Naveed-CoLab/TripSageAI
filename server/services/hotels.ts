@@ -27,10 +27,10 @@ export class HotelService {
       
       await storage.createHotelSearch(hotelSearch);
       
-      console.log(`Searching for hotels in location: ${location}`);
+      console.log(`Searching for hotels in location: ${location} using Makcorps API`);
       
-      // Use our new hotel API service that doesn't rely on external APIs
-      const hotels = await hotelsApiService.searchHotels(location);
+      // Use the Makcorps API service for hotel search
+      const hotels = await makcorpsApiService.searchHotels(location);
       
       console.log(`Found ${hotels.length} hotels for location ${location}`);
       
@@ -48,10 +48,10 @@ export class HotelService {
    */
   async getHotelDetails(hotelId: string) {
     try {
-      console.log(`Getting details for hotel ID: ${hotelId}`);
+      console.log(`Getting details for hotel ID: ${hotelId} using Makcorps API`);
       
-      // Use our new hotel API service
-      const hotelDetail = await hotelsApiService.getHotelDetails(hotelId);
+      // Use the Makcorps API service
+      const hotelDetail = await makcorpsApiService.getHotelById(hotelId);
       
       if (!hotelDetail) {
         throw new Error(`Hotel with ID ${hotelId} not found`);

@@ -235,6 +235,11 @@ class MakcorpsApiService {
    */
   private mapToHotelResult(hotel: HotelSearchResponse): HotelResult {
     const roomTypes = hotel.availableRooms.map(room => room.roomType);
+    // Create unique array using filter instead of Set
+    const uniqueRoomTypes = roomTypes.filter((value, index, self) => 
+      self.indexOf(value) === index
+    );
+    
     return {
       id: hotel.hotelId,
       name: hotel.hotelName,
@@ -245,7 +250,7 @@ class MakcorpsApiService {
       price: hotel.price,
       currency: hotel.currency || 'USD',
       imageUrl: hotel.imageUrl,
-      roomTypes: [...new Set(roomTypes)], // Remove duplicates
+      roomTypes: uniqueRoomTypes,
     };
   }
   
@@ -264,6 +269,12 @@ class MakcorpsApiService {
       cancellationPolicy: room.cancellationPolicy || 'Free cancellation up to 24 hours before check-in',
     }));
     
+    // Create unique array of room types using filter instead of Set
+    const allRoomTypes = hotel.availableRooms.map(room => room.roomType);
+    const uniqueRoomTypes = allRoomTypes.filter((value, index, self) => 
+      self.indexOf(value) === index
+    );
+    
     return {
       id: hotel.hotelId,
       name: hotel.hotelName,
@@ -274,7 +285,7 @@ class MakcorpsApiService {
       price: hotel.price,
       currency: hotel.currency || 'USD',
       imageUrl: hotel.imageUrl,
-      roomTypes: [...new Set(hotel.availableRooms.map(room => room.roomType))], // Remove duplicates
+      roomTypes: uniqueRoomTypes,
       description: hotel.description || `Experience comfort and convenience at ${hotel.hotelName}, located in ${hotel.cityName}.`,
       amenities: hotel.amenities || ['Free WiFi', 'Air Conditioning', '24-hour front desk'],
       offers,
