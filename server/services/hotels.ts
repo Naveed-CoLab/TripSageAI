@@ -41,7 +41,7 @@ export class HotelService {
       
       // Process hotels and add additional images from Unsplash if needed
       const enhancedHotels = await Promise.all(
-        hotels.map(async (hotel) => {
+        hotels.map(async (hotel: any) => {
           // Check if hotel already has media
           if (hotel.media && hotel.media.length > 0) {
             return {
@@ -207,7 +207,7 @@ export class HotelService {
         currency: hotelDetail.offers && hotelDetail.offers.length > 0 
           ? hotelDetail.offers[0].price.currency 
           : 'USD',
-        roomTypes: [...new Set(roomTypes)], // Remove duplicates
+        roomTypes: Array.from(new Set(roomTypes)), // Remove duplicates
         imageUrl: hotelDetail.media && hotelDetail.media.length > 0 
           ? hotelDetail.media[0].uri 
           : await this.getGenericHotelImage(),

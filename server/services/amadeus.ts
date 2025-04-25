@@ -269,7 +269,7 @@ export interface HotelDetail {
   description?: {
     text: string;
   };
-  address: {
+  address?: {
     cityName: string;
     countryCode: string;
     lines: string[];

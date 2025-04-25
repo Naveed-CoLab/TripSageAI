@@ -16,6 +16,19 @@ declare module 'amadeus' {
           post(data: string): Promise<{ data: any }>;
         };
       };
+      
+      // Add Hotel APIs
+      hotelOffers: {
+        get(params: Record<string, any>): Promise<{ data: any[] }>;
+      };
+      
+      hotelOffersSearch: {
+        get(params: Record<string, any>): Promise<{ data: any[] }>;
+      };
+      
+      hotelOffersByHotel: {
+        get(params: { hotelId: string } & Record<string, any>): Promise<{ data: any }>;
+      };
     };
     
     referenceData: {
@@ -24,6 +37,9 @@ declare module 'amadeus' {
       };
       airlines: {
         get(params: { airlineCodes: string }): Promise<{ data: any[] }>;
+      };
+      hotels: {
+        get(params: { hotelIds: string | string[] }): Promise<{ data: any[] }>;
       };
     };
   }
