@@ -1085,7 +1085,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Get bookings for the user
       const bookings = await storage.getFlightBookingsByUserId(req.user!.id);
       
-      return res.status(200).json(bookings);
+      // Map snake_case database fields to camelCase for the frontend
+      const mappedBookings = bookings.map(booking => ({
+        id: booking.id,
+        userId: booking.user_id,
+        flightNumber: booking.flight_number,
+        airline: booking.airline,
+        departureAirport: booking.departure_airport,
+        departureCode: booking.departure_code,
+        departureTime: booking.departure_time,
+        arrivalAirport: booking.arrival_airport,
+        arrivalCode: booking.arrival_code,
+        arrivalTime: booking.arrival_time,
+        tripType: booking.trip_type,
+        returnFlightNumber: booking.return_flight_number,
+        returnAirline: booking.return_airline,
+        returnDepartureTime: booking.return_departure_time,
+        returnArrivalTime: booking.return_arrival_time,
+        bookingReference: booking.booking_reference,
+        price: booking.price,
+        currency: booking.currency,
+        status: booking.status,
+        cabinClass: booking.cabin_class,
+        passengerName: booking.passenger_name,
+        passengerEmail: booking.passenger_email,
+        passengerPhone: booking.passenger_phone,
+        flightDetails: booking.flight_details,
+        createdAt: booking.created_at
+      }));
+      
+      return res.status(200).json(mappedBookings);
     } catch (error) {
       console.error("Error fetching flight bookings:", error);
       return res.status(500).json({ message: "Failed to fetch flight bookings" });
@@ -1112,11 +1141,40 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
 
       // Check if the booking belongs to the user
-      if (booking.userId !== req.user!.id) {
+      if (booking.user_id !== req.user!.id) {
         return res.status(403).json({ message: "You do not have permission to view this booking" });
       }
       
-      return res.status(200).json(booking);
+      // Map snake_case database fields to camelCase for the frontend
+      const mappedBooking = {
+        id: booking.id,
+        userId: booking.user_id,
+        flightNumber: booking.flight_number,
+        airline: booking.airline,
+        departureAirport: booking.departure_airport,
+        departureCode: booking.departure_code,
+        departureTime: booking.departure_time,
+        arrivalAirport: booking.arrival_airport,
+        arrivalCode: booking.arrival_code,
+        arrivalTime: booking.arrival_time,
+        tripType: booking.trip_type,
+        returnFlightNumber: booking.return_flight_number,
+        returnAirline: booking.return_airline,
+        returnDepartureTime: booking.return_departure_time,
+        returnArrivalTime: booking.return_arrival_time,
+        bookingReference: booking.booking_reference,
+        price: booking.price,
+        currency: booking.currency,
+        status: booking.status,
+        cabinClass: booking.cabin_class,
+        passengerName: booking.passenger_name,
+        passengerEmail: booking.passenger_email,
+        passengerPhone: booking.passenger_phone,
+        flightDetails: booking.flight_details,
+        createdAt: booking.created_at
+      };
+      
+      return res.status(200).json(mappedBooking);
     } catch (error) {
       console.error("Error fetching flight booking:", error);
       return res.status(500).json({ message: "Failed to fetch flight booking" });
