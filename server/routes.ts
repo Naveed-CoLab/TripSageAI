@@ -22,6 +22,11 @@ import { promisify } from "util";
 // Crypto helpers for password hashing and comparison
 const scryptAsync = promisify(scrypt);
 
+async function scryptHash(password: string, salt: string): Promise<string> {
+  const buf = (await scryptAsync(password, salt, 64)) as Buffer;
+  return buf.toString("hex");
+}
+
 async function hashPassword(password: string) {
   const salt = randomBytes(16).toString("hex");
   const buf = (await scryptAsync(password, salt, 64)) as Buffer;
@@ -1556,6 +1561,71 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Add new user (admin only)
+  app.post("/api/admin/users", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const { username, email, password, role, firstName, lastName } = req.body;
+      
+      // Validate required fields
+      if (!username || !email || !password) {
+        return res.status(400).json({ error: "Username, email, and password are required" });
+      }
+      
+      // Check if user already exists
+      const checkUserSql = `SELECT * FROM users WHERE username = $1 OR email = $2`;
+      const checkResult = await query(checkUserSql, [username, email]);
+      
+      if (checkResult.rows.length > 0) {
+        return res.status(400).json({ error: "Username or email already exists" });
+      }
+      
+      // Hash the password
+      const salt = randomBytes(16).toString('hex');
+      const hashedPassword = await scryptHash(password, salt);
+      const passwordWithSalt = `${hashedPassword}.${salt}`;
+      
+      // Insert the new user
+      const insertUserSql = `
+        INSERT INTO users (
+          username, email, password, role, first_name, last_name, is_active, created_at, updated_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), NOW())
+        RETURNING id, username, email, role, first_name, last_name, is_active, created_at, updated_at
+      `;
+      
+      const userResult = await query(insertUserSql, [
+        username,
+        email,
+        passwordWithSalt, 
+        role || 'user',
+        firstName || null,
+        lastName || null,
+        true
+      ]);
+      
+      const newUser = userResult.rows[0];
+      
+      // Log the admin action
+      const adminLogSql = `
+        INSERT INTO admin_logs (
+          admin_id, action, entity_type, entity_id, details, created_at
+        ) VALUES ($1, $2, $3, $4, $5, NOW())
+      `;
+      
+      await query(adminLogSql, [
+        req.user!.id,
+        'create_user',
+        'user',
+        newUser.id,
+        `Admin created new user '${username}' with role '${role || 'user'}'`
+      ]);
+      
+      res.status(201).json(newUser);
+    } catch (error) {
+      console.error('Error creating user:', error);
+      res.status(500).json({ error: "Failed to create user" });
+    }
+  });
+  
   // Update user status (activate/deactivate)
   app.put("/api/admin/users/:userId/status", isAdmin, async (req: Request, res: Response) => {
     try {
@@ -1622,6 +1692,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
   
   // Admin Booking Management
   
+  // Get all pending bookings that need approval
+  app.get("/api/admin/bookings/pending", isAdmin, async (req: Request, res: Response) => {
+    try {
+      // Get pending flight bookings
+      const flightBookingsQuery = `
+        SELECT fb.*, 
+               COALESCE(ba.status, 'pending') as approval_status,
+               ba.admin_notes as approval_notes,
+               ba.updated_at as approval_updated_at,
+               u.username as user_username,
+               u.email as user_email
+        FROM flight_bookings fb
+        LEFT JOIN booking_approvals ba ON ba.booking_id = fb.id AND ba.booking_type = 'flight'
+        JOIN users u ON fb.user_id = u.id
+        WHERE ba.status = 'pending' OR ba.status IS NULL
+        ORDER BY fb.created_at DESC
+      `;
+      
+      // Get pending hotel bookings
+      const hotelBookingsQuery = `
+        SELECT hb.*, 
+               COALESCE(ba.status, 'pending') as approval_status,
+               ba.admin_notes as approval_notes,
+               ba.updated_at as approval_updated_at,
+               u.username as user_username,
+               u.email as user_email
+        FROM hotel_bookings hb
+        LEFT JOIN booking_approvals ba ON ba.booking_id = hb.id AND ba.booking_type = 'hotel'
+        JOIN users u ON hb.user_id = u.id
+        WHERE ba.status = 'pending' OR ba.status IS NULL
+        ORDER BY hb.created_at DESC
+      `;
+      
+      const flightResult = await query(flightBookingsQuery);
+      const hotelResult = await query(hotelBookingsQuery);
+      
+      return res.status(200).json({
+        flights: flightResult.rows.map(booking => ({ 
+          ...booking, 
+          bookingType: 'flight',
+          approvalStatus: booking.approval_status,
+          approvalNotes: booking.approval_notes,
+          approvalUpdated: booking.approval_updated_at
+        })),
+        hotels: hotelResult.rows.map(booking => ({ 
+          ...booking, 
+          bookingType: 'hotel',
+          approvalStatus: booking.approval_status,
+          approvalNotes: booking.approval_notes,
+          approvalUpdated: booking.approval_updated_at
+        }))
+      });
+    } catch (error) {
+      console.error("Error fetching pending bookings:", error);
+      return res.status(500).json({ error: "Failed to fetch pending bookings" });
+    }
+  });
+  
   // Get booking approvals
   app.get("/api/admin/booking-approvals", isAdmin, async (req: Request, res: Response) => {
     try {
@@ -1636,7 +1764,136 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
-  // Update booking approval status
+  // Approve or reject a booking
+  app.put("/api/admin/bookings/:bookingType/:id/status", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const bookingId = parseInt(req.params.id);
+      const bookingType = req.params.bookingType; // 'flight' or 'hotel'
+      const { status, notes } = req.body;
+      
+      if (!bookingId || isNaN(bookingId)) {
+        return res.status(400).json({ error: "Invalid booking ID" });
+      }
+      
+      if (!['approved', 'rejected'].includes(status)) {
+        return res.status(400).json({ error: "Status must be 'approved' or 'rejected'" });
+      }
+      
+      if (!['flight', 'hotel'].includes(bookingType)) {
+        return res.status(400).json({ error: "Booking type must be 'flight' or 'hotel'" });
+      }
+      
+      // Use a transaction to update booking approval status and send notification
+      const client = await pool.connect();
+      let userId, bookingDetails;
+      
+      try {
+        await client.query('BEGIN');
+        
+        // Update booking approval status
+        const updateApprovalSql = `
+          UPDATE booking_approvals
+          SET status = $1, admin_notes = $2, updated_at = NOW()
+          WHERE booking_id = $3 AND booking_type = $4
+          RETURNING *
+        `;
+        
+        const approvalResult = await client.query(updateApprovalSql, [
+          status, 
+          notes || `Booking ${status} by admin`, 
+          bookingId,
+          bookingType
+        ]);
+        
+        if (approvalResult.rows.length === 0) {
+          throw new Error(`No booking approval record found for ${bookingType} booking ID ${bookingId}`);
+        }
+        
+        // Update the main booking status
+        const tableName = bookingType === 'flight' ? 'flight_bookings' : 'hotel_bookings';
+        const updateBookingSql = `
+          UPDATE ${tableName}
+          SET status = $1, updated_at = NOW()
+          WHERE id = $2
+          RETURNING *, user_id
+        `;
+        
+        const newStatus = status === 'approved' ? 'CONFIRMED' : 'REJECTED';
+        const bookingResult = await client.query(updateBookingSql, [newStatus, bookingId]);
+        
+        if (bookingResult.rows.length === 0) {
+          throw new Error(`No ${bookingType} booking found with ID ${bookingId}`);
+        }
+        
+        // Get necessary booking details for notification
+        bookingDetails = bookingResult.rows[0];
+        userId = bookingDetails.user_id;
+        
+        // Log the admin action
+        const adminLogSql = `
+          INSERT INTO admin_logs (
+            admin_id, action, entity_type, entity_id, details, created_at
+          ) VALUES ($1, $2, $3, $4, $5, NOW())
+        `;
+        
+        await client.query(adminLogSql, [
+          req.user!.id,
+          `${status}_booking`,
+          `${bookingType}_booking`,
+          bookingId,
+          `${bookingType.charAt(0).toUpperCase() + bookingType.slice(1)} booking ${status} with ID ${bookingId}`
+        ]);
+        
+        // Create notification for the user
+        const notificationTitle = status === 'approved' 
+          ? `${bookingType.charAt(0).toUpperCase() + bookingType.slice(1)} Booking Confirmed`
+          : `${bookingType.charAt(0).toUpperCase() + bookingType.slice(1)} Booking Rejected`;
+          
+        let notificationMessage;
+        
+        if (bookingType === 'flight') {
+          notificationMessage = status === 'approved'
+            ? `Your flight booking (${bookingDetails.airline} ${bookingDetails.flight_number}) has been confirmed. Safe travels!`
+            : `Your flight booking (${bookingDetails.airline} ${bookingDetails.flight_number}) has been rejected. Please contact customer support for more details.`;
+        } else {
+          notificationMessage = status === 'approved'
+            ? `Your hotel booking at ${bookingDetails.hotel_name} for ${bookingDetails.check_in_date} to ${bookingDetails.check_out_date} has been confirmed. Enjoy your stay!`
+            : `Your hotel booking at ${bookingDetails.hotel_name} has been rejected. Please contact customer support for more details.`;
+        }
+        
+        const notificationSql = `
+          INSERT INTO notifications (
+            user_id, admin_id, title, message, type, created_at
+          ) VALUES ($1, $2, $3, $4, $5, NOW())
+        `;
+        
+        await client.query(notificationSql, [
+          userId,
+          req.user!.id,
+          notificationTitle,
+          notificationMessage,
+          status === 'approved' ? 'success' : 'error'
+        ]);
+        
+        await client.query('COMMIT');
+        
+        return res.status(200).json({ 
+          message: `Booking ${status} successfully`, 
+          bookingDetails 
+        });
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        client.release();
+      }
+    } catch (error) {
+      console.error(`Error updating booking status:`, error);
+      return res.status(500).json({ error: "Failed to update booking status" });
+    }
+  });
+  
+  // Update booking approval status (legacy endpoint)
   app.put("/api/admin/booking-approvals/:approvalId", isAdmin, async (req: Request, res: Response) => {
     try {
       const approvalId = parseInt(req.params.approvalId);
@@ -2066,6 +2323,359 @@ export async function registerRoutes(app: Express): Promise<Server> {
     } catch (error) {
       console.error('Error getting recent admin logs:', error);
       res.status(500).json({ error: "Failed to get recent admin logs" });
+    }
+  });
+  
+  // Admin Dashboard Summary Statistics
+  app.get("/api/admin/stats/users", isAdmin, async (req: Request, res: Response) => {
+    try {
+      // Total users count
+      const totalUsersQuery = `SELECT COUNT(*) as count FROM users`;
+      const totalUsersResult = await query(totalUsersQuery);
+      const totalUsers = parseInt(totalUsersResult.rows[0].count);
+      
+      // New users today
+      const newUsersTodayQuery = `
+        SELECT COUNT(*) as count 
+        FROM users 
+        WHERE created_at >= CURRENT_DATE
+      `;
+      const newUsersTodayResult = await query(newUsersTodayQuery);
+      const newUsersToday = parseInt(newUsersTodayResult.rows[0].count);
+      
+      // New users this month
+      const newUsersMonthQuery = `
+        SELECT COUNT(*) as count 
+        FROM users 
+        WHERE created_at >= DATE_TRUNC('month', CURRENT_DATE)
+      `;
+      const newUsersMonthResult = await query(newUsersMonthQuery);
+      const newUsersThisMonth = parseInt(newUsersMonthResult.rows[0].count);
+      
+      // User registration over time (last 7 days)
+      const usersTrendQuery = `
+        SELECT 
+          DATE(created_at) as date,
+          COUNT(*) as count
+        FROM users
+        WHERE created_at >= CURRENT_DATE - INTERVAL '7 days'
+        GROUP BY DATE(created_at)
+        ORDER BY date
+      `;
+      const usersTrendResult = await query(usersTrendQuery);
+      
+      // Active vs inactive users
+      const userStatusQuery = `
+        SELECT 
+          is_active,
+          COUNT(*) as count
+        FROM users
+        GROUP BY is_active
+      `;
+      const userStatusResult = await query(userStatusQuery);
+      
+      // Role distribution
+      const roleDistributionQuery = `
+        SELECT 
+          role,
+          COUNT(*) as count
+        FROM users
+        GROUP BY role
+      `;
+      const roleDistributionResult = await query(roleDistributionQuery);
+      
+      res.json({
+        totalUsers,
+        newUsersToday,
+        newUsersThisMonth,
+        usersTrend: usersTrendResult.rows,
+        userStatus: userStatusResult.rows,
+        roleDistribution: roleDistributionResult.rows
+      });
+    } catch (error) {
+      console.error('Error getting user stats:', error);
+      res.status(500).json({ error: "Failed to get user statistics" });
+    }
+  });
+  
+  app.get("/api/admin/stats/trips", isAdmin, async (req: Request, res: Response) => {
+    try {
+      // Total trips count
+      const totalTripsQuery = `SELECT COUNT(*) as count FROM trips`;
+      const totalTripsResult = await query(totalTripsQuery);
+      const totalTrips = parseInt(totalTripsResult.rows[0].count);
+      
+      // New trips today
+      const newTripsTodayQuery = `
+        SELECT COUNT(*) as count 
+        FROM trips 
+        WHERE created_at >= CURRENT_DATE
+      `;
+      const newTripsTodayResult = await query(newTripsTodayQuery);
+      const newTripsToday = parseInt(newTripsTodayResult.rows[0].count);
+      
+      // Trip creation trend (last 7 days)
+      const tripsTrendQuery = `
+        SELECT 
+          DATE(created_at) as date,
+          COUNT(*) as count
+        FROM trips
+        WHERE created_at >= CURRENT_DATE - INTERVAL '7 days'
+        GROUP BY DATE(created_at)
+        ORDER BY date
+      `;
+      const tripsTrendResult = await query(tripsTrendQuery);
+      
+      // Most popular destinations
+      const popularDestinationsQuery = `
+        SELECT 
+          destination,
+          COUNT(*) as trip_count
+        FROM trips
+        GROUP BY destination
+        ORDER BY trip_count DESC
+        LIMIT 5
+      `;
+      const popularDestinationsResult = await query(popularDestinationsQuery);
+      
+      res.json({
+        totalTrips,
+        newTripsToday,
+        tripsTrend: tripsTrendResult.rows,
+        popularDestinations: popularDestinationsResult.rows
+      });
+    } catch (error) {
+      console.error('Error getting trip stats:', error);
+      res.status(500).json({ error: "Failed to get trip statistics" });
+    }
+  });
+  
+  app.get("/api/admin/stats/bookings", isAdmin, async (req: Request, res: Response) => {
+    try {
+      // Total bookings count
+      const flightBookingsQuery = `SELECT COUNT(*) as count FROM flight_bookings`;
+      const flightBookingsResult = await query(flightBookingsQuery);
+      const totalFlightBookings = parseInt(flightBookingsResult.rows[0].count);
+      
+      const hotelBookingsQuery = `SELECT COUNT(*) as count FROM hotel_bookings`;
+      const hotelBookingsResult = await query(hotelBookingsQuery);
+      const totalHotelBookings = parseInt(hotelBookingsResult.rows[0].count);
+      
+      // Bookings by status
+      const flightStatusQuery = `
+        SELECT 
+          status,
+          COUNT(*) as count
+        FROM flight_bookings
+        GROUP BY status
+      `;
+      const flightStatusResult = await query(flightStatusQuery);
+      
+      const hotelStatusQuery = `
+        SELECT 
+          status,
+          COUNT(*) as count
+        FROM hotel_bookings
+        GROUP BY status
+      `;
+      const hotelStatusResult = await query(hotelStatusQuery);
+      
+      // Recent bookings (last 7 days)
+      const recentBookingsQuery = `
+        SELECT 
+          'flight' as type,
+          created_at,
+          price,
+          status
+        FROM flight_bookings
+        WHERE created_at >= CURRENT_DATE - INTERVAL '7 days'
+        UNION ALL
+        SELECT 
+          'hotel' as type,
+          created_at,
+          price,
+          status
+        FROM hotel_bookings
+        WHERE created_at >= CURRENT_DATE - INTERVAL '7 days'
+        ORDER BY created_at DESC
+        LIMIT 10
+      `;
+      const recentBookingsResult = await query(recentBookingsQuery);
+      
+      // Revenue by day (last 7 days)
+      const revenueQuery = `
+        SELECT 
+          DATE(created_at) as date,
+          SUM(price) as revenue,
+          COUNT(*) as booking_count
+        FROM (
+          SELECT created_at, price FROM flight_bookings
+          UNION ALL
+          SELECT created_at, price FROM hotel_bookings
+        ) as all_bookings
+        WHERE created_at >= CURRENT_DATE - INTERVAL '7 days'
+        GROUP BY DATE(created_at)
+        ORDER BY date
+      `;
+      const revenueResult = await query(revenueQuery);
+      
+      // Pending approvals count
+      const pendingApprovalsQuery = `
+        SELECT COUNT(*) as count 
+        FROM booking_approvals
+        WHERE status = 'pending'
+      `;
+      const pendingApprovalsResult = await query(pendingApprovalsQuery);
+      const pendingApprovals = parseInt(pendingApprovalsResult.rows[0].count);
+      
+      res.json({
+        totalBookings: totalFlightBookings + totalHotelBookings,
+        flightBookings: {
+          total: totalFlightBookings,
+          byStatus: flightStatusResult.rows
+        },
+        hotelBookings: {
+          total: totalHotelBookings,
+          byStatus: hotelStatusResult.rows
+        },
+        recentBookings: recentBookingsResult.rows,
+        revenueByDay: revenueResult.rows,
+        pendingApprovals
+      });
+    } catch (error) {
+      console.error('Error getting booking stats:', error);
+      res.status(500).json({ error: "Failed to get booking statistics" });
+    }
+  });
+  
+  app.get("/api/admin/stats/destinations", isAdmin, async (req: Request, res: Response) => {
+    try {
+      // Total destinations count
+      const totalDestinationsQuery = `SELECT COUNT(*) as count FROM destinations`;
+      const totalDestinationsResult = await query(totalDestinationsQuery);
+      const totalDestinations = parseInt(totalDestinationsResult.rows[0].count);
+      
+      // Most popular destinations (based on trips)
+      const popularDestinationsQuery = `
+        SELECT 
+          d.name,
+          d.country,
+          COUNT(t.id) as trip_count
+        FROM destinations d
+        LEFT JOIN trips t ON d.name = t.destination
+        GROUP BY d.id, d.name, d.country
+        ORDER BY trip_count DESC
+        LIMIT 5
+      `;
+      const popularDestinationsResult = await query(popularDestinationsQuery);
+      
+      // Destinations by continent/region
+      const destinationsByRegionQuery = `
+        SELECT 
+          region,
+          COUNT(*) as count
+        FROM destinations
+        GROUP BY region
+        ORDER BY count DESC
+      `;
+      const destinationsByRegionResult = await query(destinationsByRegionQuery);
+      
+      res.json({
+        totalDestinations,
+        mostPopular: popularDestinationsResult.rows,
+        byRegion: destinationsByRegionResult.rows
+      });
+    } catch (error) {
+      console.error('Error getting destination stats:', error);
+      res.status(500).json({ error: "Failed to get destination statistics" });
+    }
+  });
+  
+  // Dashboard summary (combined stats)
+  app.get("/api/admin/dashboard-summary", isAdmin, async (req: Request, res: Response) => {
+    try {
+      // Users count
+      const usersCountQuery = `SELECT COUNT(*) as count FROM users`;
+      const usersResult = await query(usersCountQuery);
+      const totalUsers = parseInt(usersResult.rows[0].count);
+      
+      // Trips count
+      const tripsCountQuery = `SELECT COUNT(*) as count FROM trips`;
+      const tripsResult = await query(tripsCountQuery);
+      const totalTrips = parseInt(tripsResult.rows[0].count);
+      
+      // Bookings count
+      const bookingsCountQuery = `
+        SELECT 
+          (SELECT COUNT(*) FROM flight_bookings) +
+          (SELECT COUNT(*) FROM hotel_bookings) as count
+      `;
+      const bookingsResult = await query(bookingsCountQuery);
+      const totalBookings = parseInt(bookingsResult.rows[0].count);
+      
+      // Pending approvals
+      const pendingApprovalsQuery = `
+        SELECT COUNT(*) as count FROM booking_approvals
+        WHERE status = 'pending'
+      `;
+      const pendingResult = await query(pendingApprovalsQuery);
+      const pendingApprovals = parseInt(pendingResult.rows[0].count);
+      
+      // Recent booking activity
+      const recentActivityQuery = `
+        SELECT 
+          'flight' as type,
+          fb.id,
+          u.username,
+          fb.created_at,
+          fb.price,
+          fb.status,
+          ba.status as approval_status
+        FROM flight_bookings fb
+        JOIN users u ON fb.user_id = u.id
+        LEFT JOIN booking_approvals ba ON ba.booking_id = fb.id AND ba.booking_type = 'flight'
+        UNION ALL
+        SELECT 
+          'hotel' as type,
+          hb.id,
+          u.username,
+          hb.created_at,
+          hb.price,
+          hb.status,
+          ba.status as approval_status
+        FROM hotel_bookings hb
+        JOIN users u ON hb.user_id = u.id
+        LEFT JOIN booking_approvals ba ON ba.booking_id = hb.id AND ba.booking_type = 'hotel'
+        ORDER BY created_at DESC
+        LIMIT 5
+      `;
+      const recentActivityResult = await query(recentActivityQuery);
+      
+      // Revenue summary
+      const revenueQuery = `
+        SELECT 
+          SUM(price) as total_revenue,
+          AVG(price) as average_price,
+          COUNT(*) as transaction_count
+        FROM (
+          SELECT price FROM flight_bookings
+          UNION ALL
+          SELECT price FROM hotel_bookings
+        ) as all_bookings
+      `;
+      const revenueResult = await query(revenueQuery);
+      
+      res.json({
+        totalUsers,
+        totalTrips,
+        totalBookings,
+        pendingApprovals,
+        recentActivity: recentActivityResult.rows,
+        revenue: revenueResult.rows[0]
+      });
+    } catch (error) {
+      console.error('Error getting dashboard summary:', error);
+      res.status(500).json({ error: "Failed to get dashboard summary" });
     }
   });
 
