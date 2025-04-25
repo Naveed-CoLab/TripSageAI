@@ -46,6 +46,9 @@ export default function BookingsPage() {
   const { data: bookings, isLoading, error } = useQuery<FlightBooking[]>({
     queryKey: ["/api/flight-bookings"],
     enabled: !!user,
+    onSuccess: (data) => {
+      console.log("Flight bookings data:", data);
+    }
   });
 
   if (isLoading) {
