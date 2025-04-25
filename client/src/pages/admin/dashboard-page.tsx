@@ -59,6 +59,51 @@ export default function DashboardPage() {
     totalDestinations: number;
     mostPopular: string | null;
   }
+  
+  interface BookingStats {
+    totalBookings: number;
+    flightBookings: {
+      total: number;
+      byStatus: { status: string; count: number }[];
+    };
+    hotelBookings: {
+      total: number;
+      byStatus: { status: string; count: number }[];
+    };
+    pendingApprovals: number;
+    recentBookings: {
+      type: string;
+      created_at: string;
+      price: number;
+      status: string;
+    }[];
+  }
+  
+  interface PendingBooking {
+    id: number;
+    user_username: string;
+    user_email: string;
+    created_at: string;
+    price: number;
+    status: string;
+    approval_status: string;
+    bookingType: string;
+    
+    // Flight specific
+    airline?: string;
+    flight_number?: string;
+    departure_date?: string;
+    
+    // Hotel specific
+    hotel_name?: string;
+    check_in_date?: string;
+    check_out_date?: string;
+  }
+  
+  interface PendingBookingsData {
+    flights: PendingBooking[];
+    hotels: PendingBooking[];
+  }
 
   const { data: userStats, isLoading: isLoadingUserStats } = useQuery<UserStats>({
     queryKey: ["/api/admin/stats/users"],
@@ -77,6 +122,18 @@ export default function DashboardPage() {
     queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!user && user.role === "admin",
   });
+  
+  const { data: bookingStats, isLoading: isLoadingBookingStats } = useQuery<BookingStats>({
+    queryKey: ["/api/admin/stats/bookings"],
+    queryFn: getQueryFn({ on401: "throw" }),
+    enabled: !!user && user.role === "admin",
+  });
+  
+  const { data: pendingBookings, isLoading: isLoadingPendingBookings } = useQuery<PendingBookingsData>({
+    queryKey: ["/api/admin/bookings/pending"],
+    queryFn: getQueryFn({ on401: "throw" }),
+    enabled: !!user && user.role === "admin" && activeMenuItem === "bookings",
+  });
 
   const handleLogout = () => {
     logoutMutation.mutate();
@@ -93,11 +150,14 @@ export default function DashboardPage() {
 
   const menuItems = [
     { id: "dashboard", label: "Dashboard", icon: <LayoutDashboard className="h-5 w-5" /> },
+    { id: "bookings", label: "Booking Management", icon: <BellRing className="h-5 w-5" /> },
     { id: "users", label: "User Management", icon: <Users className="h-5 w-5" /> },
     { id: "destinations", label: "Destinations", icon: <Map className="h-5 w-5" /> },
     { id: "itineraries", label: "Itineraries", icon: <BarChart3 className="h-5 w-5" /> },
+    { id: "searchLogs", label: "Search History", icon: <Search className="h-5 w-5" /> },
     { id: "chat", label: "User Chat Logs", icon: <MessageSquareText className="h-5 w-5" /> },
     { id: "aiPrompts", label: "AI Settings", icon: <Brain className="h-5 w-5" /> },
+    { id: "analytics", label: "Analytics", icon: <BarChart3 className="h-5 w-5" /> },
     { id: "settings", label: "Settings", icon: <Settings className="h-5 w-5" /> },
   ];
 
@@ -357,6 +417,205 @@ export default function DashboardPage() {
                   {/* More user rows would go here */}
                 </div>
               </div>
+            </div>
+          )}
+          
+          {activeMenuItem === "bookings" && (
+            <div className="bg-white p-6 rounded-lg shadow-sm">
+              <div className="flex justify-between items-center mb-6">
+                <h3 className="text-xl font-semibold">Booking Management</h3>
+              </div>
+              
+              <Tabs defaultValue="pending" className="w-full">
+                <TabsList className="mb-4">
+                  <TabsTrigger value="pending">Pending Approvals</TabsTrigger>
+                  <TabsTrigger value="flights">Flight Bookings</TabsTrigger>
+                  <TabsTrigger value="hotels">Hotel Bookings</TabsTrigger>
+                  <TabsTrigger value="history">Booking History</TabsTrigger>
+                </TabsList>
+                
+                <TabsContent value="pending">
+                  <div className="space-y-4">
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Pending Flight Bookings</CardTitle>
+                        <CardDescription>
+                          Flight bookings waiting for admin approval
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        {isLoadingPendingBookings ? (
+                          <div className="flex justify-center py-10">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                          </div>
+                        ) : pendingBookings?.flights && pendingBookings.flights.length > 0 ? (
+                          <div className="border rounded-lg">
+                            <div className="grid grid-cols-7 gap-2 p-3 border-b bg-slate-50 font-medium text-sm">
+                              <div>User</div>
+                              <div>Airline</div>
+                              <div>Flight</div>
+                              <div>Date</div>
+                              <div>Price</div>
+                              <div>Status</div>
+                              <div>Actions</div>
+                            </div>
+                            <div className="divide-y">
+                              {pendingBookings.flights.map((booking) => (
+                                <div key={booking.id} className="grid grid-cols-7 gap-2 p-3 items-center text-sm">
+                                  <div>{booking.user_username}</div>
+                                  <div>{booking.airline}</div>
+                                  <div>{booking.flight_number}</div>
+                                  <div>{new Date(booking.departure_date || "").toLocaleDateString()}</div>
+                                  <div>${booking.price?.toFixed(2)}</div>
+                                  <div>
+                                    <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs">
+                                      {booking.approval_status}
+                                    </span>
+                                  </div>
+                                  <div className="flex space-x-2">
+                                    <Button variant="outline" size="sm" className="text-green-500">Approve</Button>
+                                    <Button variant="outline" size="sm" className="text-red-500">Reject</Button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-center py-10 text-muted-foreground">
+                            No pending flight bookings found
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                    
+                    <Card>
+                      <CardHeader>
+                        <CardTitle>Pending Hotel Bookings</CardTitle>
+                        <CardDescription>
+                          Hotel bookings waiting for admin approval
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        {isLoadingPendingBookings ? (
+                          <div className="flex justify-center py-10">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                          </div>
+                        ) : pendingBookings?.hotels && pendingBookings.hotels.length > 0 ? (
+                          <div className="border rounded-lg">
+                            <div className="grid grid-cols-7 gap-2 p-3 border-b bg-slate-50 font-medium text-sm">
+                              <div>User</div>
+                              <div>Hotel</div>
+                              <div>Check-in</div>
+                              <div>Check-out</div>
+                              <div>Price</div>
+                              <div>Status</div>
+                              <div>Actions</div>
+                            </div>
+                            <div className="divide-y">
+                              {pendingBookings.hotels.map((booking) => (
+                                <div key={booking.id} className="grid grid-cols-7 gap-2 p-3 items-center text-sm">
+                                  <div>{booking.user_username}</div>
+                                  <div>{booking.hotel_name}</div>
+                                  <div>{new Date(booking.check_in_date || "").toLocaleDateString()}</div>
+                                  <div>{new Date(booking.check_out_date || "").toLocaleDateString()}</div>
+                                  <div>${booking.price?.toFixed(2)}</div>
+                                  <div>
+                                    <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs">
+                                      {booking.approval_status}
+                                    </span>
+                                  </div>
+                                  <div className="flex space-x-2">
+                                    <Button variant="outline" size="sm" className="text-green-500">Approve</Button>
+                                    <Button variant="outline" size="sm" className="text-red-500">Reject</Button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="text-center py-10 text-muted-foreground">
+                            No pending hotel bookings found
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                  </div>
+                </TabsContent>
+                
+                <TabsContent value="flights">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>All Flight Bookings</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="border rounded-lg">
+                        <div className="grid grid-cols-8 gap-2 p-3 border-b bg-slate-50 font-medium text-sm">
+                          <div>ID</div>
+                          <div>User</div>
+                          <div>Airline</div>
+                          <div>Flight</div>
+                          <div>Date</div>
+                          <div>Price</div>
+                          <div>Status</div>
+                          <div>Actions</div>
+                        </div>
+                        <div className="text-center py-10 text-muted-foreground">
+                          No flight bookings found
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                
+                <TabsContent value="hotels">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>All Hotel Bookings</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="border rounded-lg">
+                        <div className="grid grid-cols-8 gap-2 p-3 border-b bg-slate-50 font-medium text-sm">
+                          <div>ID</div>
+                          <div>User</div>
+                          <div>Hotel</div>
+                          <div>Check-in</div>
+                          <div>Check-out</div>
+                          <div>Price</div>
+                          <div>Status</div>
+                          <div>Actions</div>
+                        </div>
+                        <div className="text-center py-10 text-muted-foreground">
+                          No hotel bookings found
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+                
+                <TabsContent value="history">
+                  <Card>
+                    <CardHeader>
+                      <CardTitle>Booking History</CardTitle>
+                    </CardHeader>
+                    <CardContent>
+                      <div className="border rounded-lg">
+                        <div className="grid grid-cols-7 gap-2 p-3 border-b bg-slate-50 font-medium text-sm">
+                          <div>ID</div>
+                          <div>User</div>
+                          <div>Type</div>
+                          <div>Details</div>
+                          <div>Date</div>
+                          <div>Price</div>
+                          <div>Status</div>
+                        </div>
+                        <div className="text-center py-10 text-muted-foreground">
+                          No booking history found
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                </TabsContent>
+              </Tabs>
             </div>
           )}
 
