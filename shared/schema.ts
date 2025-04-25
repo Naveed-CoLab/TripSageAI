@@ -1,4 +1,4 @@
-import { pgTable, text, serial, integer, boolean, timestamp, json, jsonb, date, numeric } from "drizzle-orm/pg-core";
+import { pgTable, text, serial, integer, boolean, timestamp, json, jsonb, date, numeric, time } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { relations } from "drizzle-orm";
@@ -456,11 +456,117 @@ export const hotelBookingRelations = relations(hotelBookings, ({ one }) => ({
   }),
 }));
 
+// AI conversation logs for admin monitoring
+export const aiConversationLogs = pgTable("ai_conversation_logs", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  userQuery: text("user_query").notNull(),
+  aiResponse: text("ai_response"),
+  queryType: text("query_type"), // 'trip_planning', 'destination_info', 'general', etc.
+  sentimentScore: numeric("sentiment_score"), // Optional sentiment analysis score
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  metadata: jsonb("metadata"), // Additional metadata about the conversation
+});
+
+export const insertAiConversationLogSchema = createInsertSchema(aiConversationLogs).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const aiConversationLogRelations = relations(aiConversationLogs, ({ one }) => ({
+  user: one(users, {
+    fields: [aiConversationLogs.userId],
+    references: [users.id],
+  }),
+}));
+
+// User notifications from admins
+export const notifications = pgTable("notifications", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id), // If null, sends to all users
+  adminId: integer("admin_id").references(() => users.id).notNull(),
+  title: text("title").notNull(),
+  message: text("message").notNull(),
+  type: text("type").notNull(), // 'announcement', 'deal', 'update', 'warning', etc.
+  isRead: boolean("is_read").default(false),
+  link: text("link"), // Optional link to redirect when notification is clicked
+  validUntil: timestamp("valid_until"), // Optional expiration date
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertNotificationSchema = createInsertSchema(notifications).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const notificationRelations = relations(notifications, ({ one }) => ({
+  user: one(users, {
+    fields: [notifications.userId],
+    references: [users.id],
+  }),
+  admin: one(users, {
+    fields: [notifications.adminId],
+    references: [users.id],
+  }),
+}));
+
+// Booking approval status tracking
+export const bookingApprovals = pgTable("booking_approvals", {
+  id: serial("id").primaryKey(),
+  bookingType: text("booking_type").notNull(), // 'flight', 'hotel'
+  bookingId: integer("booking_id").notNull(),
+  status: text("status").default("pending").notNull(), // 'pending', 'approved', 'rejected'
+  adminId: integer("admin_id").references(() => users.id),
+  adminNotes: text("admin_notes"),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertBookingApprovalSchema = createInsertSchema(bookingApprovals).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const bookingApprovalRelations = relations(bookingApprovals, ({ one }) => ({
+  admin: one(users, {
+    fields: [bookingApprovals.adminId],
+    references: [users.id],
+  }),
+}));
+
+// Search analytics for tracking popular destinations
+export const searchAnalytics = pgTable("search_analytics", {
+  id: serial("id").primaryKey(),
+  searchType: text("search_type").notNull(), // 'flight', 'hotel', 'destination'
+  searchTerm: text("search_term").notNull(),
+  userId: integer("user_id").references(() => users.id),
+  resultCount: integer("result_count"),
+  dayOfWeek: integer("day_of_week"), // 0-6 for Sunday-Saturday
+  hourOfDay: integer("hour_of_day"), // 0-23
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertSearchAnalyticsSchema = createInsertSchema(searchAnalytics).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const searchAnalyticsRelations = relations(searchAnalytics, ({ one }) => ({
+  user: one(users, {
+    fields: [searchAnalytics.userId],
+    references: [users.id],
+  }),
+}));
+
 // Update user relations to include all user-related entities
 export const userWishlistRelation = relations(users, ({ many }) => ({
   wishlistItems: many(wishlistItems),
   flightBookings: many(flightBookings),
   hotelBookings: many(hotelBookings),
+  notifications: many(notifications),
+  aiConversationLogs: many(aiConversationLogs),
+  searchAnalytics: many(searchAnalytics),
   hotelSearches: many(hotelSearches),
 }));
 
@@ -497,3 +603,11 @@ export type HotelSearch = typeof hotelSearches.$inferSelect;
 export type InsertHotelSearch = z.infer<typeof insertHotelSearchSchema>;
 export type HotelBooking = typeof hotelBookings.$inferSelect;
 export type InsertHotelBooking = z.infer<typeof insertHotelBookingSchema>;
+export type AiConversationLog = typeof aiConversationLogs.$inferSelect;
+export type InsertAiConversationLog = z.infer<typeof insertAiConversationLogSchema>;
+export type Notification = typeof notifications.$inferSelect;
+export type InsertNotification = z.infer<typeof insertNotificationSchema>;
+export type BookingApproval = typeof bookingApprovals.$inferSelect;
+export type InsertBookingApproval = z.infer<typeof insertBookingApprovalSchema>;
+export type SearchAnalytic = typeof searchAnalytics.$inferSelect;
+export type InsertSearchAnalytic = z.infer<typeof insertSearchAnalyticsSchema>;

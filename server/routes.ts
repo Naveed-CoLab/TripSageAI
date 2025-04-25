@@ -1191,6 +1191,301 @@ export async function registerRoutes(app: Express): Promise<Server> {
     next();
   };
   
+  // Admin User Management
+  
+  // Get all users
+  app.get("/api/admin/users", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const users = await storage.getAllUsers();
+      res.json(users);
+    } catch (error) {
+      console.error('Error getting all users:', error);
+      res.status(500).json({ error: "Failed to get users" });
+    }
+  });
+  
+  // Update user status (activate/deactivate)
+  app.put("/api/admin/users/:userId/status", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      const { isActive } = req.body;
+      
+      if (isActive === undefined) {
+        return res.status(400).json({ error: "isActive status is required" });
+      }
+      
+      const updatedUser = await storage.updateUserStatus(userId, isActive);
+      
+      // Log the action
+      await storage.createAdminLog({
+        adminId: req.user!.id,
+        action: isActive ? 'activate_user' : 'deactivate_user',
+        entityType: 'user',
+        entityId: userId,
+        details: `User ${isActive ? 'activated' : 'deactivated'}`
+      });
+      
+      res.json(updatedUser);
+    } catch (error) {
+      console.error('Error updating user status:', error);
+      res.status(500).json({ error: "Failed to update user status" });
+    }
+  });
+  
+  // Delete user
+  app.delete("/api/admin/users/:userId", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const userId = parseInt(req.params.userId);
+      
+      // Check if trying to delete self
+      if (userId === req.user!.id) {
+        return res.status(400).json({ error: "Cannot delete your own account" });
+      }
+      
+      // Get user info before deletion for logging purposes
+      const userQuery = await query('SELECT username FROM users WHERE id = $1', [userId]);
+      if (userQuery.rows.length === 0) {
+        return res.status(404).json({ error: "User not found" });
+      }
+      
+      const username = userQuery.rows[0].username;
+      
+      await storage.deleteUser(userId);
+      
+      // Log the action
+      await storage.createAdminLog({
+        adminId: req.user!.id,
+        action: 'delete_user',
+        entityType: 'user',
+        entityId: userId,
+        details: `User '${username}' deleted`
+      });
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      res.status(500).json({ error: "Failed to delete user" });
+    }
+  });
+  
+  // Admin Booking Management
+  
+  // Get booking approvals
+  app.get("/api/admin/booking-approvals", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const status = req.query.status as string | undefined;
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
+      
+      const approvals = await storage.getBookingApprovals(status, limit);
+      res.json(approvals);
+    } catch (error) {
+      console.error('Error getting booking approvals:', error);
+      res.status(500).json({ error: "Failed to get booking approvals" });
+    }
+  });
+  
+  // Update booking approval status
+  app.put("/api/admin/booking-approvals/:approvalId", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const approvalId = parseInt(req.params.approvalId);
+      const { status, adminNotes } = req.body;
+      
+      if (!status || !['approved', 'rejected', 'pending'].includes(status)) {
+        return res.status(400).json({ error: "Valid status (approved, rejected, pending) is required" });
+      }
+      
+      const updatedApproval = await storage.updateBookingApprovalStatus(
+        approvalId, 
+        status, 
+        req.user!.id, 
+        adminNotes
+      );
+      
+      // Log the action
+      await storage.createAdminLog({
+        adminId: req.user!.id,
+        action: `booking_${status}`,
+        entityType: 'booking_approval',
+        entityId: approvalId,
+        details: `${updatedApproval.booking_type} booking #${updatedApproval.booking_id} ${status}`
+      });
+      
+      res.json(updatedApproval);
+    } catch (error) {
+      console.error('Error updating booking approval:', error);
+      res.status(500).json({ error: "Failed to update booking approval" });
+    }
+  });
+  
+  // Create booking approval record for a new booking
+  app.post("/api/admin/booking-approvals", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const { bookingType, bookingId, status, adminNotes } = req.body;
+      
+      if (!bookingType || !bookingId) {
+        return res.status(400).json({ error: "Booking type and ID are required" });
+      }
+      
+      const approval = await storage.createBookingApproval({
+        bookingType,
+        bookingId,
+        status: status || 'pending',
+        adminId: req.user!.id,
+        adminNotes
+      });
+      
+      res.status(201).json(approval);
+    } catch (error) {
+      console.error('Error creating booking approval:', error);
+      res.status(500).json({ error: "Failed to create booking approval" });
+    }
+  });
+  
+  // Admin Trip Management
+  
+  // Get all trips
+  app.get("/api/admin/trips", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
+      const trips = await storage.getAllTrips(limit);
+      res.json(trips);
+    } catch (error) {
+      console.error('Error getting all trips:', error);
+      res.status(500).json({ error: "Failed to get trips" });
+    }
+  });
+  
+  // Delete a trip (admin action)
+  app.delete("/api/admin/trips/:tripId", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const tripId = parseInt(req.params.tripId);
+      const { reason } = req.body;
+      
+      if (!reason) {
+        return res.status(400).json({ error: "Deletion reason is required" });
+      }
+      
+      await storage.deleteTripByAdmin(tripId, req.user!.id, reason);
+      
+      res.status(204).send();
+    } catch (error) {
+      console.error('Error deleting trip:', error);
+      res.status(500).json({ error: "Failed to delete trip" });
+    }
+  });
+  
+  // Admin Notification Management
+  
+  // Send a notification to a specific user or broadcast to all users
+  app.post("/api/admin/notifications", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const { userId, title, message, type, link, validUntil } = req.body;
+      
+      if (!title || !message || !type) {
+        return res.status(400).json({ error: "Title, message, and type are required" });
+      }
+      
+      const notification = await storage.createNotification({
+        userId, // If null, sends to all users
+        adminId: req.user!.id,
+        title,
+        message,
+        type,
+        link,
+        validUntil
+      });
+      
+      // Log the action
+      await storage.createAdminLog({
+        adminId: req.user!.id,
+        action: 'send_notification',
+        entityType: 'notification',
+        entityId: notification.id,
+        details: userId ? `Sent notification to user #${userId}` : 'Broadcast notification to all users'
+      });
+      
+      res.status(201).json(notification);
+    } catch (error) {
+      console.error('Error creating notification:', error);
+      res.status(500).json({ error: "Failed to create notification" });
+    }
+  });
+  
+  // Admin Analytics
+  
+  // Get top searched destinations
+  app.get("/api/admin/analytics/top-destinations", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+      const destinations = await storage.getTopSearchedDestinations(limit);
+      res.json(destinations);
+    } catch (error) {
+      console.error('Error getting top destinations:', error);
+      res.status(500).json({ error: "Failed to get top destinations" });
+    }
+  });
+  
+  // Get most booked hotels
+  app.get("/api/admin/analytics/most-booked-hotels", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+      const hotels = await storage.getMostBookedHotels(limit);
+      res.json(hotels);
+    } catch (error) {
+      console.error('Error getting most booked hotels:', error);
+      res.status(500).json({ error: "Failed to get most booked hotels" });
+    }
+  });
+  
+  // Get most booked flights
+  app.get("/api/admin/analytics/most-booked-flights", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+      const flights = await storage.getMostBookedFlights(limit);
+      res.json(flights);
+    } catch (error) {
+      console.error('Error getting most booked flights:', error);
+      res.status(500).json({ error: "Failed to get most booked flights" });
+    }
+  });
+  
+  // Get booking heatmap data
+  app.get("/api/admin/analytics/booking-heatmap", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const heatmapData = await storage.getBookingHeatmap();
+      res.json(heatmapData);
+    } catch (error) {
+      console.error('Error getting booking heatmap data:', error);
+      res.status(500).json({ error: "Failed to get booking heatmap data" });
+    }
+  });
+  
+  // Get AI conversation analytics
+  app.get("/api/admin/analytics/ai-conversations", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 100;
+      const logs = await storage.getAiConversationLogs(limit);
+      res.json(logs);
+    } catch (error) {
+      console.error('Error getting AI conversation logs:', error);
+      res.status(500).json({ error: "Failed to get AI conversation logs" });
+    }
+  });
+  
+  // Get popular AI queries
+  app.get("/api/admin/analytics/popular-ai-queries", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
+      const queries = await storage.getPopularAiQueries(limit);
+      res.json(queries);
+    } catch (error) {
+      console.error('Error getting popular AI queries:', error);
+      res.status(500).json({ error: "Failed to get popular AI queries" });
+    }
+  });
+  
+  // Admin logs endpoints
+  
   // Create an admin log entry
   app.post("/api/admin/logs", isAdmin, async (req: Request, res: Response) => {
     try {

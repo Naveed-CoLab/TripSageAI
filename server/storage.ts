@@ -380,6 +380,552 @@ export class DatabaseStorage implements IStorage {
       throw error;
     }
   }
+  
+  // Admin User Management Methods
+  async getAllUsers(): Promise<User[]> {
+    try {
+      const SQL = `
+        SELECT * FROM users
+        ORDER BY id ASC
+      `;
+      
+      const result = await query(SQL);
+      return result.rows;
+    } catch (error) {
+      console.error('Error getting all users:', error);
+      throw error;
+    }
+  }
+  
+  async updateUserStatus(userId: number, isActive: boolean): Promise<User> {
+    try {
+      const SQL = `
+        UPDATE users 
+        SET is_active = $1, updated_at = NOW()
+        WHERE id = $2
+        RETURNING *
+      `;
+      
+      const result = await query(SQL, [isActive, userId]);
+      
+      if (result.rows.length === 0) {
+        throw new Error(`User with ID ${userId} not found`);
+      }
+      
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error updating user status:', error);
+      throw error;
+    }
+  }
+  
+  async deleteUser(userId: number): Promise<void> {
+    try {
+      // Using transaction to ensure data consistency
+      await transaction(async (client) => {
+        // Delete user-related data first (respecting foreign key constraints)
+        await client.query('DELETE FROM notifications WHERE user_id = $1', [userId]);
+        await client.query('DELETE FROM ai_conversation_logs WHERE user_id = $1', [userId]);
+        await client.query('DELETE FROM search_analytics WHERE user_id = $1', [userId]);
+        await client.query('DELETE FROM wishlist_items WHERE user_id = $1', [userId]);
+        await client.query('DELETE FROM user_settings WHERE user_id = $1', [userId]);
+        await client.query('DELETE FROM flight_searches WHERE user_id = $1', [userId]);
+        await client.query('DELETE FROM flight_bookings WHERE user_id = $1', [userId]);
+        await client.query('DELETE FROM hotel_searches WHERE user_id = $1', [userId]);
+        await client.query('DELETE FROM hotel_bookings WHERE user_id = $1', [userId]);
+        
+        // Delete trips and related data
+        const tripResult = await client.query('SELECT id FROM trips WHERE user_id = $1', [userId]);
+        for (const trip of tripResult.rows) {
+          const tripId = trip.id;
+          
+          // Get all trip days to delete related activities
+          const tripDaysResult = await client.query('SELECT id FROM trip_days WHERE trip_id = $1', [tripId]);
+          for (const day of tripDaysResult.rows) {
+            await client.query('DELETE FROM activities WHERE trip_day_id = $1', [day.id]);
+          }
+          
+          await client.query('DELETE FROM trip_days WHERE trip_id = $1', [tripId]);
+          await client.query('DELETE FROM bookings WHERE trip_id = $1', [tripId]);
+        }
+        
+        await client.query('DELETE FROM trips WHERE user_id = $1', [userId]);
+        await client.query('DELETE FROM reviews WHERE user_id = $1', [userId]);
+        
+        // Finally delete the user
+        const deleteResult = await client.query('DELETE FROM users WHERE id = $1 RETURNING id', [userId]);
+        
+        if (deleteResult.rowCount === 0) {
+          throw new Error(`User with ID ${userId} not found or could not be deleted`);
+        }
+      });
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      throw error;
+    }
+  }
+  
+  // AI Conversation Log Methods
+  async createAiConversationLog(log: any): Promise<any> {
+    try {
+      const SQL = `
+        INSERT INTO ai_conversation_logs 
+        (user_id, user_query, ai_response, query_type, sentiment_score, metadata)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING *
+      `;
+      
+      const values = [
+        log.userId || null,
+        log.userQuery,
+        log.aiResponse || null,
+        log.queryType || null,
+        log.sentimentScore || null,
+        log.metadata || null
+      ];
+      
+      const result = await query(SQL, values);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error creating AI conversation log:', error);
+      throw error;
+    }
+  }
+  
+  async getAiConversationLogs(limit: number = 100): Promise<any[]> {
+    try {
+      const SQL = `
+        SELECT acl.*, u.username
+        FROM ai_conversation_logs acl
+        LEFT JOIN users u ON acl.user_id = u.id
+        ORDER BY acl.created_at DESC
+        LIMIT $1
+      `;
+      
+      const result = await query(SQL, [limit]);
+      return result.rows;
+    } catch (error) {
+      console.error('Error getting AI conversation logs:', error);
+      throw error;
+    }
+  }
+  
+  async getPopularAiQueries(limit: number = 10): Promise<any[]> {
+    try {
+      const SQL = `
+        SELECT user_query, COUNT(*) as count, MAX(created_at) as last_asked
+        FROM ai_conversation_logs
+        GROUP BY user_query
+        ORDER BY count DESC
+        LIMIT $1
+      `;
+      
+      const result = await query(SQL, [limit]);
+      return result.rows;
+    } catch (error) {
+      console.error('Error getting popular AI queries:', error);
+      throw error;
+    }
+  }
+  
+  // Notification Methods
+  async createNotification(notification: any): Promise<any> {
+    try {
+      const SQL = `
+        INSERT INTO notifications 
+        (user_id, admin_id, title, message, type, link, valid_until)
+        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        RETURNING *
+      `;
+      
+      const values = [
+        notification.userId || null, // If null, it's a broadcast to all users
+        notification.adminId,
+        notification.title,
+        notification.message,
+        notification.type,
+        notification.link || null,
+        notification.validUntil || null
+      ];
+      
+      const result = await query(SQL, values);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error creating notification:', error);
+      throw error;
+    }
+  }
+  
+  async getUserNotifications(userId: number): Promise<any[]> {
+    try {
+      const SQL = `
+        SELECT n.*, a.username as admin_username
+        FROM notifications n
+        JOIN users a ON n.admin_id = a.id
+        WHERE n.user_id = $1 OR n.user_id IS NULL
+        ORDER BY n.created_at DESC
+      `;
+      
+      const result = await query(SQL, [userId]);
+      return result.rows;
+    } catch (error) {
+      console.error('Error getting user notifications:', error);
+      throw error;
+    }
+  }
+  
+  async markNotificationAsRead(notificationId: number, userId: number): Promise<any> {
+    try {
+      const SQL = `
+        UPDATE notifications 
+        SET is_read = TRUE
+        WHERE id = $1 AND (user_id = $2 OR user_id IS NULL)
+        RETURNING *
+      `;
+      
+      const result = await query(SQL, [notificationId, userId]);
+      
+      if (result.rows.length === 0) {
+        throw new Error(`Notification with ID ${notificationId} not found or not accessible by user ${userId}`);
+      }
+      
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error marking notification as read:', error);
+      throw error;
+    }
+  }
+  
+  // Booking Approval Methods
+  async createBookingApproval(approval: any): Promise<any> {
+    try {
+      const SQL = `
+        INSERT INTO booking_approvals 
+        (booking_type, booking_id, status, admin_id, admin_notes)
+        VALUES ($1, $2, $3, $4, $5)
+        RETURNING *
+      `;
+      
+      const values = [
+        approval.bookingType,
+        approval.bookingId,
+        approval.status || 'pending',
+        approval.adminId || null,
+        approval.adminNotes || null
+      ];
+      
+      const result = await query(SQL, values);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error creating booking approval:', error);
+      throw error;
+    }
+  }
+  
+  async updateBookingApprovalStatus(id: number, status: string, adminId: number, adminNotes?: string): Promise<any> {
+    try {
+      const SQL = `
+        UPDATE booking_approvals 
+        SET status = $1, admin_id = $2, admin_notes = $3, updated_at = NOW()
+        WHERE id = $4
+        RETURNING *
+      `;
+      
+      const result = await query(SQL, [status, adminId, adminNotes || null, id]);
+      
+      if (result.rows.length === 0) {
+        throw new Error(`Booking approval with ID ${id} not found`);
+      }
+      
+      // Update the corresponding booking status based on approval
+      const approval = result.rows[0];
+      
+      // Handle different booking types
+      if (approval.booking_type === 'flight') {
+        // Update flight booking status
+        await query(
+          `UPDATE flight_bookings SET status = $1 WHERE id = $2`,
+          [status === 'approved' ? 'confirmed' : (status === 'rejected' ? 'cancelled' : 'pending'), approval.booking_id]
+        );
+      } else if (approval.booking_type === 'hotel') {
+        // Update hotel booking status
+        await query(
+          `UPDATE hotel_bookings SET status = $1 WHERE id = $2`,
+          [status === 'approved' ? 'CONFIRMED' : (status === 'rejected' ? 'CANCELLED' : 'PENDING'), approval.booking_id]
+        );
+      }
+      
+      return approval;
+    } catch (error) {
+      console.error('Error updating booking approval status:', error);
+      throw error;
+    }
+  }
+  
+  async getBookingApprovals(status?: string, limit: number = 100): Promise<any[]> {
+    try {
+      let SQL = `
+        SELECT ba.*, 
+               u.username as admin_username,
+               CASE 
+                 WHEN ba.booking_type = 'flight' THEN 
+                   (SELECT json_build_object(
+                     'id', fb.id,
+                     'userId', fb.user_id,
+                     'flightNumber', fb.flight_number,
+                     'airline', fb.airline,
+                     'departureAirport', fb.departure_airport,
+                     'departureCode', fb.departure_code,
+                     'arrivalAirport', fb.arrival_airport,
+                     'arrivalCode', fb.arrival_code,
+                     'price', fb.price,
+                     'status', fb.status,
+                     'passengerName', fb.passenger_name,
+                     'createdAt', fb.created_at
+                   )
+                   FROM flight_bookings fb 
+                   WHERE fb.id = ba.booking_id)
+                 WHEN ba.booking_type = 'hotel' THEN 
+                   (SELECT json_build_object(
+                     'id', hb.id,
+                     'userId', hb.user_id,
+                     'hotelName', hb.hotel_name,
+                     'checkInDate', hb.check_in_date,
+                     'checkOutDate', hb.check_out_date,
+                     'price', hb.price,
+                     'status', hb.status,
+                     'guestName', hb.guest_name,
+                     'createdAt', hb.created_at
+                   )
+                   FROM hotel_bookings hb 
+                   WHERE hb.id = ba.booking_id)
+               END as booking_details,
+               (SELECT username FROM users WHERE id = 
+                 CASE 
+                   WHEN ba.booking_type = 'flight' THEN (SELECT user_id FROM flight_bookings WHERE id = ba.booking_id)
+                   WHEN ba.booking_type = 'hotel' THEN (SELECT user_id FROM hotel_bookings WHERE id = ba.booking_id)
+                 END
+               ) as user_username
+        FROM booking_approvals ba
+        LEFT JOIN users u ON ba.admin_id = u.id
+      `;
+      
+      const params = [];
+      
+      if (status) {
+        SQL += ` WHERE ba.status = $1`;
+        params.push(status);
+      }
+      
+      SQL += ` ORDER BY ba.created_at DESC LIMIT $${params.length + 1}`;
+      params.push(limit);
+      
+      const result = await query(SQL, params);
+      return result.rows;
+    } catch (error) {
+      console.error('Error getting booking approvals:', error);
+      throw error;
+    }
+  }
+  
+  // Analytics Methods
+  async recordSearchAnalytics(searchData: any): Promise<any> {
+    try {
+      const now = new Date();
+      const dayOfWeek = now.getDay(); // 0-6 (Sunday-Saturday)
+      const hourOfDay = now.getHours(); // 0-23
+      
+      const SQL = `
+        INSERT INTO search_analytics 
+        (search_type, search_term, user_id, result_count, day_of_week, hour_of_day)
+        VALUES ($1, $2, $3, $4, $5, $6)
+        RETURNING *
+      `;
+      
+      const values = [
+        searchData.searchType,
+        searchData.searchTerm,
+        searchData.userId || null,
+        searchData.resultCount || 0,
+        dayOfWeek,
+        hourOfDay
+      ];
+      
+      const result = await query(SQL, values);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error recording search analytics:', error);
+      throw error;
+    }
+  }
+  
+  async getTopSearchedDestinations(limit: number = 10): Promise<any[]> {
+    try {
+      const SQL = `
+        SELECT search_term as destination, COUNT(*) as search_count
+        FROM search_analytics
+        WHERE search_type IN ('destination', 'hotel')
+        GROUP BY search_term
+        ORDER BY search_count DESC
+        LIMIT $1
+      `;
+      
+      const result = await query(SQL, [limit]);
+      return result.rows;
+    } catch (error) {
+      console.error('Error getting top searched destinations:', error);
+      throw error;
+    }
+  }
+  
+  async getMostBookedHotels(limit: number = 10): Promise<any[]> {
+    try {
+      const SQL = `
+        SELECT hotel_name, COUNT(*) as booking_count
+        FROM hotel_bookings
+        GROUP BY hotel_name
+        ORDER BY booking_count DESC
+        LIMIT $1
+      `;
+      
+      const result = await query(SQL, [limit]);
+      return result.rows;
+    } catch (error) {
+      console.error('Error getting most booked hotels:', error);
+      throw error;
+    }
+  }
+  
+  async getMostBookedFlights(limit: number = 10): Promise<any[]> {
+    try {
+      const SQL = `
+        SELECT airline, COUNT(*) as booking_count
+        FROM flight_bookings
+        GROUP BY airline
+        ORDER BY booking_count DESC
+        LIMIT $1
+      `;
+      
+      const result = await query(SQL, [limit]);
+      return result.rows;
+    } catch (error) {
+      console.error('Error getting most booked flights:', error);
+      throw error;
+    }
+  }
+  
+  async getBookingHeatmap(): Promise<any[]> {
+    try {
+      const SQL = `
+        SELECT 
+          day_of_week, 
+          hour_of_day, 
+          COUNT(*) as booking_count
+        FROM (
+          SELECT 
+            EXTRACT(DOW FROM created_at) as day_of_week,
+            EXTRACT(HOUR FROM created_at) as hour_of_day
+          FROM flight_bookings
+          UNION ALL
+          SELECT 
+            EXTRACT(DOW FROM created_at) as day_of_week,
+            EXTRACT(HOUR FROM created_at) as hour_of_day
+          FROM hotel_bookings
+        ) AS all_bookings
+        GROUP BY day_of_week, hour_of_day
+        ORDER BY day_of_week, hour_of_day
+      `;
+      
+      const result = await query(SQL);
+      return result.rows;
+    } catch (error) {
+      console.error('Error getting booking heatmap data:', error);
+      throw error;
+    }
+  }
+  
+  // Trip Management Methods for Admins
+  async getAllTrips(limit: number = 100): Promise<Trip[]> {
+    try {
+      const SQL = `
+        SELECT t.*, u.username as user_username
+        FROM trips t
+        JOIN users u ON t.user_id = u.id
+        ORDER BY t.created_at DESC
+        LIMIT $1
+      `;
+      
+      const result = await query(SQL, [limit]);
+      return result.rows;
+    } catch (error) {
+      console.error('Error getting all trips:', error);
+      throw error;
+    }
+  }
+  
+  async deleteTripByAdmin(tripId: number, adminId: number, reason: string): Promise<void> {
+    try {
+      // First check if trip exists
+      const tripCheck = await query('SELECT id, user_id FROM trips WHERE id = $1', [tripId]);
+      
+      if (tripCheck.rows.length === 0) {
+        throw new Error(`Trip with ID ${tripId} not found`);
+      }
+      
+      const tripUserId = tripCheck.rows[0].user_id;
+      
+      // Using transaction to ensure data consistency and log the admin action
+      await transaction(async (client) => {
+        // Get all trip days to find related activities
+        const tripDaysQuery = 'SELECT id FROM trip_days WHERE trip_id = $1';
+        const tripDaysResult = await client.query(tripDaysQuery, [tripId]);
+        
+        // Delete activities for each trip day
+        for (const day of tripDaysResult.rows) {
+          await client.query('DELETE FROM activities WHERE trip_day_id = $1', [day.id]);
+        }
+        
+        // Delete bookings that might be related to this trip
+        await client.query('DELETE FROM bookings WHERE trip_id = $1', [tripId]);
+        
+        // Delete the trip days after activities are removed
+        await client.query('DELETE FROM trip_days WHERE trip_id = $1', [tripId]);
+        
+        // Finally delete the trip itself
+        const deleteTripQuery = 'DELETE FROM trips WHERE id = $1 RETURNING id';
+        const result = await client.query(deleteTripQuery, [tripId]);
+        
+        if (result.rowCount === 0) {
+          throw new Error(`Trip with ID ${tripId} could not be deleted`);
+        }
+        
+        // Log the admin action
+        await client.query(
+          `INSERT INTO admin_logs (admin_id, action, entity_type, entity_id, details) 
+           VALUES ($1, $2, $3, $4, $5)`,
+          [adminId, 'delete_trip', 'trip', tripId, `Trip deleted. Reason: ${reason}`]
+        );
+        
+        // Create a notification for the user
+        await client.query(
+          `INSERT INTO notifications (user_id, admin_id, title, message, type) 
+           VALUES ($1, $2, $3, $4, $5)`,
+          [
+            tripUserId, 
+            adminId, 
+            'Trip Removed',
+            `Your trip has been removed by an administrator. Reason: ${reason}`,
+            'warning'
+          ]
+        );
+      });
+      
+      console.log(`Successfully deleted trip with ID ${tripId} by admin ${adminId}`);
+    } catch (error) {
+      console.error(`Error deleting trip with ID ${tripId} by admin:`, error);
+      throw error;
+    }
+  }
 
   // Trip methods
   async getTripsByUserId(userId: number): Promise<Trip[]> {
