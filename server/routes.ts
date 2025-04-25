@@ -2325,7 +2325,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const SQL = `
           SELECT sa.id, sa.user_id, u.username as user_username, 
                  sa.search_type, sa.search_term as query, 
-                 sa.results_count, sa.created_at
+                 sa.result_count, sa.created_at
           FROM search_analytics sa
           JOIN users u ON sa.user_id = u.id
           WHERE sa.search_type = $1

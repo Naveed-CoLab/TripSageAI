@@ -133,9 +133,9 @@ export default function DashboardPage() {
     user_username: string;
     search_type: string;
     query: string;
-    search_params: any;
+    search_params?: any;
     created_at: string;
-    results_count: number;
+    result_count: number;
   }
 
   const { data: userStats, isLoading: isLoadingUserStats } = useQuery<UserStats>({
@@ -966,7 +966,7 @@ export default function DashboardPage() {
                                 <div>{log.user_username}</div>
                                 <div>{log.query}</div>
                                 <div>{new Date(log.created_at).toLocaleDateString()}</div>
-                                <div>{log.results_count}</div>
+                                <div>{log.result_count}</div>
                                 <div>{new Date(log.created_at).toLocaleTimeString()}</div>
                                 <div>
                                   <Button variant="outline" size="sm">Details</Button>
@@ -1013,7 +1013,7 @@ export default function DashboardPage() {
                                 <div>{log.user_username}</div>
                                 <div>{log.query}</div>
                                 <div>{new Date(log.created_at).toLocaleDateString()}</div>
-                                <div>{log.results_count}</div>
+                                <div>{log.result_count}</div>
                                 <div>{new Date(log.created_at).toLocaleTimeString()}</div>
                                 <div>
                                   <Button variant="outline" size="sm">Details</Button>
