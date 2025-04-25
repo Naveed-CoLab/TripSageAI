@@ -44,6 +44,18 @@ import { useToast } from "@/hooks/use-toast";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { getQueryFn, apiRequest, queryClient } from "@/lib/queryClient";
 
+// Helper function to safely format price
+function formatPrice(price: any): string {
+  if (typeof price === 'number') {
+    return price.toFixed(2);
+  }
+  if (typeof price === 'string') {
+    const numPrice = parseFloat(price);
+    return isNaN(numPrice) ? price : numPrice.toFixed(2);
+  }
+  return String(price || '0.00');
+}
+
 export default function DashboardPage() {
   const [, navigate] = useLocation();
   const { user, logoutMutation } = useAuth();
@@ -711,7 +723,7 @@ export default function DashboardPage() {
                                   <div>{booking.airline}</div>
                                   <div>{booking.flight_number}</div>
                                   <div>{new Date(booking.departure_date || "").toLocaleDateString()}</div>
-                                  <div>${booking.price?.toFixed(2)}</div>
+                                  <div>${formatPrice(booking.price)}</div>
                                   <div>
                                     <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs">
                                       {booking.approval_status}
@@ -763,7 +775,7 @@ export default function DashboardPage() {
                                   <div>{booking.hotel_name}</div>
                                   <div>{new Date(booking.check_in_date || "").toLocaleDateString()}</div>
                                   <div>{new Date(booking.check_out_date || "").toLocaleDateString()}</div>
-                                  <div>${booking.price?.toFixed(2)}</div>
+                                  <div>${formatPrice(booking.price)}</div>
                                   <div>
                                     <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs">
                                       {booking.approval_status}
