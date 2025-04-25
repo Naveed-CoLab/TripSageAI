@@ -10,6 +10,8 @@ import {
   userSettings,
   wishlistItems,
   flightBookings,
+  hotelSearches,
+  hotelBookings,
   type User, 
   type InsertUser, 
   type Trip, 
@@ -31,7 +33,11 @@ import {
   type WishlistItem,
   type InsertWishlistItem,
   type FlightBooking,
-  type InsertFlightBooking
+  type InsertFlightBooking,
+  type HotelSearch,
+  type InsertHotelSearch,
+  type HotelBooking,
+  type InsertHotelBooking
 } from "@shared/schema";
 import { db, pool, query, transaction } from "./db";
 import { eq, and, desc, gte, count } from "drizzle-orm";
@@ -99,6 +105,19 @@ export interface IStorage {
   updateFlightBooking(id: number, booking: Partial<FlightBooking>): Promise<FlightBooking>;
   deleteFlightBooking(id: number): Promise<void>;
   getFlightBookingsByStatus(userId: number, status: string): Promise<FlightBooking[]>;
+
+  // Hotel Search methods
+  getHotelSearchesByUserId(userId: number): Promise<HotelSearch[]>;
+  createHotelSearch(hotelSearch: any): Promise<HotelSearch>;
+  deleteHotelSearch(id: number): Promise<void>;
+
+  // Hotel Booking methods
+  getHotelBookingsByUserId(userId: number): Promise<HotelBooking[]>;
+  getHotelBookingById(id: number): Promise<HotelBooking | undefined>;
+  createHotelBooking(booking: any): Promise<HotelBooking>;
+  updateHotelBooking(id: number, booking: Partial<HotelBooking>): Promise<HotelBooking>;
+  deleteHotelBooking(id: number): Promise<void>;
+  getHotelBookingsByStatus(userId: number, status: string): Promise<HotelBooking[]>;
 
   // Destination methods
   getAllDestinations(): Promise<Destination[]>;
@@ -788,6 +807,192 @@ export class DatabaseStorage implements IStorage {
       return result.rows as FlightBooking[];
     } catch (error) {
       console.error("Error in getFlightBookingsByStatus:", error);
+      throw error;
+    }
+  }
+
+  // Hotel Search methods
+  async getHotelSearchesByUserId(userId: number): Promise<HotelSearch[]> {
+    try {
+      const query = `
+        SELECT * FROM hotel_searches
+        WHERE user_id = $1
+        ORDER BY created_at DESC
+      `;
+      const result = await pool.query(query, [userId]);
+      return result.rows as HotelSearch[];
+    } catch (error) {
+      console.error("Error in getHotelSearchesByUserId:", error);
+      throw error;
+    }
+  }
+
+  async createHotelSearch(hotelSearch: any): Promise<HotelSearch> {
+    try {
+      // Convert camelCase keys to snake_case for PostgreSQL
+      const processedData: Record<string, any> = {};
+      
+      for (const [key, value] of Object.entries(hotelSearch)) {
+        // Convert camelCase to snake_case
+        const snakeCaseKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+        processedData[snakeCaseKey] = value;
+      }
+      
+      const keys = Object.keys(processedData);
+      const values = Object.values(processedData);
+      const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
+      const columnNames = keys.join(', ');
+      
+      const query = `
+        INSERT INTO hotel_searches (${columnNames})
+        VALUES (${placeholders})
+        RETURNING *
+      `;
+      
+      const result = await pool.query(query, values);
+      return result.rows[0] as HotelSearch;
+    } catch (error) {
+      console.error("Error in createHotelSearch:", error);
+      throw error;
+    }
+  }
+
+  async deleteHotelSearch(id: number): Promise<void> {
+    try {
+      const query = `
+        DELETE FROM hotel_searches
+        WHERE id = $1
+      `;
+      await pool.query(query, [id]);
+    } catch (error) {
+      console.error("Error in deleteHotelSearch:", error);
+      throw error;
+    }
+  }
+
+  // Hotel Booking methods
+  async getHotelBookingsByUserId(userId: number): Promise<HotelBooking[]> {
+    try {
+      const query = `
+        SELECT * FROM hotel_bookings
+        WHERE user_id = $1
+        ORDER BY created_at DESC
+      `;
+      const result = await pool.query(query, [userId]);
+      return result.rows as HotelBooking[];
+    } catch (error) {
+      console.error("Error in getHotelBookingsByUserId:", error);
+      throw error;
+    }
+  }
+
+  async getHotelBookingById(id: number): Promise<HotelBooking | undefined> {
+    try {
+      const query = `
+        SELECT * FROM hotel_bookings
+        WHERE id = $1
+      `;
+      const result = await pool.query(query, [id]);
+      return result.rows[0] as HotelBooking || undefined;
+    } catch (error) {
+      console.error("Error in getHotelBookingById:", error);
+      throw error;
+    }
+  }
+
+  async createHotelBooking(booking: any): Promise<HotelBooking> {
+    try {
+      // Convert camelCase keys to snake_case for PostgreSQL
+      const processedData: Record<string, any> = {};
+      
+      for (const [key, value] of Object.entries(booking)) {
+        // Convert camelCase to snake_case
+        const snakeCaseKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+        processedData[snakeCaseKey] = value;
+      }
+      
+      const keys = Object.keys(processedData);
+      const values = Object.values(processedData);
+      const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
+      const columnNames = keys.join(', ');
+      
+      console.log("Executing SQL with values:", values);
+      
+      const query = `
+        INSERT INTO hotel_bookings (${columnNames})
+        VALUES (${placeholders})
+        RETURNING *
+      `;
+      
+      const result = await pool.query(query, values);
+      return result.rows[0] as HotelBooking;
+    } catch (error) {
+      console.error("Database error in createHotelBooking:", error);
+      throw error;
+    }
+  }
+
+  async updateHotelBooking(id: number, booking: Partial<HotelBooking>): Promise<HotelBooking> {
+    try {
+      // Build the SET part of the query dynamically from the booking object
+      const setValues: string[] = [];
+      const queryValues: any[] = [];
+      let paramIndex = 1;
+      
+      Object.entries(booking).forEach(([key, value]) => {
+        if (value !== undefined && key !== 'id') {
+          // Convert camelCase to snake_case for column names
+          const columnName = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+          setValues.push(`${columnName} = $${paramIndex++}`);
+          queryValues.push(value);
+        }
+      });
+      
+      // Add updated_at
+      setValues.push(`updated_at = NOW()`);
+      
+      // Add the ID as the last parameter
+      queryValues.push(id);
+      
+      const query = `
+        UPDATE hotel_bookings
+        SET ${setValues.join(', ')}
+        WHERE id = $${paramIndex}
+        RETURNING *
+      `;
+      
+      const result = await pool.query(query, queryValues);
+      return result.rows[0] as HotelBooking;
+    } catch (error) {
+      console.error("Error in updateHotelBooking:", error);
+      throw error;
+    }
+  }
+
+  async deleteHotelBooking(id: number): Promise<void> {
+    try {
+      const query = `
+        DELETE FROM hotel_bookings
+        WHERE id = $1
+      `;
+      await pool.query(query, [id]);
+    } catch (error) {
+      console.error("Error in deleteHotelBooking:", error);
+      throw error;
+    }
+  }
+
+  async getHotelBookingsByStatus(userId: number, status: string): Promise<HotelBooking[]> {
+    try {
+      const query = `
+        SELECT * FROM hotel_bookings
+        WHERE user_id = $1 AND status = $2
+        ORDER BY created_at DESC
+      `;
+      const result = await pool.query(query, [userId, status]);
+      return result.rows as HotelBooking[];
+    } catch (error) {
+      console.error("Error in getHotelBookingsByStatus:", error);
       throw error;
     }
   }

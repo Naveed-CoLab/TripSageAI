@@ -381,10 +381,87 @@ export const flightBookingRelations = relations(flightBookings, ({ one }) => ({
   }),
 }));
 
-// Update user relations to include flight bookings and wishlist items
+// Hotel searches table for tracking user hotel search history
+export const hotelSearches = pgTable("hotel_searches", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  location: text("location").notNull(),
+  checkInDate: date("check_in_date").notNull(),
+  checkOutDate: date("check_out_date").notNull(),
+  guests: integer("guests").default(1).notNull(),
+  rooms: integer("rooms").default(1).notNull(),
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertHotelSearchSchema = createInsertSchema(hotelSearches).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const hotelSearchRelations = relations(hotelSearches, ({ one }) => ({
+  user: one(users, {
+    fields: [hotelSearches.userId],
+    references: [users.id],
+  }),
+}));
+
+// Hotel bookings table for tracking hotel reservations
+export const hotelBookings = pgTable("hotel_bookings", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").notNull().references(() => users.id),
+  
+  // Hotel details
+  hotelId: text("hotel_id").notNull(),
+  hotelName: text("hotel_name").notNull(),
+  hotelImage: text("hotel_image"),
+  hotelAddress: text("hotel_address").notNull(),
+  hotelCity: text("hotel_city").notNull(),
+  hotelCountry: text("hotel_country").notNull(),
+  hotelRating: numeric("hotel_rating", { precision: 3, scale: 1 }),
+  
+  // Booking details
+  roomType: text("room_type").notNull(),
+  checkInDate: date("check_in_date").notNull(),
+  checkOutDate: date("check_out_date").notNull(),
+  guests: integer("guests").default(1).notNull(),
+  rooms: integer("rooms").default(1).notNull(),
+  price: numeric("price").notNull(),
+  currency: text("currency").default("USD").notNull(),
+  status: text("status").default("CONFIRMED").notNull(), // CONFIRMED, PENDING, CANCELLED
+  bookingReference: text("booking_reference").notNull(),
+  
+  // Guest details
+  guestName: text("guest_name").notNull(),
+  guestEmail: text("guest_email").notNull(),
+  guestPhone: text("guest_phone"),
+  specialRequests: text("special_requests"),
+  
+  // Metadata
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+});
+
+export const insertHotelBookingSchema = createInsertSchema(hotelBookings).omit({
+  id: true,
+  createdAt: true,
+  updatedAt: true,
+});
+
+export const hotelBookingRelations = relations(hotelBookings, ({ one }) => ({
+  user: one(users, {
+    fields: [hotelBookings.userId],
+    references: [users.id],
+  }),
+}));
+
+// Update user relations to include all user-related entities
 export const userWishlistRelation = relations(users, ({ many }) => ({
   wishlistItems: many(wishlistItems),
   flightBookings: many(flightBookings),
+  hotelBookings: many(hotelBookings),
+  hotelSearches: many(hotelSearches),
 }));
 
 // Export type declarations for all tables
@@ -416,3 +493,7 @@ export type WishlistItem = typeof wishlistItems.$inferSelect;
 export type InsertWishlistItem = z.infer<typeof insertWishlistItemSchema>;
 export type FlightBooking = typeof flightBookings.$inferSelect;
 export type InsertFlightBooking = z.infer<typeof insertFlightBookingSchema>;
+export type HotelSearch = typeof hotelSearches.$inferSelect;
+export type InsertHotelSearch = z.infer<typeof insertHotelSearchSchema>;
+export type HotelBooking = typeof hotelBookings.$inferSelect;
+export type InsertHotelBooking = z.infer<typeof insertHotelBookingSchema>;
