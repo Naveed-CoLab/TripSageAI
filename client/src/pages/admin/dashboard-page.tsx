@@ -251,6 +251,42 @@ export default function DashboardPage() {
     },
   });
   
+  // Booking approval mutation
+  const updateBookingStatusMutation = useMutation({
+    mutationFn: async ({ 
+      bookingId, 
+      bookingType, 
+      status 
+    }: { 
+      bookingId: number; 
+      bookingType: string; 
+      status: 'approved' | 'rejected' 
+    }) => {
+      const res = await apiRequest(
+        "PUT", 
+        `/api/admin/bookings/${bookingType}/${bookingId}/status`, 
+        { status }
+      );
+      return await res.json();
+    },
+    onSuccess: () => {
+      toast({
+        title: "Booking status updated",
+        description: "The booking status has been updated successfully.",
+      });
+      // Invalidate bookings queries to refresh lists
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/bookings/pending"] });
+      queryClient.invalidateQueries({ queryKey: ["/api/admin/stats/bookings"] });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Failed to update booking status",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+  
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: number) => {
       const res = await apiRequest("DELETE", `/api/admin/users/${userId}`);
@@ -701,40 +737,64 @@ export default function DashboardPage() {
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
-                        {isLoadingPendingBookings ? (
+                        {isLoadingPendingBookings || updateBookingStatusMutation.isPending ? (
                           <div className="flex justify-center py-10">
                             <Loader2 className="h-8 w-8 animate-spin text-primary" />
                           </div>
                         ) : pendingBookings?.flights && pendingBookings.flights.length > 0 ? (
-                          <div className="border rounded-lg">
-                            <div className="grid grid-cols-7 gap-2 p-3 border-b bg-slate-50 font-medium text-sm">
-                              <div>User</div>
-                              <div>Airline</div>
-                              <div>Flight</div>
-                              <div>Date</div>
-                              <div>Price</div>
-                              <div>Status</div>
-                              <div>Actions</div>
-                            </div>
-                            <div className="divide-y">
-                              {pendingBookings.flights.map((booking) => (
-                                <div key={booking.id} className="grid grid-cols-7 gap-2 p-3 items-center text-sm">
-                                  <div>{booking.user_username}</div>
-                                  <div>{booking.airline}</div>
-                                  <div>{booking.flight_number}</div>
-                                  <div>{new Date(booking.departure_date || "").toLocaleDateString()}</div>
-                                  <div>${formatPrice(booking.price)}</div>
-                                  <div>
-                                    <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs">
-                                      {booking.approval_status}
-                                    </span>
+                          <div className="border rounded-lg overflow-x-auto">
+                            <div className="min-w-[800px]">
+                              <div className="grid grid-cols-7 gap-2 p-3 border-b bg-slate-50 font-medium text-sm">
+                                <div>User</div>
+                                <div>Airline</div>
+                                <div>Flight</div>
+                                <div>Date</div>
+                                <div>Price</div>
+                                <div>Status</div>
+                                <div>Actions</div>
+                              </div>
+                              <div className="divide-y">
+                                {pendingBookings.flights.map((booking) => (
+                                  <div key={booking.id} className="grid grid-cols-7 gap-2 p-3 items-center text-sm">
+                                    <div className="truncate">{booking.user_username}</div>
+                                    <div className="truncate">{booking.airline}</div>
+                                    <div className="truncate">{booking.flight_number}</div>
+                                    <div>{new Date(booking.departure_date || "").toLocaleDateString()}</div>
+                                    <div>${formatPrice(booking.price)}</div>
+                                    <div>
+                                      <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs whitespace-nowrap">
+                                        {booking.approval_status}
+                                      </span>
+                                    </div>
+                                    <div className="flex flex-col space-y-1 sm:flex-row sm:space-y-0 sm:space-x-2">
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        className="text-green-500 whitespace-nowrap"
+                                        onClick={() => updateBookingStatusMutation.mutate({
+                                          bookingId: booking.id,
+                                          bookingType: 'flight',
+                                          status: 'approved'
+                                        })}
+                                      >
+                                        Approve
+                                      </Button>
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        className="text-red-500 whitespace-nowrap"
+                                        onClick={() => updateBookingStatusMutation.mutate({
+                                          bookingId: booking.id,
+                                          bookingType: 'flight',
+                                          status: 'rejected'
+                                        })}
+                                      >
+                                        Reject
+                                      </Button>
+                                    </div>
                                   </div>
-                                  <div className="flex space-x-2">
-                                    <Button variant="outline" size="sm" className="text-green-500">Approve</Button>
-                                    <Button variant="outline" size="sm" className="text-red-500">Reject</Button>
-                                  </div>
-                                </div>
-                              ))}
+                                ))}
+                              </div>
                             </div>
                           </div>
                         ) : (
@@ -753,40 +813,64 @@ export default function DashboardPage() {
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
-                        {isLoadingPendingBookings ? (
+                        {isLoadingPendingBookings || updateBookingStatusMutation.isPending ? (
                           <div className="flex justify-center py-10">
                             <Loader2 className="h-8 w-8 animate-spin text-primary" />
                           </div>
                         ) : pendingBookings?.hotels && pendingBookings.hotels.length > 0 ? (
-                          <div className="border rounded-lg">
-                            <div className="grid grid-cols-7 gap-2 p-3 border-b bg-slate-50 font-medium text-sm">
-                              <div>User</div>
-                              <div>Hotel</div>
-                              <div>Check-in</div>
-                              <div>Check-out</div>
-                              <div>Price</div>
-                              <div>Status</div>
-                              <div>Actions</div>
-                            </div>
-                            <div className="divide-y">
-                              {pendingBookings.hotels.map((booking) => (
-                                <div key={booking.id} className="grid grid-cols-7 gap-2 p-3 items-center text-sm">
-                                  <div>{booking.user_username}</div>
-                                  <div>{booking.hotel_name}</div>
-                                  <div>{new Date(booking.check_in_date || "").toLocaleDateString()}</div>
-                                  <div>{new Date(booking.check_out_date || "").toLocaleDateString()}</div>
-                                  <div>${formatPrice(booking.price)}</div>
-                                  <div>
-                                    <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs">
-                                      {booking.approval_status}
-                                    </span>
+                          <div className="border rounded-lg overflow-x-auto">
+                            <div className="min-w-[800px]">
+                              <div className="grid grid-cols-7 gap-2 p-3 border-b bg-slate-50 font-medium text-sm">
+                                <div>User</div>
+                                <div>Hotel</div>
+                                <div>Check-in</div>
+                                <div>Check-out</div>
+                                <div>Price</div>
+                                <div>Status</div>
+                                <div>Actions</div>
+                              </div>
+                              <div className="divide-y">
+                                {pendingBookings.hotels.map((booking) => (
+                                  <div key={booking.id} className="grid grid-cols-7 gap-2 p-3 items-center text-sm">
+                                    <div className="truncate">{booking.user_username}</div>
+                                    <div className="truncate">{booking.hotel_name}</div>
+                                    <div>{new Date(booking.check_in_date || "").toLocaleDateString()}</div>
+                                    <div>{new Date(booking.check_out_date || "").toLocaleDateString()}</div>
+                                    <div>${formatPrice(booking.price)}</div>
+                                    <div>
+                                      <span className="bg-yellow-100 text-yellow-800 px-2 py-1 rounded-full text-xs whitespace-nowrap">
+                                        {booking.approval_status}
+                                      </span>
+                                    </div>
+                                    <div className="flex flex-col space-y-1 sm:flex-row sm:space-y-0 sm:space-x-2">
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        className="text-green-500 whitespace-nowrap"
+                                        onClick={() => updateBookingStatusMutation.mutate({
+                                          bookingId: booking.id,
+                                          bookingType: 'hotel',
+                                          status: 'approved'
+                                        })}
+                                      >
+                                        Approve
+                                      </Button>
+                                      <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        className="text-red-500 whitespace-nowrap"
+                                        onClick={() => updateBookingStatusMutation.mutate({
+                                          bookingId: booking.id,
+                                          bookingType: 'hotel',
+                                          status: 'rejected'
+                                        })}
+                                      >
+                                        Reject
+                                      </Button>
+                                    </div>
                                   </div>
-                                  <div className="flex space-x-2">
-                                    <Button variant="outline" size="sm" className="text-green-500">Approve</Button>
-                                    <Button variant="outline" size="sm" className="text-red-500">Reject</Button>
-                                  </div>
-                                </div>
-                              ))}
+                                ))}
+                              </div>
                             </div>
                           </div>
                         ) : (
@@ -904,40 +988,42 @@ export default function DashboardPage() {
                           <Loader2 className="h-8 w-8 animate-spin text-primary" />
                         </div>
                       ) : searchLogs && searchLogs.length > 0 ? (
-                        <div className="border rounded-lg">
-                          <div className="grid grid-cols-7 gap-2 p-3 border-b bg-slate-50 font-medium text-sm">
-                            <div>ID</div>
-                            <div>User</div>
-                            <div>Type</div>
-                            <div>Query</div>
-                            <div>Results</div>
-                            <div>Date</div>
-                            <div>Actions</div>
-                          </div>
-                          <div className="divide-y">
-                            {searchLogs.map((log) => (
-                              <div key={log.id} className="grid grid-cols-7 gap-2 p-3 items-center text-sm">
-                                <div>{log.id}</div>
-                                <div>{log.user_username}</div>
-                                <div>
-                                  <span className={`px-2 py-1 rounded-full text-xs ${
-                                    log.search_type === 'flight' 
-                                      ? 'bg-blue-100 text-blue-800'
-                                      : 'bg-green-100 text-green-800'
-                                  }`}>
-                                    {log.search_type}
-                                  </span>
+                        <div className="border rounded-lg overflow-x-auto">
+                          <div className="min-w-[800px]">
+                            <div className="grid grid-cols-7 gap-2 p-3 border-b bg-slate-50 font-medium text-sm">
+                              <div>ID</div>
+                              <div>User</div>
+                              <div>Type</div>
+                              <div>Query</div>
+                              <div>Results</div>
+                              <div>Date</div>
+                              <div>Actions</div>
+                            </div>
+                            <div className="divide-y">
+                              {searchLogs.map((log) => (
+                                <div key={log.id} className="grid grid-cols-7 gap-2 p-3 items-center text-sm">
+                                  <div>{log.id}</div>
+                                  <div className="truncate">{log.user_username}</div>
+                                  <div>
+                                    <span className={`px-2 py-1 rounded-full text-xs whitespace-nowrap ${
+                                      log.search_type === 'flight' 
+                                        ? 'bg-blue-100 text-blue-800'
+                                        : 'bg-green-100 text-green-800'
+                                    }`}>
+                                      {log.search_type}
+                                    </span>
+                                  </div>
+                                  <div className="truncate max-w-[150px]">{log.query}</div>
+                                  <div>{log.result_count}</div>
+                                  <div className="whitespace-nowrap">{new Date(log.created_at).toLocaleString()}</div>
+                                  <div>
+                                    <Button variant="outline" size="sm">
+                                      Details
+                                    </Button>
+                                  </div>
                                 </div>
-                                <div className="truncate max-w-xs">{log.query}</div>
-                                <div>{log.result_count}</div>
-                                <div>{new Date(log.created_at).toLocaleString()}</div>
-                                <div>
-                                  <Button variant="outline" size="sm">
-                                    Details
-                                  </Button>
-                                </div>
-                              </div>
-                            ))}
+                              ))}
+                            </div>
                           </div>
                         </div>
                       ) : (
@@ -963,28 +1049,30 @@ export default function DashboardPage() {
                           <Loader2 className="h-8 w-8 animate-spin text-primary" />
                         </div>
                       ) : flightSearchLogs && flightSearchLogs.length > 0 ? (
-                        <div className="border rounded-lg">
-                          <div className="grid grid-cols-6 gap-2 p-3 border-b bg-slate-50 font-medium text-sm">
-                            <div>User</div>
-                            <div>From/To</div>
-                            <div>Date</div>
-                            <div>Results</div>
-                            <div>When</div>
-                            <div>Actions</div>
-                          </div>
-                          <div className="divide-y">
-                            {flightSearchLogs.map((log) => (
-                              <div key={log.id} className="grid grid-cols-6 gap-2 p-3 items-center text-sm">
-                                <div>{log.user_username}</div>
-                                <div>{log.query}</div>
-                                <div>{new Date(log.created_at).toLocaleDateString()}</div>
-                                <div>{log.result_count}</div>
-                                <div>{new Date(log.created_at).toLocaleTimeString()}</div>
-                                <div>
-                                  <Button variant="outline" size="sm">Details</Button>
+                        <div className="border rounded-lg overflow-x-auto">
+                          <div className="min-w-[750px]">
+                            <div className="grid grid-cols-6 gap-2 p-3 border-b bg-slate-50 font-medium text-sm">
+                              <div>User</div>
+                              <div>From/To</div>
+                              <div>Date</div>
+                              <div>Results</div>
+                              <div>When</div>
+                              <div>Actions</div>
+                            </div>
+                            <div className="divide-y">
+                              {flightSearchLogs.map((log) => (
+                                <div key={log.id} className="grid grid-cols-6 gap-2 p-3 items-center text-sm">
+                                  <div className="truncate">{log.user_username}</div>
+                                  <div className="truncate max-w-[150px]">{log.query}</div>
+                                  <div className="whitespace-nowrap">{new Date(log.created_at).toLocaleDateString()}</div>
+                                  <div>{log.result_count}</div>
+                                  <div className="whitespace-nowrap">{new Date(log.created_at).toLocaleTimeString()}</div>
+                                  <div>
+                                    <Button variant="outline" size="sm">Details</Button>
+                                  </div>
                                 </div>
-                              </div>
-                            ))}
+                              ))}
+                            </div>
                           </div>
                         </div>
                       ) : (
@@ -1010,28 +1098,30 @@ export default function DashboardPage() {
                           <Loader2 className="h-8 w-8 animate-spin text-primary" />
                         </div>
                       ) : hotelSearchLogs && hotelSearchLogs.length > 0 ? (
-                        <div className="border rounded-lg">
-                          <div className="grid grid-cols-6 gap-2 p-3 border-b bg-slate-50 font-medium text-sm">
-                            <div>User</div>
-                            <div>Location</div>
-                            <div>Date</div>
-                            <div>Results</div>
-                            <div>When</div>
-                            <div>Actions</div>
-                          </div>
-                          <div className="divide-y">
-                            {hotelSearchLogs.map((log) => (
-                              <div key={log.id} className="grid grid-cols-6 gap-2 p-3 items-center text-sm">
-                                <div>{log.user_username}</div>
-                                <div>{log.query}</div>
-                                <div>{new Date(log.created_at).toLocaleDateString()}</div>
-                                <div>{log.result_count}</div>
-                                <div>{new Date(log.created_at).toLocaleTimeString()}</div>
-                                <div>
-                                  <Button variant="outline" size="sm">Details</Button>
+                        <div className="border rounded-lg overflow-x-auto">
+                          <div className="min-w-[750px]">
+                            <div className="grid grid-cols-6 gap-2 p-3 border-b bg-slate-50 font-medium text-sm">
+                              <div>User</div>
+                              <div>Location</div>
+                              <div>Date</div>
+                              <div>Results</div>
+                              <div>When</div>
+                              <div>Actions</div>
+                            </div>
+                            <div className="divide-y">
+                              {hotelSearchLogs.map((log) => (
+                                <div key={log.id} className="grid grid-cols-6 gap-2 p-3 items-center text-sm">
+                                  <div className="truncate">{log.user_username}</div>
+                                  <div className="truncate max-w-[150px]">{log.query}</div>
+                                  <div className="whitespace-nowrap">{new Date(log.created_at).toLocaleDateString()}</div>
+                                  <div>{log.result_count}</div>
+                                  <div className="whitespace-nowrap">{new Date(log.created_at).toLocaleTimeString()}</div>
+                                  <div>
+                                    <Button variant="outline" size="sm">Details</Button>
+                                  </div>
                                 </div>
-                              </div>
-                            ))}
+                              ))}
+                            </div>
                           </div>
                         </div>
                       ) : (
