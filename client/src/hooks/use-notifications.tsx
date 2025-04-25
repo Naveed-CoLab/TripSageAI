@@ -32,14 +32,6 @@ export function useNotifications() {
   // Keep track of previous unread count to detect new notifications
   const prevUnreadCountRef = useRef(0);
   
-  // Initialize prevUnreadCountRef once on initial load
-  useEffect(() => {
-    if (notifications && notifications.length > 0) {
-      const unread = notifications.filter((n: Notification) => !n.read_at && !n.is_read).length;
-      prevUnreadCountRef.current = unread;
-    }
-  }, [notifications]);
-
   // Fetch all notifications
   const { data: notifications = [], isLoading, refetch } = useQuery({
     queryKey: ['/api/notifications'],
@@ -50,7 +42,7 @@ export function useNotifications() {
     },
     refetchInterval: 30000, // Refetch every 30 seconds
   });
-
+  
   // Mark a notification as read
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: number) => {
@@ -73,6 +65,14 @@ export function useNotifications() {
       setUnreadCount(0);
     },
   });
+  
+  // Initialize prevUnreadCountRef once on initial load
+  useEffect(() => {
+    if (notifications && notifications.length > 0) {
+      const unread = notifications.filter((n: Notification) => !n.read_at && !n.is_read).length;
+      prevUnreadCountRef.current = unread;
+    }
+  }, [notifications]);
 
   useEffect(() => {
     // Calculate unread count
