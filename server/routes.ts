@@ -954,10 +954,14 @@ export async function registerRoutes(app: Express): Promise<Server> {
       
       console.log("Processing flight booking with approval flow:", JSON.stringify(bookingData, null, 2));
       
-      // Use transaction to ensure both booking and approval record are created
+      // Use direct client connection with manual transaction control
       let newBooking;
+      const client = await pool.connect();
       
-      await transaction(async (client) => {
+      try {
+        // Start transaction
+        await client.query('BEGIN');
+        
         // Create the flight booking using raw SQL
         const bookingSql = `
           INSERT INTO flight_bookings (
@@ -1002,6 +1006,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
         const bookingResult = await client.query(bookingSql, bookingValues);
         newBooking = bookingResult.rows[0];
         
+        // Find an admin to use for system logs and notifications
+        const adminQuery = `SELECT id FROM users WHERE role = 'admin' LIMIT 1`;
+        const adminResult = await client.query(adminQuery);
+        const adminId = adminResult.rows.length > 0 ? adminResult.rows[0].id : req.user!.id;
+        
         // Create booking approval record
         const approvalSql = `
           INSERT INTO booking_approvals (
@@ -1014,11 +1023,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           'pending',
           `Flight booking from ${bookingData.departureAirport} to ${bookingData.arrivalAirport} awaiting approval`
         ]);
-        
-        // Find an admin to use for system logs
-        const adminQuery = `SELECT id FROM users WHERE role = 'admin' LIMIT 1`;
-        const adminResult = await client.query(adminQuery);
-        const adminId = adminResult.rows.length > 0 ? adminResult.rows[0].id : req.user!.id;
         
         // Log the new booking in admin logs
         const adminLogSql = `
@@ -1033,31 +1037,30 @@ export async function registerRoutes(app: Express): Promise<Server> {
           newBooking.id,
           `New flight booking: ${bookingData.airline} ${bookingData.flightNumber} from ${bookingData.departureAirport} to ${bookingData.arrivalAirport}`
         ]);
-      });
-      
-      // Add notification for user about pending approval
-      try {
-        // Find an admin ID to use for system notifications
-        const adminResult = await query('SELECT id FROM users WHERE role = $1 LIMIT 1', ['admin']);
-        const adminId = adminResult.rows.length > 0 ? adminResult.rows[0].id : null;
         
-        if (adminId) {
-          const notificationSql = `
-            INSERT INTO notifications (
-              user_id, admin_id, title, message, type, created_at
-            ) VALUES ($1, $2, $3, $4, $5, NOW())`;
-            
-          await query(notificationSql, [
-            bookingData.userId,
-            adminId,
-            'Flight Booking Under Review',
-            `Your booking for ${bookingData.airline} flight ${bookingData.flightNumber} from ${bookingData.departureAirport} to ${bookingData.arrivalAirport} is pending approval. You'll be notified once it's approved.`,
-            'info'
-          ]);
-        }
-      } catch (notificationError) {
-        console.error("Error creating notification for flight booking:", notificationError);
-        // Continue even if notification creation fails
+        // Create notification for the user within the same transaction
+        const notificationSql = `
+          INSERT INTO notifications (
+            user_id, admin_id, title, message, type, created_at
+          ) VALUES ($1, $2, $3, $4, $5, NOW())`;
+          
+        await client.query(notificationSql, [
+          bookingData.userId,
+          adminId,
+          'Flight Booking Under Review',
+          `Your booking for ${bookingData.airline} flight ${bookingData.flightNumber} from ${bookingData.departureAirport} to ${bookingData.arrivalAirport} is pending approval. You'll be notified once it's approved.`,
+          'info'
+        ]);
+        
+        // Commit transaction
+        await client.query('COMMIT');
+      } catch (txError) {
+        // Rollback transaction on error
+        await client.query('ROLLBACK');
+        throw txError;
+      } finally {
+        // Release client back to pool
+        client.release();
       }
       
       return res.status(201).json(newBooking);
