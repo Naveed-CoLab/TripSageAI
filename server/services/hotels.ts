@@ -2,7 +2,11 @@ import { createApi } from 'unsplash-js';
 import { storage } from '../storage';
 import { HotelBooking, HotelSearch, InsertHotelBooking, InsertHotelSearch } from '@shared/schema';
 import { randomBytes } from 'crypto';
-import { searchHotels as searchAmadeusHotels, getHotelDetails as getAmadeusHotelDetails } from './amadeus';
+import { 
+  searchHotels as searchAmadeusHotels, 
+  getHotelDetails as getAmadeusHotelDetails,
+  searchLocations
+} from './amadeus';
 
 // Setup Unsplash API client
 const unsplash = createApi({
@@ -27,9 +31,13 @@ export class HotelService {
       
       await storage.createHotelSearch(hotelSearch);
       
+      // First get the city code
+      const cityCode = await this.getCityCode(location);
+      console.log(`Using city code: ${cityCode} for location: ${location}`);
+      
       // Search hotels using the Amadeus API
       const hotels = await searchAmadeusHotels({
-        cityCode: this.getCityCode(location), // Try to convert location to a city code
+        cityCode: cityCode, // Use the city code we obtained
         checkInDate,
         checkOutDate,
         adults: guests,
@@ -121,7 +129,7 @@ export class HotelService {
       
       // If we found a matching location with an IATA code, use it
       if (locationResults && locationResults.length > 0) {
-        const cityLocation = locationResults.find(loc => 
+        const cityLocation = locationResults.find((loc: any) => 
           (loc.subType === 'CITY' || loc.subType === 'CITY_AIRPORT') && loc.iataCode
         );
         
