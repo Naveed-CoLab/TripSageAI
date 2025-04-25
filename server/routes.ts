@@ -1015,13 +1015,19 @@ export async function registerRoutes(app: Express): Promise<Server> {
           `Flight booking from ${bookingData.departureAirport} to ${bookingData.arrivalAirport} awaiting approval`
         ]);
         
+        // Find an admin to use for system logs
+        const adminQuery = `SELECT id FROM users WHERE role = 'admin' LIMIT 1`;
+        const adminResult = await client.query(adminQuery);
+        const adminId = adminResult.rows.length > 0 ? adminResult.rows[0].id : req.user!.id;
+        
         // Log the new booking in admin logs
         const adminLogSql = `
           INSERT INTO admin_logs (
-            action, entity_type, entity_id, details, created_at
-          ) VALUES ($1, $2, $3, $4, NOW())`;
+            admin_id, action, entity_type, entity_id, details, created_at
+          ) VALUES ($1, $2, $3, $4, $5, NOW())`;
           
         await client.query(adminLogSql, [
+          adminId,
           'new_booking',
           'flight_booking',
           newBooking.id,
@@ -1188,16 +1194,16 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Missing required booking information" });
       }
       
-      // Create the booking
-      const booking = await hotelService.bookHotel({
+      // Booking data with pending status for admin approval
+      const bookingData = {
         userId: req.user!.id,
         hotelId,
         hotelName,
-        hotelImage,
+        hotelImage: hotelImage || null,
         hotelAddress,
         hotelCity,
         hotelCountry,
-        hotelRating,
+        hotelRating: hotelRating || 0,
         roomType,
         checkInDate,
         checkOutDate,
@@ -1205,13 +1211,118 @@ export async function registerRoutes(app: Express): Promise<Server> {
         rooms: rooms || 1,
         price,
         currency: currency || 'USD',
+        status: 'PENDING', // Start with pending status for admin approval
+        bookingReference: `HOTEL-${Date.now()}`,
         guestName,
         guestEmail,
-        guestPhone,
-        specialRequests
-      });
+        guestPhone: guestPhone || null,
+        specialRequests: specialRequests || null
+      };
       
-      return res.status(201).json(booking);
+      console.log("Processing hotel booking with approval flow:", JSON.stringify(bookingData, null, 2));
+      
+      // Use raw SQL instead of hotelService.bookHotel to create the booking
+      let newBooking;
+      
+      // Use transaction to ensure both the booking and approval record are created
+      const client = await pool.connect();
+      try {
+        await client.query('BEGIN');
+        
+        // Insert hotel booking
+        const bookingSql = `
+          INSERT INTO hotel_bookings (
+            user_id, hotel_id, hotel_name, hotel_image, hotel_address, hotel_city, 
+            hotel_country, hotel_rating, room_type, check_in_date, check_out_date, 
+            guests, rooms, price, currency, status, booking_reference, 
+            guest_name, guest_email, guest_phone, special_requests, created_at, updated_at
+          ) VALUES (
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $14, $15, $16, $17, 
+            $18, $19, $20, $21, NOW(), NOW()
+          ) RETURNING *`;
+          
+        const bookingValues = [
+          bookingData.userId,
+          bookingData.hotelId,
+          bookingData.hotelName,
+          bookingData.hotelImage,
+          bookingData.hotelAddress,
+          bookingData.hotelCity,
+          bookingData.hotelCountry,
+          bookingData.hotelRating,
+          bookingData.roomType,
+          bookingData.checkInDate,
+          bookingData.checkOutDate,
+          bookingData.guests,
+          bookingData.rooms,
+          bookingData.price,
+          bookingData.currency,
+          bookingData.status,
+          bookingData.bookingReference,
+          bookingData.guestName,
+          bookingData.guestEmail,
+          bookingData.guestPhone,
+          bookingData.specialRequests
+        ];
+        
+        const bookingResult = await client.query(bookingSql, bookingValues);
+        newBooking = bookingResult.rows[0];
+        
+        // Find an admin to use for system logs and notifications
+        const adminQuery = `SELECT id FROM users WHERE role = 'admin' LIMIT 1`;
+        const adminResult = await client.query(adminQuery);
+        const adminId = adminResult.rows.length > 0 ? adminResult.rows[0].id : req.user!.id;
+        
+        // Create booking approval record
+        const approvalSql = `
+          INSERT INTO booking_approvals (
+            booking_type, booking_id, status, admin_notes, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, NOW(), NOW())`;
+          
+        await client.query(approvalSql, [
+          'hotel',
+          newBooking.id,
+          'pending',
+          `Hotel booking at ${bookingData.hotelName} for ${bookingData.guestName} (${bookingData.checkInDate} to ${bookingData.checkOutDate}) awaiting approval`
+        ]);
+        
+        // Create admin log entry
+        const adminLogSql = `
+          INSERT INTO admin_logs (
+            admin_id, action, entity_type, entity_id, details, created_at
+          ) VALUES ($1, $2, $3, $4, $5, NOW())`;
+          
+        await client.query(adminLogSql, [
+          adminId,
+          'new_booking',
+          'hotel_booking',
+          newBooking.id,
+          `New hotel booking: ${bookingData.hotelName} in ${bookingData.hotelCity}, ${bookingData.hotelCountry} for ${bookingData.checkInDate} to ${bookingData.checkOutDate}`
+        ]);
+        
+        // Create notification for the user
+        const notificationSql = `
+          INSERT INTO notifications (
+            user_id, admin_id, title, message, type, created_at
+          ) VALUES ($1, $2, $3, $4, $5, NOW())`;
+          
+        await client.query(notificationSql, [
+          bookingData.userId,
+          adminId,
+          'Hotel Booking Under Review',
+          `Your booking at ${bookingData.hotelName} in ${bookingData.hotelCity} for ${bookingData.checkInDate} to ${bookingData.checkOutDate} is under review. You'll be notified once it's approved.`,
+          'info'
+        ]);
+        
+        await client.query('COMMIT');
+      } catch (error) {
+        await client.query('ROLLBACK');
+        throw error;
+      } finally {
+        client.release();
+      }
+      
+      return res.status(201).json(newBooking);
     } catch (error) {
       console.error("Error creating hotel booking:", error);
       return res.status(500).json({ message: "Failed to create hotel booking" });
@@ -1258,18 +1369,159 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
     
     try {
-      // Get both flight and hotel bookings
-      const flightBookings = await storage.getFlightBookingsByUserId(req.user!.id);
-      const hotelBookings = await storage.getHotelBookingsByUserId(req.user!.id);
+      // Get both flight and hotel bookings with approval status
+      const flightBookingsQuery = `
+        SELECT fb.*, 
+               COALESCE(ba.status, 'pending') as approval_status,
+               ba.admin_notes as approval_notes,
+               ba.updated_at as approval_updated_at
+        FROM flight_bookings fb
+        LEFT JOIN booking_approvals ba ON ba.booking_id = fb.id AND ba.booking_type = 'flight'
+        WHERE fb.user_id = $1
+        ORDER BY fb.created_at DESC
+      `;
       
-      // Return both types with type indicators
+      const hotelBookingsQuery = `
+        SELECT hb.*, 
+               COALESCE(ba.status, 'pending') as approval_status,
+               ba.admin_notes as approval_notes,
+               ba.updated_at as approval_updated_at
+        FROM hotel_bookings hb
+        LEFT JOIN booking_approvals ba ON ba.booking_id = hb.id AND ba.booking_type = 'hotel'
+        WHERE hb.user_id = $1
+        ORDER BY hb.created_at DESC
+      `;
+      
+      const flightResult = await query(flightBookingsQuery, [req.user!.id]);
+      const hotelResult = await query(hotelBookingsQuery, [req.user!.id]);
+      
+      // Return both types with type indicators and approval data
       return res.status(200).json({
-        flights: flightBookings.map(booking => ({ ...booking, bookingType: 'flight' })),
-        hotels: hotelBookings.map(booking => ({ ...booking, bookingType: 'hotel' }))
+        flights: flightResult.rows.map(booking => ({ 
+          ...booking, 
+          bookingType: 'flight',
+          approvalStatus: booking.approval_status,
+          approvalNotes: booking.approval_notes,
+          approvalUpdated: booking.approval_updated_at
+        })),
+        hotels: hotelResult.rows.map(booking => ({ 
+          ...booking, 
+          bookingType: 'hotel',
+          approvalStatus: booking.approval_status,
+          approvalNotes: booking.approval_notes,
+          approvalUpdated: booking.approval_updated_at
+        }))
       });
     } catch (error) {
       console.error("Error fetching bookings:", error);
       return res.status(500).json({ message: "Failed to fetch bookings" });
+    }
+  });
+  
+  // Notifications endpoints
+  
+  // Get all notifications for the user
+  app.get("/api/notifications", async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    
+    try {
+      const notificationsQuery = `
+        SELECT n.*, 
+               a.username as admin_username,
+               a.first_name as admin_first_name,
+               a.last_name as admin_last_name
+        FROM notifications n
+        JOIN users a ON n.admin_id = a.id
+        WHERE n.user_id = $1 OR n.user_id IS NULL
+        ORDER BY n.created_at DESC
+      `;
+      
+      const result = await query(notificationsQuery, [req.user!.id]);
+      
+      return res.status(200).json(result.rows);
+    } catch (error) {
+      console.error("Error fetching notifications:", error);
+      return res.status(500).json({ message: "Failed to fetch notifications" });
+    }
+  });
+  
+  // Get unread notification count for the user - used for bell icon
+  app.get("/api/notifications/unread-count", async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    
+    try {
+      const countQuery = `
+        SELECT COUNT(*) as unread_count
+        FROM notifications
+        WHERE (user_id = $1 OR user_id IS NULL)
+        AND is_read = FALSE
+      `;
+      
+      const result = await query(countQuery, [req.user!.id]);
+      
+      return res.status(200).json({ count: parseInt(result.rows[0].unread_count) });
+    } catch (error) {
+      console.error("Error fetching unread notification count:", error);
+      return res.status(500).json({ message: "Failed to fetch unread notification count" });
+    }
+  });
+  
+  // Mark a notification as read
+  app.put("/api/notifications/:id/read", async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    
+    try {
+      const notificationId = parseInt(req.params.id);
+      
+      // Check if the notification exists and belongs to the user
+      const checkQuery = `
+        SELECT * FROM notifications
+        WHERE id = $1 AND (user_id = $2 OR user_id IS NULL)
+      `;
+      
+      const checkResult = await query(checkQuery, [notificationId, req.user!.id]);
+      if (checkResult.rows.length === 0) {
+        return res.status(404).json({ message: "Notification not found" });
+      }
+      
+      // Mark as read
+      const updateQuery = `
+        UPDATE notifications
+        SET is_read = TRUE
+        WHERE id = $1
+        RETURNING *
+      `;
+      
+      const result = await query(updateQuery, [notificationId]);
+      
+      return res.status(200).json(result.rows[0]);
+    } catch (error) {
+      console.error("Error marking notification as read:", error);
+      return res.status(500).json({ message: "Failed to mark notification as read" });
+    }
+  });
+  
+  // Mark all notifications for a user as read
+  app.put("/api/notifications/mark-all-read", async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    
+    try {
+      const updateQuery = `
+        UPDATE notifications
+        SET is_read = TRUE
+        WHERE (user_id = $1 OR user_id IS NULL) AND is_read = FALSE
+        RETURNING *
+      `;
+      
+      const result = await query(updateQuery, [req.user!.id]);
+      
+      return res.status(200).json({ 
+        message: "All notifications marked as read", 
+        count: result.rowCount 
+      });
+    } catch (error) {
+      console.error("Error marking all notifications as read:", error);
+      return res.status(500).json({ message: "Failed to mark all notifications as read" });
     }
   });
 
@@ -1514,8 +1766,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/analytics/top-destinations", isAdmin, async (req: Request, res: Response) => {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
-      const destinations = await storage.getTopSearchedDestinations(limit);
-      res.json(destinations);
+      const SQL = `
+        SELECT search_term as destination, COUNT(*) as search_count
+        FROM search_analytics
+        WHERE search_type IN ('destination', 'hotel')
+        GROUP BY search_term
+        ORDER BY search_count DESC
+        LIMIT $1
+      `;
+      
+      const result = await query(SQL, [limit]);
+      res.json(result.rows);
     } catch (error) {
       console.error('Error getting top destinations:', error);
       res.status(500).json({ error: "Failed to get top destinations" });
@@ -1526,8 +1787,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/analytics/most-booked-hotels", isAdmin, async (req: Request, res: Response) => {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
-      const hotels = await storage.getMostBookedHotels(limit);
-      res.json(hotels);
+      const SQL = `
+        SELECT hotel_name, COUNT(*) as booking_count, 
+               MAX(price) as highest_price, 
+               MIN(price) as lowest_price,
+               AVG(price) as average_price,
+               MAX(created_at) as latest_booking
+        FROM hotel_bookings
+        GROUP BY hotel_name
+        ORDER BY booking_count DESC
+        LIMIT $1
+      `;
+      
+      const result = await query(SQL, [limit]);
+      res.json(result.rows);
     } catch (error) {
       console.error('Error getting most booked hotels:', error);
       res.status(500).json({ error: "Failed to get most booked hotels" });
@@ -1538,8 +1811,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get("/api/admin/analytics/most-booked-flights", isAdmin, async (req: Request, res: Response) => {
     try {
       const limit = req.query.limit ? parseInt(req.query.limit as string) : 10;
-      const flights = await storage.getMostBookedFlights(limit);
-      res.json(flights);
+      const SQL = `
+        SELECT airline, COUNT(*) as booking_count,
+               MAX(price) as highest_price,
+               MIN(price) as lowest_price,
+               AVG(price) as average_price,
+               MAX(created_at) as latest_booking
+        FROM flight_bookings
+        GROUP BY airline
+        ORDER BY booking_count DESC
+        LIMIT $1
+      `;
+      
+      const result = await query(SQL, [limit]);
+      res.json(result.rows);
     } catch (error) {
       console.error('Error getting most booked flights:', error);
       res.status(500).json({ error: "Failed to get most booked flights" });
@@ -1549,11 +1834,162 @@ export async function registerRoutes(app: Express): Promise<Server> {
   // Get booking heatmap data
   app.get("/api/admin/analytics/booking-heatmap", isAdmin, async (req: Request, res: Response) => {
     try {
-      const heatmapData = await storage.getBookingHeatmap();
+      const SQL = `
+        SELECT 
+          day_of_week, 
+          hour_of_day, 
+          COUNT(*) as booking_count
+        FROM (
+          SELECT 
+            EXTRACT(DOW FROM created_at) as day_of_week,
+            EXTRACT(HOUR FROM created_at) as hour_of_day
+          FROM flight_bookings
+          UNION ALL
+          SELECT 
+            EXTRACT(DOW FROM created_at) as day_of_week,
+            EXTRACT(HOUR FROM created_at) as hour_of_day
+          FROM hotel_bookings
+        ) AS all_bookings
+        GROUP BY day_of_week, hour_of_day
+        ORDER BY day_of_week, hour_of_day
+      `;
+      
+      const result = await query(SQL);
+      
+      // Format data for heatmap visualization
+      // Create a 7x24 grid (7 days, 24 hours)
+      const heatmapData = [];
+      for (let day = 0; day < 7; day++) {
+        for (let hour = 0; hour < 24; hour++) {
+          // Find the data point if it exists
+          const dataPoint = result.rows.find(
+            row => parseInt(row.day_of_week) === day && parseInt(row.hour_of_day) === hour
+          );
+          
+          heatmapData.push({
+            day_of_week: day,
+            hour_of_day: hour,
+            booking_count: dataPoint ? parseInt(dataPoint.booking_count) : 0,
+            day_name: ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'][day]
+          });
+        }
+      }
+      
       res.json(heatmapData);
     } catch (error) {
       console.error('Error getting booking heatmap data:', error);
       res.status(500).json({ error: "Failed to get booking heatmap data" });
+    }
+  });
+  
+  // Get booking stats by month
+  app.get("/api/admin/analytics/booking-trends", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const SQL = `
+        SELECT 
+          date_trunc('month', created_at) as month,
+          COUNT(*) as total_bookings,
+          SUM(CASE WHEN status IN ('CONFIRMED', 'confirmed') THEN 1 ELSE 0 END) as confirmed_bookings,
+          SUM(CASE WHEN status IN ('CANCELLED', 'cancelled') THEN 1 ELSE 0 END) as cancelled_bookings,
+          SUM(CASE WHEN status IN ('PENDING', 'pending') THEN 1 ELSE 0 END) as pending_bookings,
+          SUM(price) as total_revenue
+        FROM (
+          SELECT created_at, status, price FROM flight_bookings
+          UNION ALL
+          SELECT created_at, status, price FROM hotel_bookings
+        ) AS all_bookings
+        GROUP BY month
+        ORDER BY month
+      `;
+      
+      const result = await query(SQL);
+      res.json(result.rows);
+    } catch (error) {
+      console.error('Error getting booking trends:', error);
+      res.status(500).json({ error: "Failed to get booking trends" });
+    }
+  });
+  
+  // Get user activity stats
+  app.get("/api/admin/analytics/user-activity", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const SQL = `
+        SELECT 
+          u.id,
+          u.username,
+          u.email,
+          u.role,
+          u.created_at as joined_date,
+          COUNT(DISTINCT fb.id) as flight_bookings,
+          COUNT(DISTINCT hb.id) as hotel_bookings,
+          COUNT(DISTINCT t.id) as trips,
+          MAX(GREATEST(COALESCE(fb.created_at, '1970-01-01'), 
+                       COALESCE(hb.created_at, '1970-01-01'), 
+                       COALESCE(t.created_at, '1970-01-01'))) as last_activity
+        FROM users u
+        LEFT JOIN flight_bookings fb ON u.id = fb.user_id
+        LEFT JOIN hotel_bookings hb ON u.id = hb.user_id
+        LEFT JOIN trips t ON u.id = t.user_id
+        GROUP BY u.id, u.username, u.email, u.role, u.created_at
+        ORDER BY last_activity DESC
+      `;
+      
+      const result = await query(SQL);
+      res.json(result.rows);
+    } catch (error) {
+      console.error('Error getting user activity stats:', error);
+      res.status(500).json({ error: "Failed to get user activity stats" });
+    }
+  });
+  
+  // Get dashboard summary stats
+  app.get("/api/admin/analytics/dashboard-summary", isAdmin, async (req: Request, res: Response) => {
+    try {
+      // Total users and new users today
+      const userStatsSQL = `
+        SELECT 
+          COUNT(*) as total_users,
+          SUM(CASE WHEN created_at >= CURRENT_DATE THEN 1 ELSE 0 END) as new_users_today
+        FROM users
+      `;
+      
+      // Total bookings and revenue
+      const bookingStatsSQL = `
+        SELECT 
+          COUNT(*) as total_bookings,
+          SUM(CASE WHEN created_at >= CURRENT_DATE THEN 1 ELSE 0 END) as new_bookings_today,
+          SUM(price) as total_revenue,
+          SUM(CASE WHEN created_at >= CURRENT_DATE THEN price ELSE 0 END) as revenue_today
+        FROM (
+          SELECT created_at, price FROM flight_bookings
+          UNION ALL
+          SELECT created_at, price FROM hotel_bookings
+        ) AS all_bookings
+      `;
+      
+      // Status of approval requests
+      const approvalStatsSQL = `
+        SELECT 
+          COUNT(*) as total_approvals,
+          SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_approvals,
+          SUM(CASE WHEN status = 'approved' THEN 1 ELSE 0 END) as approved_approvals,
+          SUM(CASE WHEN status = 'rejected' THEN 1 ELSE 0 END) as rejected_approvals
+        FROM booking_approvals
+      `;
+      
+      const userStatsResult = await query(userStatsSQL);
+      const bookingStatsResult = await query(bookingStatsSQL);
+      const approvalStatsResult = await query(approvalStatsSQL);
+      
+      res.json({
+        users: userStatsResult.rows[0],
+        bookings: bookingStatsResult.rows[0],
+        approvals: approvalStatsResult.rows[0],
+        last_updated: new Date()
+      });
+    } catch (error) {
+      console.error('Error getting dashboard summary stats:', error);
+      res.status(500).json({ error: "Failed to get dashboard summary stats" });
     }
   });
   
