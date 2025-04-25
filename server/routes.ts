@@ -5,7 +5,7 @@ import { setupAuth } from "./auth";
 import { generateTripIdea, generateItinerary } from "./gemini";
 import { searchFlights, searchAirports, getAirlineInfo } from "./services/amadeus";
 import { hotelService } from "./services/hotels";
-import { pool } from "./db";
+import { pool, query, transaction } from "./db";
 import { 
   trips, 
   insertTripSchema, 
@@ -925,26 +925,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
       console.log("Raw booking data received:", JSON.stringify(req.body, null, 2));
       console.log("User authenticated:", req.isAuthenticated(), "User ID:", req.user?.id);
       
-      // Create a new booking object without the timestamp fields
+      // Create a new booking object with initial status set to pending for admin approval
       const bookingData = {
         userId: req.user!.id,
         flightNumber: req.body.flightNumber,
         airline: req.body.airline,
         departureAirport: req.body.departureAirport,
         departureCode: req.body.departureCode,
-        departureTime: req.body.departureTime || new Date().toISOString(), // Add default if missing
+        departureTime: req.body.departureTime || new Date().toISOString(),
         arrivalAirport: req.body.arrivalAirport,
         arrivalCode: req.body.arrivalCode,
-        arrivalTime: req.body.arrivalTime || new Date().toISOString(), // Add default if missing
+        arrivalTime: req.body.arrivalTime || new Date().toISOString(),
         tripType: req.body.tripType,
         returnFlightNumber: req.body.returnFlightNumber || null,
         returnAirline: req.body.returnAirline || null,
         returnDepartureTime: req.body.returnDepartureTime || null,
         returnArrivalTime: req.body.returnArrivalTime || null,
-        bookingReference: req.body.bookingReference,
+        bookingReference: req.body.bookingReference || `FLT-${Date.now()}`,
         price: req.body.price,
         currency: req.body.currency || "USD",
-        status: req.body.status || "CONFIRMED",
+        status: "pending", // Always start with pending status for admin approval
         cabinClass: req.body.cabinClass || "ECONOMY",
         passengerName: req.body.passengerName,
         passengerEmail: req.body.passengerEmail,
@@ -952,10 +952,107 @@ export async function registerRoutes(app: Express): Promise<Server> {
         flightDetails: req.body.flightDetails || {}
       };
       
-      console.log("Simplified booking data:", JSON.stringify(bookingData, null, 2));
+      console.log("Processing flight booking with approval flow:", JSON.stringify(bookingData, null, 2));
       
-      // Create the booking record
-      const newBooking = await storage.createFlightBooking(bookingData);
+      // Use transaction to ensure both booking and approval record are created
+      let newBooking;
+      
+      await transaction(async (client) => {
+        // Create the flight booking using raw SQL
+        const bookingSql = `
+          INSERT INTO flight_bookings (
+            user_id, flight_number, airline, departure_airport, departure_code, departure_time,
+            arrival_airport, arrival_code, arrival_time, trip_type, 
+            return_flight_number, return_airline, return_departure_time, return_arrival_time, 
+            booking_reference, price, currency, status, cabin_class, 
+            passenger_name, passenger_email, passenger_phone, flight_details,
+            created_at, updated_at
+          ) VALUES (
+            $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, 
+            $11, $12, $13, $14, $15, $16, $17, $18, $19, 
+            $20, $21, $22, $23, NOW(), NOW()
+          ) RETURNING *`;
+          
+        const bookingValues = [
+          bookingData.userId,
+          bookingData.flightNumber,
+          bookingData.airline,
+          bookingData.departureAirport,
+          bookingData.departureCode,
+          bookingData.departureTime,
+          bookingData.arrivalAirport,
+          bookingData.arrivalCode,
+          bookingData.arrivalTime,
+          bookingData.tripType,
+          bookingData.returnFlightNumber,
+          bookingData.returnAirline,
+          bookingData.returnDepartureTime,
+          bookingData.returnArrivalTime,
+          bookingData.bookingReference,
+          bookingData.price,
+          bookingData.currency,
+          bookingData.status,
+          bookingData.cabinClass,
+          bookingData.passengerName,
+          bookingData.passengerEmail,
+          bookingData.passengerPhone,
+          JSON.stringify(bookingData.flightDetails)
+        ];
+        
+        const bookingResult = await client.query(bookingSql, bookingValues);
+        newBooking = bookingResult.rows[0];
+        
+        // Create booking approval record
+        const approvalSql = `
+          INSERT INTO booking_approvals (
+            booking_type, booking_id, status, admin_notes, created_at, updated_at
+          ) VALUES ($1, $2, $3, $4, NOW(), NOW())`;
+          
+        await client.query(approvalSql, [
+          'flight',
+          newBooking.id,
+          'pending',
+          `Flight booking from ${bookingData.departureAirport} to ${bookingData.arrivalAirport} awaiting approval`
+        ]);
+        
+        // Log the new booking in admin logs
+        const adminLogSql = `
+          INSERT INTO admin_logs (
+            action, entity_type, entity_id, details, created_at
+          ) VALUES ($1, $2, $3, $4, NOW())`;
+          
+        await client.query(adminLogSql, [
+          'new_booking',
+          'flight_booking',
+          newBooking.id,
+          `New flight booking: ${bookingData.airline} ${bookingData.flightNumber} from ${bookingData.departureAirport} to ${bookingData.arrivalAirport}`
+        ]);
+      });
+      
+      // Add notification for user about pending approval
+      try {
+        // Find an admin ID to use for system notifications
+        const adminResult = await query('SELECT id FROM users WHERE role = $1 LIMIT 1', ['admin']);
+        const adminId = adminResult.rows.length > 0 ? adminResult.rows[0].id : null;
+        
+        if (adminId) {
+          const notificationSql = `
+            INSERT INTO notifications (
+              user_id, admin_id, title, message, type, created_at
+            ) VALUES ($1, $2, $3, $4, $5, NOW())`;
+            
+          await query(notificationSql, [
+            bookingData.userId,
+            adminId,
+            'Flight Booking Under Review',
+            `Your booking for ${bookingData.airline} flight ${bookingData.flightNumber} from ${bookingData.departureAirport} to ${bookingData.arrivalAirport} is pending approval. You'll be notified once it's approved.`,
+            'info'
+          ]);
+        }
+      } catch (notificationError) {
+        console.error("Error creating notification for flight booking:", notificationError);
+        // Continue even if notification creation fails
+      }
       
       return res.status(201).json(newBooking);
     } catch (error: any) {
