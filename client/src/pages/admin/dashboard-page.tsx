@@ -689,24 +689,21 @@ export default function DashboardPage() {
                               </div>
                               <div className="text-right">
                                 <p className="text-sm font-medium">${formatPrice(booking.price)}</p>
-                                <p className={`text-xs font-medium ${
-                                  booking.status === 'confirmed' ? 'text-green-600' : 
-                                  booking.status === 'pending' ? 'text-amber-600' : 'text-red-600'
-                                }`}>
-                                  {booking.status === 'confirmed' ? (
-                                    <span className="flex items-center">
-                                      <Check className="mr-1 h-3 w-3" />
-                                      Confirmed
-                                    </span>
-                                  ) : booking.status === 'rejected' ? (
-                                    <span className="flex items-center">
-                                      <X className="mr-1 h-3 w-3" />
-                                      Rejected
-                                    </span>
-                                  ) : (
-                                    booking.status.charAt(0).toUpperCase() + booking.status.slice(1)
-                                  )}
-                                </p>
+                                {booking.status === 'confirmed' ? (
+                                  <span className="flex items-center text-xs font-medium text-white bg-green-500 py-1 px-2 rounded-full">
+                                    <Check className="mr-1 h-3 w-3" />
+                                    Confirmed
+                                  </span>
+                                ) : booking.status === 'rejected' ? (
+                                  <span className="flex items-center text-xs font-medium text-white bg-red-500 py-1 px-2 rounded-full">
+                                    <X className="mr-1 h-3 w-3" />
+                                    Rejected
+                                  </span>
+                                ) : (
+                                  <p className="text-xs font-medium text-amber-600">
+                                    {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                                  </p>
+                                )}
                               </div>
                             </div>
                           </div>
