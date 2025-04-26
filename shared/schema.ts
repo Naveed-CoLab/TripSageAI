@@ -214,6 +214,40 @@ export const insertAiPromptSchema = createInsertSchema(aiPrompts).omit({
   updatedAt: true,
 });
 
+// AI Trip Generation table to store user inputs and AI responses
+export const aiTripGenerations = pgTable("ai_trip_generations", {
+  id: serial("id").primaryKey(),
+  userId: integer("user_id").references(() => users.id),
+  destination: text("destination").notNull(),
+  startDate: date("start_date"),
+  endDate: date("end_date"),
+  tripType: text("trip_type"), // 'Solo Trip', 'Partner trip', 'Friends Trip', 'Family trip'
+  interests: text("interests").array(),
+  withPets: boolean("with_pets").default(false),
+  prompt: text("prompt").notNull(), // The prompt sent to Gemini
+  aiResponse: text("ai_response").notNull(), // The raw response from Gemini
+  generatedTrip: jsonb("generated_trip"), // Parsed JSON trip data
+  saved: boolean("saved").default(false), // Whether user saved this trip
+  savedTripId: integer("saved_trip_id").references(() => trips.id), // Reference to saved trip in trips table
+  createdAt: timestamp("created_at").defaultNow().notNull(),
+});
+
+export const insertAiTripGenerationSchema = createInsertSchema(aiTripGenerations).omit({
+  id: true,
+  createdAt: true,
+});
+
+export const aiTripGenerationRelations = relations(aiTripGenerations, ({ one }) => ({
+  user: one(users, {
+    fields: [aiTripGenerations.userId],
+    references: [users.id],
+  }),
+  savedTrip: one(trips, {
+    fields: [aiTripGenerations.savedTripId],
+    references: [trips.id],
+  }),
+}));
+
 // Reviews table for user reviews
 export const reviews = pgTable("reviews", {
   id: serial("id").primaryKey(),
