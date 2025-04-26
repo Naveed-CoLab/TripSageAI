@@ -368,11 +368,14 @@ export default function BookingsPage() {
               </div>
               <div>
                 <CardTitle className="text-lg">{booking.hotelName || "Hotel Booking"}</CardTitle>
-                <CardDescription className="text-xs flex items-center gap-1">
-                  {Array.from({ length: booking.hotelStars || 0 }).map((_, i) => (
-                    <span key={i} className="text-yellow-400">★</span>
-                  ))}
-                  {booking.hotelStars ? ` • ${booking.roomType}` : booking.roomType}
+                <CardDescription>
+                  <div className="text-xs flex items-center gap-1 mb-1">
+                    {Array.from({ length: booking.hotelStars || 0 }).map((_, i) => (
+                      <span key={i} className="text-yellow-400">★</span>
+                    ))}
+                    {booking.hotelStars ? ` • ${booking.roomType}` : booking.roomType}
+                  </div>
+                  <div className="text-xs font-semibold text-blue-600">Ref: {booking.bookingReference || "N/A"}</div>
                 </CardDescription>
               </div>
             </div>

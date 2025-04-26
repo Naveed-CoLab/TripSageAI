@@ -1,14 +1,14 @@
-import React from "react";
+import { ReactNode } from "react";
 import Navbar from "./navbar";
 import Footer from "./footer";
 
-type MainLayoutProps = {
-  children: React.ReactNode;
-};
+interface MainLayoutProps {
+  children: ReactNode;
+}
 
 export default function MainLayout({ children }: MainLayoutProps) {
   return (
-    <div className="min-h-screen flex flex-col bg-gray-50">
+    <div className="flex flex-col min-h-screen">
       <Navbar />
       <main className="flex-grow">
         {children}
