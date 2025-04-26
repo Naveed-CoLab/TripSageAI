@@ -1,61 +1,40 @@
 import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
 import { Loader2, Trash2, Search } from "lucide-react";
-import { apiRequest } from "@/lib/queryClient";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
 import { Redirect, useLocation } from "wouter";
-import { EmptyState } from "../components/empty-state";
 import MainLayout from "@/components/layout/main-layout";
-type WishlistItem = {
-  id: number;
-  userId: number;
-  itemType: string;
-  itemId: string;
-  itemName: string;
-  itemImage?: string;
-  additionalData?: any;
-  createdAt: string;
-};
+import { useWishlist, WishlistItem } from "@/hooks/use-wishlist";
 
 export default function WishlistPage() {
   const { user, isLoading: isAuthLoading } = useAuth();
-  const { toast } = useToast();
-  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [, navigate] = useLocation();
 
-  // Fetch wishlist items
-  const { data: wishlistItems, isLoading } = useQuery<WishlistItem[]>({
-    queryKey: ["/api/wishlist"],
-    enabled: !!user,
-  });
+  // Use our custom wishlist hook
+  const { 
+    wishlistItems, 
+    isLoading, 
+    removeFromWishlist, 
+    refetchWishlist 
+  } = useWishlist();
+  
+  // Periodic refetch to ensure data is fresh
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      refetchWishlist();
+    }, 5000); // Refetch every 5 seconds
+    
+    return () => clearInterval(intervalId);
+  }, [refetchWishlist]);
 
-  // Delete wishlist item mutation
-  const deleteWishlistItem = useMutation({
-    mutationFn: async (id: number) => {
-      return apiRequest("DELETE", `/api/wishlist/${id}`);
-    },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["/api/wishlist"] });
-      toast({
-        title: "Item removed",
-        description: "The item has been removed from your wishlist.",
-      });
-    },
-    onError: (error) => {
-      toast({
-        title: "Error",
-        description: "Failed to remove item from wishlist. Please try again.",
-        variant: "destructive",
-      });
-    },
-  });
+  // Handle removing an item from wishlist
+  const handleRemoveItem = (id: number) => {
+    removeFromWishlist.mutate(id);
+  };
 
   // Filter wishlist items based on search query and active tab
   const filteredItems = wishlistItems ? wishlistItems.filter((item: WishlistItem) => {
@@ -75,11 +54,6 @@ export default function WishlistPage() {
   if (!isAuthLoading && !user) {
     return <Redirect to="/auth" />;
   }
-
-  // Handle removing an item from wishlist
-  const handleRemoveItem = (id: number) => {
-    deleteWishlistItem.mutate(id);
-  };
 
   return (
     <MainLayout>
