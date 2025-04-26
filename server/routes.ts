@@ -1572,18 +1572,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Notification not found" });
       }
       
-      // Mark as read with timestamp
+      // Mark as read 
       const updateQuery = `
         UPDATE notifications
-        SET is_read = TRUE, read_at = NOW()
+        SET is_read = TRUE
         WHERE id = $1
         RETURNING 
           id, 
           title, 
           message, 
           type, 
-          created_at, 
-          read_at,
+          created_at,
           user_id,
           admin_id
       `;
@@ -1604,7 +1603,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const updateQuery = `
         UPDATE notifications
-        SET is_read = TRUE, read_at = NOW()
+        SET is_read = TRUE
         WHERE (user_id = $1 OR user_id IS NULL) AND is_read = FALSE
         RETURNING id
       `;
@@ -2142,8 +2141,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create notification with sound alert capability for real-time notifications
       const createNotificationSql = `
         INSERT INTO notifications (
-          user_id, admin_id, title, message, type, link, valid_until, created_at, is_read, read_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), FALSE, NULL)
+          user_id, admin_id, title, message, type, link, valid_until, created_at, is_read
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), FALSE)
         RETURNING id, title, message, type, created_at, user_id, admin_id
       `;
 
