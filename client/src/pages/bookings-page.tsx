@@ -142,61 +142,91 @@ export default function BookingsPage() {
     }
   };
 
-  const parseDate = (dateTimeStr: string) => {
+  const parseDate = (dateTimeStr: string | Date | number) => {
     try {
-      // Try parsing as ISO date first
-      if (dateTimeStr.includes('T') || dateTimeStr.includes('-')) {
-        return new Date(dateTimeStr);
-      } else {
-        // Try parsing as a timestamp (assuming ms)
-        return new Date(parseInt(dateTimeStr));
+      if (!dateTimeStr) return null;
+      
+      // If it's already a Date object
+      if (dateTimeStr instanceof Date) return dateTimeStr;
+      
+      // If it's a number or numeric string
+      if (typeof dateTimeStr === 'number' || !isNaN(Number(dateTimeStr))) {
+        return new Date(Number(dateTimeStr));
       }
+      
+      // If it's a string, handle different formats
+      if (typeof dateTimeStr === 'string') {
+        // Try parsing as ISO date first
+        if (dateTimeStr.includes('T') || dateTimeStr.includes('-')) {
+          return new Date(dateTimeStr);
+        }
+        
+        // Try direct date parsing
+        const parsedDate = new Date(dateTimeStr);
+        if (!isNaN(parsedDate.getTime())) {
+          return parsedDate;
+        }
+      }
+      
+      console.warn('Unparseable date format:', dateTimeStr);
+      return null;
     } catch (e) {
       console.error('Error parsing date:', e);
       return null;
     }
   };
 
-  const formatDateTime = (dateTimeStr: string) => {
+  const formatDateTime = (dateTimeStr: string | Date | number) => {
     try {
+      if (!dateTimeStr) return "N/A";
+      
       const date = parseDate(dateTimeStr);
       if (!date || isNaN(date.getTime())) {
-        return dateTimeStr;
+        return typeof dateTimeStr === 'string' ? dateTimeStr : "Invalid date";
       }
       return format(date, "MMM d, yyyy h:mm a");
     } catch (e) {
       console.error('Error formatting datetime:', e);
-      return dateTimeStr;
+      return typeof dateTimeStr === 'string' ? dateTimeStr : "Error";
     }
   };
 
-  const formatTime = (dateTimeStr: string) => {
+  const formatTime = (dateTimeStr: string | Date | number) => {
     try {
+      if (!dateTimeStr) return "N/A";
+      
       const date = parseDate(dateTimeStr);
       if (!date || isNaN(date.getTime())) {
-        return dateTimeStr;
+        return typeof dateTimeStr === 'string' ? dateTimeStr : "Invalid time";
       }
       return format(date, "h:mm a");
     } catch (e) {
       console.error('Error formatting time:', e);
-      return dateTimeStr;
+      return typeof dateTimeStr === 'string' ? dateTimeStr : "Error";
     }
   };
 
-  const formatDate = (dateTimeStr: string) => {
+  const formatDate = (dateTimeStr: string | Date | number) => {
     try {
+      if (!dateTimeStr) return "N/A";
+      
       const date = parseDate(dateTimeStr);
       if (!date || isNaN(date.getTime())) {
-        return dateTimeStr;
+        // If we have a string that looks like the booking reference format, don't try to format it
+        if (typeof dateTimeStr === 'string' && 
+            (dateTimeStr.startsWith('HOTEL-') || dateTimeStr.startsWith('FLIGHT-'))) {
+          return dateTimeStr;
+        }
+        return typeof dateTimeStr === 'string' ? dateTimeStr : "Invalid date";
       }
       return format(date, "MMM d, yyyy");
     } catch (e) {
       console.error('Error formatting date:', e);
-      return dateTimeStr;
+      return typeof dateTimeStr === 'string' ? dateTimeStr : "Error";
     }
   };
 
-  const formatDuration = (departureTime: string, arrivalTime: string) => {
+  const formatDuration = (departureTime: string | Date | number, arrivalTime: string | Date | number) => {
     try {
       const departure = parseDate(departureTime);
       const arrival = parseDate(arrivalTime);
@@ -217,7 +247,7 @@ export default function BookingsPage() {
     }
   };
 
-  const nightsStay = (checkInDate: string, checkOutDate: string) => {
+  const nightsStay = (checkInDate: string | Date | number, checkOutDate: string | Date | number) => {
     try {
       const checkIn = parseDate(checkInDate);
       const checkOut = parseDate(checkOutDate);
