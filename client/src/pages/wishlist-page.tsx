@@ -239,7 +239,7 @@ function renderWishlistItems(
                       return (
                         <div
                           key={`bubble-${index}`}
-                          className={`rounded-full ${fillClass} w-3.5 h-3.5 mx-0.5`}
+                          className={`rounded-full ${fillClass} w-3 h-3 mx-0.5`}
                         />
                       );
                     })}
