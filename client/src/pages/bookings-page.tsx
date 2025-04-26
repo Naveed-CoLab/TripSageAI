@@ -7,7 +7,11 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter }
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Loader2, Plane, Calendar, Clock, MapPin, Users, CreditCard, CheckCircle, AlertCircle, HelpCircle } from "lucide-react";
+import { 
+  Loader2, Plane, Calendar, Clock, MapPin, Users, CreditCard, CheckCircle, 
+  AlertCircle, HelpCircle, Building, Bookmark, BedDouble, Home,
+  Check, X
+} from "lucide-react";
 import { Link } from "wouter";
 
 type FlightBooking = {
@@ -38,20 +42,54 @@ type FlightBooking = {
   createdAt: string;
 };
 
+type HotelBooking = {
+  id: number;
+  userId: number;
+  hotelName: string;
+  hotelAddress: string;
+  hotelCity: string;
+  hotelCountry: string;
+  hotelStars: number;
+  roomType: string;
+  checkInDate: string;
+  checkOutDate: string;
+  guestCount: number;
+  nightsCount: number;
+  bookingReference: string;
+  price: number;
+  currency: string;
+  status: string;
+  guestName: string;
+  guestEmail: string;
+  guestPhone: string;
+  hotelDetails: any;
+  createdAt: string;
+};
+
 export default function BookingsPage() {
   const { user } = useAuth();
   const { toast } = useToast();
   const [tab, setTab] = useState("all");
+  const [bookingType, setBookingType] = useState<"all" | "flights" | "hotels">("all");
   
-  const { data: bookings, isLoading, error } = useQuery<FlightBooking[]>({
+  const { data: flightBookings, isLoading: isLoadingFlights, error: flightError } = useQuery<FlightBooking[]>({
     queryKey: ["/api/flight-bookings"],
     enabled: !!user,
     onSuccess: (data) => {
       console.log("Flight bookings data:", data);
     }
   });
+  
+  const { data: hotelBookings, isLoading: isLoadingHotels, error: hotelError } = useQuery<HotelBooking[]>({
+    queryKey: ["/api/hotel-bookings"],
+    enabled: !!user,
+    onSuccess: (data) => {
+      console.log("Hotel bookings data:", data);
+    }
+  });
 
-  if (isLoading) {
+  // Handle combined loading state
+  if (isLoadingFlights || isLoadingHotels) {
     return (
       <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
         <Loader2 className="h-10 w-10 animate-spin text-primary-500" />
@@ -59,7 +97,8 @@ export default function BookingsPage() {
     );
   }
 
-  if (error) {
+  // Handle error states
+  if (flightError && hotelError) {
     return (
       <div className="flex flex-col items-center justify-center min-h-[calc(100vh-64px)] p-4">
         <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
@@ -77,9 +116,19 @@ export default function BookingsPage() {
     );
   }
 
-  const filteredBookings = tab === "all" 
-    ? bookings 
-    : bookings?.filter(booking => booking.status.toLowerCase() === tab.toLowerCase());
+  // Get all bookings or filter by status
+  const filteredFlightBookings = tab === "all" 
+    ? flightBookings 
+    : flightBookings?.filter(booking => booking.status.toLowerCase() === tab.toLowerCase());
+    
+  const filteredHotelBookings = tab === "all" 
+    ? hotelBookings 
+    : hotelBookings?.filter(booking => booking.status.toLowerCase() === tab.toLowerCase());
+    
+  // Combine all bookings when type is "all"
+  const hasFlightBookings = filteredFlightBookings && filteredFlightBookings.length > 0;
+  const hasHotelBookings = filteredHotelBookings && filteredHotelBookings.length > 0;
+  const hasNoBookings = (!hasFlightBookings && !hasHotelBookings);
 
   const getStatusBadge = (status: string) => {
     switch (status.toUpperCase()) {
@@ -169,146 +218,343 @@ export default function BookingsPage() {
     }
   };
 
+  const nightsStay = (checkInDate: string, checkOutDate: string) => {
+    try {
+      const checkIn = parseDate(checkInDate);
+      const checkOut = parseDate(checkOutDate);
+      
+      if (!checkIn || !checkOut || isNaN(checkIn.getTime()) || isNaN(checkOut.getTime())) {
+        return "Unknown";
+      }
+      
+      const durationMs = checkOut.getTime() - checkIn.getTime();
+      const nights = Math.floor(durationMs / (1000 * 60 * 60 * 24));
+      return nights === 1 ? `${nights} Night` : `${nights} Nights`;
+    } catch (e) {
+      console.error('Error calculating nights stay:', e);
+      return "Unknown";
+    }
+  };
+  
+  const renderFlightCard = (booking: FlightBooking) => {
+    return (
+      <Card key={booking.id} className="overflow-hidden border border-gray-200 hover:shadow-md transition-shadow duration-300">
+        <CardHeader className="bg-indigo-50 border-b border-gray-200 pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="bg-indigo-100 text-indigo-800 font-bold h-10 w-10 rounded-md flex items-center justify-center mr-3">
+                <Plane className="h-5 w-5" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">{booking.airline}</CardTitle>
+                <CardDescription className="text-xs">
+                  Flight {booking.flightNumber} • {booking.cabinClass}
+                </CardDescription>
+              </div>
+            </div>
+            <div>
+              {booking.status.toUpperCase() === "CONFIRMED" ? (
+                <Badge className="bg-green-500 text-white hover:bg-green-600 flex items-center gap-1">
+                  <Check className="h-3 w-3" />
+                  Confirmed
+                </Badge>
+              ) : booking.status.toUpperCase() === "REJECTED" ? (
+                <Badge className="bg-red-500 text-white hover:bg-red-600 flex items-center gap-1">
+                  <X className="h-3 w-3" />
+                  Rejected
+                </Badge>
+              ) : (
+                getStatusBadge(booking.status)
+              )}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-4">
+          <div className="flex items-start justify-between mb-4">
+            <div className="text-center">
+              <div className="text-2xl font-bold">{formatTime(booking.departureTime)}</div>
+              <div className="text-sm text-gray-500">{booking.departureCode}</div>
+            </div>
+            <div className="flex-1 px-4 flex flex-col items-center">
+              <div className="text-xs text-gray-500 mb-1">{formatDuration(booking.departureTime, booking.arrivalTime)}</div>
+              <div className="w-full flex items-center">
+                <div className="h-1 w-1 rounded-full bg-gray-400"></div>
+                <div className="flex-1 h-[2px] bg-gray-300"></div>
+                <Plane className="h-4 w-4 text-indigo-500 mx-1" />
+                <div className="flex-1 h-[2px] bg-gray-300"></div>
+                <div className="h-1 w-1 rounded-full bg-gray-400"></div>
+              </div>
+              <div className="text-xs text-gray-500 mt-1">Direct</div>
+            </div>
+            <div className="text-center">
+              <div className="text-2xl font-bold">{formatTime(booking.arrivalTime)}</div>
+              <div className="text-sm text-gray-500">{booking.arrivalCode}</div>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="flex items-start">
+              <Calendar className="h-4 w-4 text-indigo-500 mt-0.5 mr-2 flex-shrink-0" />
+              <div>
+                <div className="text-sm font-medium">Date</div>
+                <div className="text-sm text-gray-600">{formatDate(booking.departureTime)}</div>
+              </div>
+            </div>
+            <div className="flex items-start">
+              <Clock className="h-4 w-4 text-indigo-500 mt-0.5 mr-2 flex-shrink-0" />
+              <div>
+                <div className="text-sm font-medium">Duration</div>
+                <div className="text-sm text-gray-600">{formatDuration(booking.departureTime, booking.arrivalTime)}</div>
+              </div>
+            </div>
+            <div className="flex items-start">
+              <MapPin className="h-4 w-4 text-indigo-500 mt-0.5 mr-2 flex-shrink-0" />
+              <div>
+                <div className="text-sm font-medium">From</div>
+                <div className="text-sm text-gray-600">{booking.departureAirport}</div>
+              </div>
+            </div>
+            <div className="flex items-start">
+              <MapPin className="h-4 w-4 text-indigo-500 mt-0.5 mr-2 flex-shrink-0" />
+              <div>
+                <div className="text-sm font-medium">To</div>
+                <div className="text-sm text-gray-600">{booking.arrivalAirport}</div>
+              </div>
+            </div>
+            <div className="flex items-start">
+              <Users className="h-4 w-4 text-indigo-500 mt-0.5 mr-2 flex-shrink-0" />
+              <div>
+                <div className="text-sm font-medium">Passenger</div>
+                <div className="text-sm text-gray-600">{booking.passengerName}</div>
+              </div>
+            </div>
+            <div className="flex items-start">
+              <CreditCard className="h-4 w-4 text-indigo-500 mt-0.5 mr-2 flex-shrink-0" />
+              <div>
+                <div className="text-sm font-medium">Price</div>
+                <div className="text-sm text-gray-600">{booking.price} {booking.currency}</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gray-50 -mx-6 -mb-6 p-4 border-t border-gray-200 flex items-center justify-between">
+            <div>
+              <div className="text-sm font-medium">Booking Reference</div>
+              <div className="text-sm font-mono text-gray-700">{booking.bookingReference}</div>
+            </div>
+            <div className="flex space-x-2">
+              <Button variant="outline" size="sm">
+                View Details
+              </Button>
+              {booking.status.toUpperCase() === "CONFIRMED" && (
+                <Button size="sm" variant="default" className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                  <CheckCircle className="mr-1 h-4 w-4" />
+                  Check In
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+  
+  const renderHotelCard = (booking: HotelBooking) => {
+    return (
+      <Card key={booking.id} className="overflow-hidden border border-gray-200 hover:shadow-md transition-shadow duration-300">
+        <CardHeader className="bg-cyan-50 border-b border-gray-200 pb-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="bg-cyan-100 text-cyan-800 font-bold h-10 w-10 rounded-md flex items-center justify-center mr-3">
+                <BedDouble className="h-5 w-5" />
+              </div>
+              <div>
+                <CardTitle className="text-lg">{booking.hotelName}</CardTitle>
+                <CardDescription className="text-xs">
+                  {booking.hotelStars}-Star • {booking.roomType}
+                </CardDescription>
+              </div>
+            </div>
+            <div>
+              {booking.status.toUpperCase() === "CONFIRMED" ? (
+                <Badge className="bg-green-500 text-white hover:bg-green-600 flex items-center gap-1">
+                  <Check className="h-3 w-3" />
+                  Confirmed
+                </Badge>
+              ) : booking.status.toUpperCase() === "REJECTED" ? (
+                <Badge className="bg-red-500 text-white hover:bg-red-600 flex items-center gap-1">
+                  <X className="h-3 w-3" />
+                  Rejected
+                </Badge>
+              ) : (
+                getStatusBadge(booking.status)
+              )}
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-4">
+          <div className="flex items-center justify-between mb-4 bg-cyan-50 rounded-md p-3">
+            <div className="flex items-center">
+              <Calendar className="h-5 w-5 text-cyan-600 mr-3" />
+              <div>
+                <div className="text-sm font-medium">{formatDate(booking.checkInDate)}</div>
+                <div className="text-xs text-gray-500">Check-in</div>
+              </div>
+            </div>
+            <div className="text-xs text-gray-500 px-3">{nightsStay(booking.checkInDate, booking.checkOutDate)}</div>
+            <div className="flex items-center">
+              <div>
+                <div className="text-sm font-medium text-right">{formatDate(booking.checkOutDate)}</div>
+                <div className="text-xs text-gray-500 text-right">Check-out</div>
+              </div>
+              <Calendar className="h-5 w-5 text-cyan-600 ml-3" />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="flex items-start">
+              <Building className="h-4 w-4 text-cyan-500 mt-0.5 mr-2 flex-shrink-0" />
+              <div>
+                <div className="text-sm font-medium">Location</div>
+                <div className="text-sm text-gray-600">{booking.hotelCity}, {booking.hotelCountry}</div>
+              </div>
+            </div>
+            <div className="flex items-start">
+              <BedDouble className="h-4 w-4 text-cyan-500 mt-0.5 mr-2 flex-shrink-0" />
+              <div>
+                <div className="text-sm font-medium">Room</div>
+                <div className="text-sm text-gray-600">{booking.roomType}</div>
+              </div>
+            </div>
+            <div className="flex items-start">
+              <Users className="h-4 w-4 text-cyan-500 mt-0.5 mr-2 flex-shrink-0" />
+              <div>
+                <div className="text-sm font-medium">Guests</div>
+                <div className="text-sm text-gray-600">{booking.guestCount} {booking.guestCount === 1 ? 'Person' : 'People'}</div>
+              </div>
+            </div>
+            <div className="flex items-start">
+              <CreditCard className="h-4 w-4 text-cyan-500 mt-0.5 mr-2 flex-shrink-0" />
+              <div>
+                <div className="text-sm font-medium">Price</div>
+                <div className="text-sm text-gray-600">{booking.price} {booking.currency}</div>
+              </div>
+            </div>
+          </div>
+
+          <div className="bg-gray-50 -mx-6 -mb-6 p-4 border-t border-gray-200 flex items-center justify-between">
+            <div>
+              <div className="text-sm font-medium">Booking Reference</div>
+              <div className="text-sm font-mono text-gray-700">{booking.bookingReference}</div>
+            </div>
+            <div className="flex space-x-2">
+              <Button variant="outline" size="sm">
+                View Details
+              </Button>
+              {booking.status.toUpperCase() === "CONFIRMED" && (
+                <Button size="sm" variant="default" className="bg-cyan-600 hover:bg-cyan-700 text-white">
+                  <Bookmark className="mr-1 h-4 w-4" />
+                  View Voucher
+                </Button>
+              )}
+            </div>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  };
+  
   return (
     <div className="container mx-auto px-4 py-8 max-w-6xl">
-      <div className="mb-8">
+      <div className="mb-6">
         <h1 className="text-3xl font-bold text-gray-900 mb-2">My Bookings</h1>
-        <p className="text-gray-600">View and manage all your flight bookings in one place</p>
+        <p className="text-gray-600">View and manage all your travel bookings in one place</p>
       </div>
 
-      <Tabs defaultValue="all" value={tab} onValueChange={setTab} className="mb-8">
-        <TabsList className="grid grid-cols-4 w-full max-w-md">
-          <TabsTrigger value="all" className="text-sm">All Bookings</TabsTrigger>
-          <TabsTrigger value="confirmed" className="text-sm">Confirmed</TabsTrigger>
-          <TabsTrigger value="pending" className="text-sm">Pending</TabsTrigger>
-          <TabsTrigger value="cancelled" className="text-sm">Cancelled</TabsTrigger>
-        </TabsList>
-      </Tabs>
+      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+        <Tabs defaultValue="all" value={tab} onValueChange={setTab} className="mb-2 md:mb-0">
+          <TabsList className="grid grid-cols-4 w-full max-w-md">
+            <TabsTrigger value="all" className="text-sm">All</TabsTrigger>
+            <TabsTrigger value="confirmed" className="text-sm">Confirmed</TabsTrigger>
+            <TabsTrigger value="pending" className="text-sm">Pending</TabsTrigger>
+            <TabsTrigger value="cancelled" className="text-sm">Cancelled</TabsTrigger>
+          </TabsList>
+        </Tabs>
+        
+        <Tabs defaultValue="all" value={bookingType} onValueChange={(value) => setBookingType(value as "all" | "flights" | "hotels")}>
+          <TabsList>
+            <TabsTrigger value="all" className="flex items-center gap-1">
+              <span className="hidden md:inline">All Types</span>
+              <span className="md:hidden">All</span>
+            </TabsTrigger>
+            <TabsTrigger value="flights" className="flex items-center gap-1">
+              <Plane className="h-4 w-4" />
+              <span className="hidden md:inline">Flights</span>
+            </TabsTrigger>
+            <TabsTrigger value="hotels" className="flex items-center gap-1">
+              <BedDouble className="h-4 w-4" />
+              <span className="hidden md:inline">Hotels</span>
+            </TabsTrigger>
+          </TabsList>
+        </Tabs>
+      </div>
 
-      {filteredBookings?.length === 0 ? (
+      {hasNoBookings || (!flightBookings?.length && !hotelBookings?.length) ? (
         <div className="flex flex-col items-center justify-center p-12 border border-dashed border-gray-300 rounded-lg bg-gray-50">
           <HelpCircle className="h-12 w-12 text-gray-400 mb-4" />
           <h3 className="text-xl font-semibold text-gray-800 mb-2">No bookings found</h3>
           <p className="text-gray-600 mb-6 text-center max-w-md">
             {tab === "all" 
-              ? "You haven't made any flight bookings yet. Start by searching for flights to your destination." 
+              ? "You haven't made any bookings yet. Start by searching for flights or hotels."
               : `You don't have any ${tab.toLowerCase()} bookings. Try checking the "All Bookings" tab.`}
           </p>
-          <Link href="/flights">
-            <Button>Search Flights</Button>
-          </Link>
+          <div className="flex gap-4">
+            <Link href="/flights">
+              <Button className="bg-indigo-600 hover:bg-indigo-700 flex items-center gap-2">
+                <Plane className="h-4 w-4" />
+                Search Flights
+              </Button>
+            </Link>
+            <Link href="/hotels">
+              <Button variant="outline" className="flex items-center gap-2">
+                <BedDouble className="h-4 w-4" />
+                Search Hotels
+              </Button>
+            </Link>
+          </div>
         </div>
       ) : (
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {filteredBookings?.map((booking) => (
-            <Card key={booking.id} className="overflow-hidden border border-gray-200 hover:shadow-md transition-shadow duration-300">
-              <CardHeader className="bg-gray-50 border-b border-gray-200 pb-3">
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center">
-                    <div className="bg-gray-200 text-gray-800 font-bold h-10 w-10 rounded-md flex items-center justify-center mr-3">
-                      {booking.airline.substring(0, 2)}
-                    </div>
-                    <div>
-                      <CardTitle className="text-lg">{booking.airline}</CardTitle>
-                      <CardDescription className="text-xs">
-                        Flight {booking.flightNumber} • {booking.cabinClass}
-                      </CardDescription>
-                    </div>
-                  </div>
-                  <div>
-                    {getStatusBadge(booking.status)}
-                  </div>
+        <>
+          {/* Flight Bookings Section */}
+          {(hasFlightBookings && (bookingType === "all" || bookingType === "flights")) && (
+            <div className="mb-8">
+              {bookingType === "all" && (
+                <div className="flex items-center gap-2 mb-4">
+                  <Plane className="h-5 w-5 text-indigo-600" />
+                  <h2 className="text-xl font-semibold text-gray-800">Flight Bookings</h2>
                 </div>
-              </CardHeader>
-              <CardContent className="pt-4">
-                <div className="flex items-start justify-between mb-4">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold">{formatTime(booking.departureTime)}</div>
-                    <div className="text-sm text-gray-500">{booking.departureCode}</div>
-                  </div>
-                  <div className="flex-1 px-4 flex flex-col items-center">
-                    <div className="text-xs text-gray-500 mb-1">{formatDuration(booking.departureTime, booking.arrivalTime)}</div>
-                    <div className="w-full flex items-center">
-                      <div className="h-1 w-1 rounded-full bg-gray-400"></div>
-                      <div className="flex-1 h-[2px] bg-gray-300"></div>
-                      <Plane className="h-4 w-4 text-primary-500 mx-1" />
-                      <div className="flex-1 h-[2px] bg-gray-300"></div>
-                      <div className="h-1 w-1 rounded-full bg-gray-400"></div>
-                    </div>
-                    <div className="text-xs text-gray-500 mt-1">Direct</div>
-                  </div>
-                  <div className="text-center">
-                    <div className="text-2xl font-bold">{formatTime(booking.arrivalTime)}</div>
-                    <div className="text-sm text-gray-500">{booking.arrivalCode}</div>
-                  </div>
+              )}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {filteredFlightBookings?.map(renderFlightCard)}
+              </div>
+            </div>
+          )}
+          
+          {/* Hotel Bookings Section */}
+          {(hasHotelBookings && (bookingType === "all" || bookingType === "hotels")) && (
+            <div>
+              {bookingType === "all" && (
+                <div className="flex items-center gap-2 mb-4">
+                  <BedDouble className="h-5 w-5 text-cyan-600" />
+                  <h2 className="text-xl font-semibold text-gray-800">Hotel Bookings</h2>
                 </div>
-
-                <div className="grid grid-cols-2 gap-4 mb-4">
-                  <div className="flex items-start">
-                    <Calendar className="h-4 w-4 text-gray-500 mt-0.5 mr-2 flex-shrink-0" />
-                    <div>
-                      <div className="text-sm font-medium">Date</div>
-                      <div className="text-sm text-gray-600">{formatDate(booking.departureTime)}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start">
-                    <Clock className="h-4 w-4 text-gray-500 mt-0.5 mr-2 flex-shrink-0" />
-                    <div>
-                      <div className="text-sm font-medium">Duration</div>
-                      <div className="text-sm text-gray-600">{formatDuration(booking.departureTime, booking.arrivalTime)}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start">
-                    <MapPin className="h-4 w-4 text-gray-500 mt-0.5 mr-2 flex-shrink-0" />
-                    <div>
-                      <div className="text-sm font-medium">From</div>
-                      <div className="text-sm text-gray-600">{booking.departureAirport}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start">
-                    <MapPin className="h-4 w-4 text-gray-500 mt-0.5 mr-2 flex-shrink-0" />
-                    <div>
-                      <div className="text-sm font-medium">To</div>
-                      <div className="text-sm text-gray-600">{booking.arrivalAirport}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start">
-                    <Users className="h-4 w-4 text-gray-500 mt-0.5 mr-2 flex-shrink-0" />
-                    <div>
-                      <div className="text-sm font-medium">Passenger</div>
-                      <div className="text-sm text-gray-600">{booking.passengerName}</div>
-                    </div>
-                  </div>
-                  <div className="flex items-start">
-                    <CreditCard className="h-4 w-4 text-gray-500 mt-0.5 mr-2 flex-shrink-0" />
-                    <div>
-                      <div className="text-sm font-medium">Price</div>
-                      <div className="text-sm text-gray-600">{booking.price} {booking.currency}</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="bg-gray-50 -mx-6 -mb-6 p-4 border-t border-gray-200 flex items-center justify-between">
-                  <div>
-                    <div className="text-sm font-medium">Booking Reference</div>
-                    <div className="text-sm font-mono text-gray-700">{booking.bookingReference}</div>
-                  </div>
-                  <div className="flex space-x-2">
-                    <Button variant="outline" size="sm">
-                      View Details
-                    </Button>
-                    {booking.status === "CONFIRMED" && (
-                      <Button size="sm" variant="default" className="text-white">
-                        <CheckCircle className="mr-1 h-4 w-4" />
-                        Check In
-                      </Button>
-                    )}
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
-        </div>
+              )}
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {filteredHotelBookings?.map(renderHotelCard)}
+              </div>
+            </div>
+          )}
+        </>
       )}
     </div>
   );
