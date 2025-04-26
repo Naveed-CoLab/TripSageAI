@@ -1,168 +1,143 @@
-import { pgTable, text, serial, integer, boolean, timestamp, json, jsonb, date, numeric, time } from "drizzle-orm/pg-core";
-import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
-import { relations } from "drizzle-orm";
 
-export const users = pgTable("users", {
-  id: serial("id").primaryKey(),
-  username: text("username").notNull().unique(),
-  password: text("password").notNull(),
-  email: text("email").notNull().unique(),
-  firstName: text("first_name"),
-  lastName: text("last_name"),
-  profileImage: text("profile_image"),
-  bio: text("bio"),
-  phone: text("phone"),
-  googleId: text("google_id").unique(),
-  role: text("role").default("user").notNull(), // 'user', 'admin', 'moderator'
-  isActive: boolean("is_active").default(true).notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+// Define TypeScript interfaces instead of Drizzle schema
+export interface User {
+  id: number;
+  username: string;
+  password: string;
+  email: string;
+  firstName?: string;
+  lastName?: string;
+  profileImage?: string;
+  bio?: string;
+  phone?: string;
+  googleId?: string;
+  role: string; // 'user', 'admin', 'moderator'
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+// Define validation schemas with Zod
+export const insertUserSchema = z.object({
+  username: z.string(),
+  password: z.string(),
+  email: z.string().email(),
+  firstName: z.string().optional(),
+  lastName: z.string().optional(),
+  profileImage: z.string().optional(),
+  bio: z.string().optional(),
+  phone: z.string().optional(),
+  googleId: z.string().optional(),
+  role: z.string().default("user"),
+  isActive: z.boolean().default(true),
 });
 
-export const insertUserSchema = createInsertSchema(users).pick({
-  username: true,
-  password: true,
-  email: true,
-  firstName: true,
-  lastName: true,
-  profileImage: true,
-  bio: true,
-  phone: true,
-  googleId: true,
-  role: true,
-  isActive: true,
+export interface Trip {
+  id: number;
+  userId: number;
+  title: string;
+  destination: string;
+  startDate?: Date;
+  endDate?: Date;
+  budget?: string;
+  preferences?: string[];
+  status: string; // 'draft', 'planned', 'ongoing', 'completed'
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export const insertTripSchema = z.object({
+  userId: z.number(),
+  title: z.string(),
+  destination: z.string(),
+  startDate: z.date().optional(),
+  endDate: z.date().optional(),
+  budget: z.string().optional(),
+  preferences: z.array(z.string()).optional(),
+  status: z.string().default("draft"),
 });
 
-export const userRelations = relations(users, ({ one, many }) => ({
-  settings: one(userSettings, {
-    fields: [users.id],
-    references: [userSettings.userId],
-  }),
-  trips: many(trips),
-  reviews: many(reviews),
-  flightSearches: many(flightSearches),
-}));
+export interface TripDay {
+  id: number;
+  tripId: number;
+  dayNumber: number;
+  date?: Date;
+  title: string;
+  createdAt: Date;
+}
 
-export const trips = pgTable("trips", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
-  title: text("title").notNull(),
-  destination: text("destination").notNull(),
-  startDate: date("start_date"),
-  endDate: date("end_date"),
-  budget: text("budget"),
-  preferences: text("preferences").array(),
-  status: text("status").default("draft").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
+export const insertTripDaySchema = z.object({
+  tripId: z.number(),
+  dayNumber: z.number(),
+  date: z.date().optional(),
+  title: z.string(),
 });
 
-export const insertTripSchema = createInsertSchema(trips).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
+export interface Activity {
+  id: number;
+  tripDayId: number;
+  title: string;
+  description?: string;
+  time?: string;
+  location?: string;
+  type?: string;
+  bookingId?: number;
+  createdAt: Date;
+}
+
+export const insertActivitySchema = z.object({
+  tripDayId: z.number(),
+  title: z.string(),
+  description: z.string().optional(),
+  time: z.string().optional(),
+  location: z.string().optional(),
+  type: z.string().optional(),
+  bookingId: z.number().optional(),
 });
 
-export const tripRelations = relations(trips, ({ one, many }) => ({
-  user: one(users, {
-    fields: [trips.userId],
-    references: [users.id],
-  }),
-  days: many(tripDays),
-  bookings: many(bookings),
-}));
+export interface Booking {
+  id: number;
+  tripId: number;
+  type: string; // "flight", "hotel", "activity"
+  title: string;
+  provider?: string;
+  price?: string;
+  details?: any; // JSON data
+  confirmed: boolean;
+  createdAt: Date;
+}
 
-export const tripDays = pgTable("trip_days", {
-  id: serial("id").primaryKey(),
-  tripId: integer("trip_id").notNull().references(() => trips.id),
-  dayNumber: integer("day_number").notNull(),
-  date: date("date"),
-  title: text("title").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
+export const insertBookingSchema = z.object({
+  tripId: z.number(),
+  type: z.string(),
+  title: z.string(),
+  provider: z.string().optional(),
+  price: z.string().optional(),
+  details: z.any().optional(),
+  confirmed: z.boolean().default(false)
 });
 
-export const insertTripDaySchema = createInsertSchema(tripDays).omit({
-  id: true,
-  createdAt: true,
-});
+export interface Destination {
+  id: number;
+  name: string;
+  country: string;
+  description: string;
+  imageUrl?: string;
+  rating?: string;
+  reviewCount?: number;
+  priceEstimate?: string;
+  createdAt: Date;
+}
 
-export const tripDayRelations = relations(tripDays, ({ one, many }) => ({
-  trip: one(trips, {
-    fields: [tripDays.tripId],
-    references: [trips.id],
-  }),
-  activities: many(activities),
-}));
-
-export const activities = pgTable("activities", {
-  id: serial("id").primaryKey(),
-  tripDayId: integer("trip_day_id").notNull().references(() => tripDays.id),
-  title: text("title").notNull(),
-  description: text("description"),
-  time: text("time"),
-  location: text("location"),
-  type: text("type"),
-  bookingId: integer("booking_id").references(() => bookings.id),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-export const insertActivitySchema = createInsertSchema(activities).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const activityRelations = relations(activities, ({ one }) => ({
-  tripDay: one(tripDays, {
-    fields: [activities.tripDayId],
-    references: [tripDays.id],
-  }),
-  booking: one(bookings, {
-    fields: [activities.bookingId],
-    references: [bookings.id],
-  }),
-}));
-
-export const bookings = pgTable("bookings", {
-  id: serial("id").primaryKey(),
-  tripId: integer("trip_id").notNull().references(() => trips.id),
-  type: text("type").notNull(), // "flight", "hotel", "activity"
-  title: text("title").notNull(),
-  provider: text("provider"),
-  price: text("price"),
-  details: json("details"),
-  confirmed: boolean("confirmed").default(false),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-export const insertBookingSchema = createInsertSchema(bookings).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const bookingRelations = relations(bookings, ({ one, many }) => ({
-  trip: one(trips, {
-    fields: [bookings.tripId],
-    references: [trips.id],
-  }),
-  activities: many(activities),
-}));
-
-export const destinations = pgTable("destinations", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull(),
-  country: text("country").notNull(),
-  description: text("description").notNull(),
-  imageUrl: text("image_url"),
-  rating: text("rating"),
-  reviewCount: integer("review_count"),
-  priceEstimate: text("price_estimate"),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-export const insertDestinationSchema = createInsertSchema(destinations).omit({
-  id: true,
-  createdAt: true,
+export const insertDestinationSchema = z.object({
+  name: z.string(),
+  country: z.string(),
+  description: z.string(),
+  imageUrl: z.string().optional(),
+  rating: z.string().optional(),
+  reviewCount: z.number().optional(),
+  priceEstimate: z.string().optional(),
 });
 
 // Analytics tables
@@ -180,19 +155,22 @@ export const insertAnalyticsSchema = createInsertSchema(analytics).omit({
 });
 
 // Admin logs
-export const adminLogs = pgTable("admin_logs", {
-  id: serial("id").primaryKey(),
-  adminId: integer("admin_id").references(() => users.id).notNull(),
-  action: text("action").notNull(), // 'user_blocked', 'destination_added', etc.
-  entityType: text("entity_type"), // 'user', 'trip', 'destination', etc.
-  entityId: integer("entity_id"), // ID of the affected entity
-  details: text("details"), // Additional information
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+export interface AdminLog {
+  id: number;
+  adminId: number;
+  action: string; // 'user_blocked', 'destination_added', etc.
+  entityType?: string; // 'user', 'trip', 'destination', etc.
+  entityId?: number; // ID of the affected entity
+  details?: string; // Additional information
+  createdAt: Date;
+}
 
-export const insertAdminLogSchema = createInsertSchema(adminLogs).omit({
-  id: true,
-  createdAt: true,
+export const insertAdminLogSchema = z.object({
+  adminId: z.number(),
+  action: z.string(),
+  entityType: z.string().optional(),
+  entityId: z.number().optional(),
+  details: z.string().optional(),
 });
 
 // AI prompts for admins to customize
@@ -215,36 +193,32 @@ export const insertAiPromptSchema = createInsertSchema(aiPrompts).omit({
 });
 
 // Reviews table for user reviews
-export const reviews = pgTable("reviews", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").notNull().references(() => users.id),
-  targetType: text("target_type").notNull(), // 'hotel', 'restaurant', 'attraction', 'trip'
-  targetId: text("target_id").notNull(), // Could be an external ID for hotels/restaurants or an internal ID for trips
-  title: text("title").notNull(),
-  content: text("content").notNull(),
-  rating: integer("rating").notNull(), // 1-5 rating
-  images: text("images").array(), // Array of image URLs
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at"),
-  isApproved: boolean("is_approved").default(true),
-  helpfulCount: integer("helpful_count").default(0),
-  reportCount: integer("report_count").default(0),
-});
+export interface Review {
+  id: number;
+  userId: number;
+  targetType: string; // 'hotel', 'restaurant', 'attraction', 'trip'
+  targetId: string; // Could be an external ID for hotels/restaurants or an internal ID for trips
+  title: string;
+  content: string;
+  rating: number; // 1-5 rating
+  images?: string[]; // Array of image URLs
+  createdAt: Date;
+  updatedAt?: Date;
+  isApproved: boolean;
+  helpfulCount: number;
+  reportCount: number;
+}
 
-export const insertReviewSchema = createInsertSchema(reviews).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-  helpfulCount: true,
-  reportCount: true,
+export const insertReviewSchema = z.object({
+  userId: z.number(),
+  targetType: z.string(),
+  targetId: z.string(),
+  title: z.string(),
+  content: z.string(),
+  rating: z.number().min(1).max(5),
+  images: z.array(z.string()).optional(),
+  isApproved: z.boolean().default(true),
 });
-
-export const reviewRelations = relations(reviews, ({ one }) => ({
-  user: one(users, {
-    fields: [reviews.userId],
-    references: [users.id],
-  }),
-}));
 
 // Flight searches table for tracking user flight search history
 export const flightSearches = pgTable("flight_searches", {

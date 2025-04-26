@@ -1,18 +1,4 @@
 import { 
-  users, 
-  trips, 
-  tripDays, 
-  activities, 
-  bookings,
-  destinations,
-  reviews,
-  flightSearches,
-  userSettings,
-  wishlistItems,
-  flightBookings,
-  hotelSearches,
-  hotelBookings,
-  adminLogs,
   type User, 
   type InsertUser, 
   type Trip, 
@@ -42,8 +28,7 @@ import {
   type AdminLog,
   type InsertAdminLog
 } from "@shared/schema";
-import { db, pool, query, transaction } from "./db";
-import { eq, and, desc, gte, count } from "drizzle-orm";
+import { pool, query, queryOne, queryMany, transaction } from "./db";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 
@@ -225,50 +210,101 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUser(id: number, userData: Partial<User>): Promise<User> {
-    const [updatedUser] = await db
-      .update(users)
-      .set({ ...userData, updatedAt: new Date() })
-      .where(eq(users.id, id))
-      .returning();
-    return updatedUser;
+    // Convert userData object into SQL SET format with parameters
+    const entries = Object.entries(userData);
+    const setClauses = entries.map((_, index) => {
+      // Convert camelCase to snake_case for column names
+      const key = entries[index][0].replace(/([A-Z])/g, '_$1').toLowerCase();
+      return `${key} = $${index + 2}`;
+    });
+    
+    // Add updated_at to the SET clause
+    setClauses.push("updated_at = NOW()");
+    
+    const SQL = `
+      UPDATE users
+      SET ${setClauses.join(', ')}
+      WHERE id = $1
+      RETURNING *
+    `;
+    
+    // Create array of values with id as first parameter
+    const values = [id, ...entries.map(entry => entry[1])];
+    
+    const result = await query(SQL, values);
+    return result.rows[0];
   }
 
   async updateUserPassword(id: number, newPassword: string): Promise<User> {
-    const [updatedUser] = await db
-      .update(users)
-      .set({ password: newPassword, updatedAt: new Date() })
-      .where(eq(users.id, id))
-      .returning();
-    return updatedUser;
+    const SQL = `
+      UPDATE users
+      SET password = $1, updated_at = NOW()
+      WHERE id = $2
+      RETURNING *
+    `;
+    
+    const result = await query(SQL, [newPassword, id]);
+    return result.rows[0];
   }
 
   async updateUserEmail(id: number, newEmail: string): Promise<User> {
-    const [updatedUser] = await db
-      .update(users)
-      .set({ email: newEmail, updatedAt: new Date() })
-      .where(eq(users.id, id))
-      .returning();
-    return updatedUser;
+    const SQL = `
+      UPDATE users
+      SET email = $1, updated_at = NOW()
+      WHERE id = $2
+      RETURNING *
+    `;
+    
+    const result = await query(SQL, [newEmail, id]);
+    return result.rows[0];
   }
 
   async updateUserProfileImage(id: number, imageUrl: string): Promise<User> {
-    const [updatedUser] = await db
-      .update(users)
-      .set({ profileImage: imageUrl, updatedAt: new Date() })
-      .where(eq(users.id, id))
-      .returning();
-    return updatedUser;
+    const SQL = `
+      UPDATE users
+      SET profile_image = $1, updated_at = NOW()
+      WHERE id = $2
+      RETURNING *
+    `;
+    
+    const result = await query(SQL, [imageUrl, id]);
+    return result.rows[0];
   }
   
   // User settings methods
   async getUserSettings(userId: number): Promise<UserSettings | undefined> {
-    const [settings] = await db.select().from(userSettings).where(eq(userSettings.userId, userId));
-    return settings;
+    const SQL = `
+      SELECT * FROM user_settings
+      WHERE user_id = $1
+    `;
+    
+    const result = await query(SQL, [userId]);
+    return result.rows[0];
   }
 
   async createUserSettings(settings: InsertUserSettings): Promise<UserSettings> {
-    const [newSettings] = await db.insert(userSettings).values(settings).returning();
-    return newSettings;
+    // Convert camelCase keys to snake_case for PostgreSQL column names
+    const processedData: Record<string, any> = {};
+    
+    for (const [key, value] of Object.entries(settings)) {
+      // Convert camelCase to snake_case
+      const snakeCaseKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+      processedData[snakeCaseKey] = value;
+    }
+    
+    const keys = Object.keys(processedData);
+    const values = Object.values(processedData);
+    const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
+    const columnNames = keys.join(', ');
+    
+    const SQL = `
+      INSERT INTO user_settings (${columnNames})
+      VALUES (${placeholders})
+      RETURNING *
+    `;
+    
+    const result = await query(SQL, values);
+    return result.rows[0];
   }
 
   async updateUserSettings(userId: number, settingsData: Partial<UserSettings>): Promise<UserSettings> {
@@ -279,47 +315,73 @@ export class DatabaseStorage implements IStorage {
       return this.createUserSettings({ userId, ...settingsData } as InsertUserSettings);
     }
     
-    // Otherwise update existing settings
-    const [updatedSettings] = await db
-      .update(userSettings)
-      .set({ ...settingsData, updatedAt: new Date() })
-      .where(eq(userSettings.userId, userId))
-      .returning();
-    return updatedSettings;
+    // Convert userData object into SQL SET format with parameters
+    const entries = Object.entries(settingsData);
+    const setClauses = entries.map((_, index) => {
+      // Convert camelCase to snake_case for column names
+      const key = entries[index][0].replace(/([A-Z])/g, '_$1').toLowerCase();
+      return `${key} = $${index + 2}`;
+    });
+    
+    // Add updated_at to the SET clause
+    setClauses.push("updated_at = NOW()");
+    
+    const SQL = `
+      UPDATE user_settings
+      SET ${setClauses.join(', ')}
+      WHERE user_id = $1
+      RETURNING *
+    `;
+    
+    // Create array of values with userId as first parameter
+    const values = [userId, ...entries.map(entry => entry[1])];
+    
+    const result = await query(SQL, values);
+    return result.rows[0];
   }
   
   async getUserCount(): Promise<number> {
-    const result = await db.select({ count: count() }).from(users);
-    return result[0].count;
+    const SQL = `
+      SELECT COUNT(*) as count FROM users
+    `;
+    const result = await query(SQL);
+    return parseInt(result.rows[0].count);
   }
   
   async getNewUserCountToday(): Promise<number> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    const result = await db
-      .select({ count: count() })
-      .from(users)
-      .where(gte(users.createdAt, today));
+    const SQL = `
+      SELECT COUNT(*) as count 
+      FROM users 
+      WHERE created_at >= $1
+    `;
     
-    return result[0].count;
+    const result = await query(SQL, [today]);
+    return parseInt(result.rows[0].count);
   }
   
   async getTripCount(): Promise<number> {
-    const result = await db.select({ count: count() }).from(trips);
-    return result[0].count;
+    const SQL = `
+      SELECT COUNT(*) as count FROM trips
+    `;
+    const result = await query(SQL);
+    return parseInt(result.rows[0].count);
   }
   
   async getNewTripCountToday(): Promise<number> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    const result = await db
-      .select({ count: count() })
-      .from(trips)
-      .where(gte(trips.createdAt, today));
+    const SQL = `
+      SELECT COUNT(*) as count 
+      FROM trips 
+      WHERE created_at >= $1
+    `;
     
-    return result[0].count;
+    const result = await query(SQL, [today]);
+    return parseInt(result.rows[0].count);
   }
   
   // Admin logs methods
