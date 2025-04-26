@@ -74,18 +74,12 @@ export default function BookingsPage() {
   
   const { data: flightBookings, isLoading: isLoadingFlights, error: flightError } = useQuery<FlightBooking[]>({
     queryKey: ["/api/flight-bookings"],
-    enabled: !!user,
-    onSuccess: (data) => {
-      console.log("Flight bookings data:", data);
-    }
+    enabled: !!user
   });
   
   const { data: hotelBookings, isLoading: isLoadingHotels, error: hotelError } = useQuery<HotelBooking[]>({
     queryKey: ["/api/hotel-bookings"],
-    enabled: !!user,
-    onSuccess: (data) => {
-      console.log("Hotel bookings data:", data);
-    }
+    enabled: !!user
   });
 
   // Handle combined loading state
