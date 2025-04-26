@@ -1138,17 +1138,86 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createBooking(booking: InsertBooking): Promise<Booking> {
-    const [newBooking] = await db.insert(bookings).values(booking).returning();
-    return newBooking;
+    try {
+      const SQL = `
+        INSERT INTO bookings (
+          trip_id, type, title, provider, confirmation_code, 
+          price, currency, status, booking_date, start_date, 
+          end_date, details, notes
+        ) 
+        VALUES (
+          $1, $2, $3, $4, $5, 
+          $6, $7, $8, $9, $10, 
+          $11, $12, $13
+        )
+        RETURNING *
+      `;
+      const values = [
+        booking.tripId,
+        booking.type,
+        booking.title,
+        booking.provider,
+        booking.confirmationCode,
+        booking.price,
+        booking.currency,
+        booking.status,
+        booking.bookingDate || new Date(),
+        booking.startDate,
+        booking.endDate,
+        booking.details || null,
+        booking.notes || null
+      ];
+      
+      const result = await query(SQL, values);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error creating booking:', error);
+      throw error;
+    }
   }
 
-  async updateBooking(id: number, booking: InsertBooking): Promise<Booking> {
-    const [updatedBooking] = await db
-      .update(bookings)
-      .set(booking)
-      .where(eq(bookings.id, id))
-      .returning();
-    return updatedBooking;
+  async updateBooking(id: number, booking: Partial<InsertBooking>): Promise<Booking> {
+    try {
+      // Create SET clause dynamically based on provided fields
+      const updateFields: string[] = [];
+      const values: any[] = [];
+      let paramIndex = 1;
+      
+      // Add fields that are present in the booking object
+      Object.entries(booking).forEach(([key, value]) => {
+        if (value !== undefined) {
+          // Convert camelCase to snake_case for SQL
+          const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
+          updateFields.push(`${snakeKey} = $${paramIndex}`);
+          values.push(value);
+          paramIndex++;
+        }
+      });
+      
+      // Add updated_at timestamp
+      updateFields.push(`updated_at = NOW()`);
+      
+      // Add the ID as the last parameter
+      values.push(id);
+      
+      const SQL = `
+        UPDATE bookings
+        SET ${updateFields.join(', ')}
+        WHERE id = $${paramIndex}
+        RETURNING *
+      `;
+      
+      const result = await query(SQL, values);
+      
+      if (result.rows.length === 0) {
+        throw new Error(`Booking with ID ${id} not found`);
+      }
+      
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error updating booking:', error);
+      throw error;
+    }
   }
 
   async deleteBooking(id: number): Promise<void> {
@@ -1276,59 +1345,182 @@ export class DatabaseStorage implements IStorage {
   
   // Flight search methods
   async getFlightSearchesByUserId(userId: number): Promise<FlightSearch[]> {
-    return db.select()
-      .from(flightSearches)
-      .where(eq(flightSearches.userId, userId))
-      .orderBy(desc(flightSearches.createdAt));
+    try {
+      const SQL = `
+        SELECT * FROM flight_searches
+        WHERE user_id = $1
+        ORDER BY created_at DESC
+      `;
+      
+      const result = await query(SQL, [userId]);
+      return result.rows;
+    } catch (error) {
+      console.error('Error getting flight searches:', error);
+      throw error;
+    }
   }
   
   async createFlightSearch(flightSearch: InsertFlightSearch): Promise<FlightSearch> {
-    const [newFlightSearch] = await db
-      .insert(flightSearches)
-      .values(flightSearch)
-      .returning();
-    return newFlightSearch;
+    try {
+      const SQL = `
+        INSERT INTO flight_searches (
+          user_id, departure_city, departure_code, arrival_city, 
+          arrival_code, departure_date, return_date, adults, 
+          children, infants, cabin_class, direct_flights_only, 
+          flexible_dates, one_way, max_price
+        )
+        VALUES (
+          $1, $2, $3, $4, 
+          $5, $6, $7, $8, 
+          $9, $10, $11, $12, 
+          $13, $14, $15
+        )
+        RETURNING *
+      `;
+      
+      const values = [
+        flightSearch.userId,
+        flightSearch.departureCity,
+        flightSearch.departureCode,
+        flightSearch.arrivalCity,
+        flightSearch.arrivalCode,
+        flightSearch.departureDate,
+        flightSearch.returnDate,
+        flightSearch.adults || 1,
+        flightSearch.children || 0,
+        flightSearch.infants || 0,
+        flightSearch.cabinClass || 'ECONOMY',
+        flightSearch.directFlightsOnly || false,
+        flightSearch.flexibleDates || false,
+        flightSearch.oneWay || false,
+        flightSearch.maxPrice || null
+      ];
+      
+      const result = await query(SQL, values);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error creating flight search:', error);
+      throw error;
+    }
   }
   
   async deleteFlightSearch(id: number): Promise<void> {
-    await db.delete(flightSearches).where(eq(flightSearches.id, id));
+    try {
+      const SQL = `
+        DELETE FROM flight_searches
+        WHERE id = $1
+        RETURNING id
+      `;
+      
+      const result = await query(SQL, [id]);
+      
+      if (result.rows.length === 0) {
+        throw new Error(`Flight search with ID ${id} not found or could not be deleted`);
+      }
+    } catch (error) {
+      console.error('Error deleting flight search:', error);
+      throw error;
+    }
   }
   
   // Wishlist methods
   async getWishlistItemsByUserId(userId: number): Promise<WishlistItem[]> {
-    return db
-      .select()
-      .from(wishlistItems)
-      .where(eq(wishlistItems.userId, userId))
-      .orderBy(desc(wishlistItems.createdAt));
+    try {
+      const SQL = `
+        SELECT * FROM wishlist_items
+        WHERE user_id = $1
+        ORDER BY created_at DESC
+      `;
+      
+      const result = await query(SQL, [userId]);
+      return result.rows;
+    } catch (error) {
+      console.error('Error getting wishlist items:', error);
+      throw error;
+    }
   }
   
   async getWishlistItemById(id: number): Promise<WishlistItem | undefined> {
-    const [item] = await db.select().from(wishlistItems).where(eq(wishlistItems.id, id));
-    return item;
+    try {
+      const SQL = `
+        SELECT * FROM wishlist_items
+        WHERE id = $1
+      `;
+      
+      const result = await query(SQL, [id]);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error getting wishlist item by ID:', error);
+      throw error;
+    }
   }
   
   async createWishlistItem(item: InsertWishlistItem): Promise<WishlistItem> {
-    const [newItem] = await db.insert(wishlistItems).values(item).returning();
-    return newItem;
+    try {
+      const SQL = `
+        INSERT INTO wishlist_items (
+          user_id, item_type, item_id, title, 
+          image_url, description, metadata
+        )
+        VALUES (
+          $1, $2, $3, $4,
+          $5, $6, $7
+        )
+        RETURNING *
+      `;
+      
+      const values = [
+        item.userId,
+        item.itemType,
+        item.itemId,
+        item.title,
+        item.imageUrl || null,
+        item.description || null,
+        item.metadata ? JSON.stringify(item.metadata) : null
+      ];
+      
+      const result = await query(SQL, values);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error creating wishlist item:', error);
+      throw error;
+    }
   }
   
   async deleteWishlistItem(id: number): Promise<void> {
-    await db.delete(wishlistItems).where(eq(wishlistItems.id, id));
+    try {
+      const SQL = `
+        DELETE FROM wishlist_items
+        WHERE id = $1
+        RETURNING id
+      `;
+      
+      const result = await query(SQL, [id]);
+      
+      if (result.rows.length === 0) {
+        throw new Error(`Wishlist item with ID ${id} not found or could not be deleted`);
+      }
+    } catch (error) {
+      console.error('Error deleting wishlist item:', error);
+      throw error;
+    }
   }
   
   async getWishlistItemByTypeAndId(userId: number, itemType: string, itemId: string): Promise<WishlistItem | undefined> {
-    const [item] = await db
-      .select()
-      .from(wishlistItems)
-      .where(
-        and(
-          eq(wishlistItems.userId, userId),
-          eq(wishlistItems.itemType, itemType),
-          eq(wishlistItems.itemId, itemId)
-        )
-      );
-    return item;
+    try {
+      const SQL = `
+        SELECT * FROM wishlist_items
+        WHERE user_id = $1
+          AND item_type = $2
+          AND item_id = $3
+      `;
+      
+      const result = await query(SQL, [userId, itemType, itemId]);
+      return result.rows[0];
+    } catch (error) {
+      console.error('Error getting wishlist item by type and ID:', error);
+      throw error;
+    }
   }
   
   // Flight booking methods

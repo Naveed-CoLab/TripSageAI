@@ -1500,7 +1500,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           n.message, 
           n.type, 
           n.created_at, 
-          n.read_at,
           n.is_read,
           n.link,
           n.user_id,
@@ -1522,9 +1521,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Ensure we indicate if it's read for the frontend to show the right UI
         is_read: !!notification.is_read,
         // Format the date for consistent display
-        created_at: notification.created_at,
-        // Only include read_at if it's actually set
-        read_at: notification.read_at || null
+        created_at: notification.created_at
       }));
       
       return res.status(200).json(notifications);
@@ -1573,10 +1570,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Notification not found" });
       }
       
-      // Mark as read with timestamp
+      // Mark as read
       const updateQuery = `
         UPDATE notifications
-        SET is_read = TRUE, read_at = NOW()
+        SET is_read = TRUE
         WHERE id = $1
         RETURNING 
           id, 
@@ -1584,7 +1581,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message, 
           type, 
           created_at, 
-          read_at,
+          is_read,
           user_id,
           admin_id
       `;
@@ -1605,7 +1602,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const updateQuery = `
         UPDATE notifications
-        SET is_read = TRUE, read_at = NOW()
+        SET is_read = TRUE
         WHERE (user_id = $1 OR user_id IS NULL) AND is_read = FALSE
         RETURNING id
       `;
