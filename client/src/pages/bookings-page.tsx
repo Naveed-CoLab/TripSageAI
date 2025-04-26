@@ -426,9 +426,9 @@ export default function BookingsPage() {
               <div>
                 <div className="text-sm font-medium">Location</div>
                 <div className="text-sm text-gray-600">
-                  {booking.hotelAddress && <div className="text-xs text-gray-500">{booking.hotelAddress}</div>}
                   {booking.hotelCity || "City"}, {booking.hotelCountry || "Country"}
                 </div>
+                {booking.hotelAddress && <div className="text-xs text-gray-500">{booking.hotelAddress}</div>}
               </div>
             </div>
             <div className="flex items-start">
