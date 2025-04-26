@@ -554,8 +554,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Wishlist item not found" });
       }
       
-      // Check if user_id (database field) matches userId (from request)
-      if (item.user_id !== userId) {
+      if (item.userId !== userId) {
         return res.status(403).json({ message: "You do not have permission to delete this wishlist item" });
       }
       
@@ -1501,6 +1500,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           n.message, 
           n.type, 
           n.created_at, 
+          n.read_at,
           n.is_read,
           n.link,
           n.user_id,
@@ -1522,7 +1522,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Ensure we indicate if it's read for the frontend to show the right UI
         is_read: !!notification.is_read,
         // Format the date for consistent display
-        created_at: notification.created_at
+        created_at: notification.created_at,
+        // Only include read_at if it's actually set
+        read_at: notification.read_at || null
       }));
       
       return res.status(200).json(notifications);
@@ -1571,10 +1573,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Notification not found" });
       }
       
-      // Mark as read
+      // Mark as read with timestamp
       const updateQuery = `
         UPDATE notifications
-        SET is_read = TRUE
+        SET is_read = TRUE, read_at = NOW()
         WHERE id = $1
         RETURNING 
           id, 
@@ -1582,7 +1584,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           message, 
           type, 
           created_at, 
-          is_read,
+          read_at,
           user_id,
           admin_id
       `;
@@ -1603,7 +1605,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     try {
       const updateQuery = `
         UPDATE notifications
-        SET is_read = TRUE
+        SET is_read = TRUE, read_at = NOW()
         WHERE (user_id = $1 OR user_id IS NULL) AND is_read = FALSE
         RETURNING id
       `;
@@ -2006,8 +2008,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Create a notification with high priority for real-time sound alerts
         const notificationSql = `
           INSERT INTO notifications (
-            user_id, admin_id, title, message, type, created_at, is_read
-          ) VALUES ($1, $2, $3, $4, $5, NOW(), FALSE)
+            user_id, admin_id, title, message, type, created_at, is_read, read_at
+          ) VALUES ($1, $2, $3, $4, $5, NOW(), FALSE, NULL)
           RETURNING id
         `;
         
@@ -2141,8 +2143,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create notification with sound alert capability for real-time notifications
       const createNotificationSql = `
         INSERT INTO notifications (
-          user_id, admin_id, title, message, type, link, valid_until, created_at, is_read
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), FALSE)
+          user_id, admin_id, title, message, type, link, valid_until, created_at, is_read, read_at
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), FALSE, NULL)
         RETURNING id, title, message, type, created_at, user_id, admin_id
       `;
 

@@ -1,6 +1,8 @@
-import { pool, query } from "../server/db";
+import { db } from "../server/db";
+import { users } from "../shared/schema";
 import { randomBytes, scrypt } from "crypto";
 import { promisify } from "util";
+import { eq } from "drizzle-orm";
 
 const scryptAsync = promisify(scrypt);
 
@@ -13,26 +15,19 @@ async function hashPassword(password: string) {
 async function createAdminUser() {
   try {
     console.log("Checking if admin user already exists...");
-    
-    const checkUserSQL = `
-      SELECT id, username, role FROM users
-      WHERE username = $1
-      LIMIT 1
-    `;
-    
-    const existingAdmin = await query(checkUserSQL, ["admin"]);
+    const existingAdmin = await db
+      .select()
+      .from(users)
+      .where(eq(users.username, "admin"))
+      .limit(1);
 
-    if (existingAdmin.rows.length > 0) {
+    if (existingAdmin.length > 0) {
       console.log("Admin user already exists.");
       // Update the role to make sure it's set to admin
-      const updateRoleSQL = `
-        UPDATE users
-        SET role = 'admin'
-        WHERE username = $1
-        RETURNING id, username, role
-      `;
-      
-      await query(updateRoleSQL, ["admin"]);
+      await db
+        .update(users)
+        .set({ role: "admin" })
+        .where(eq(users.username, "admin"));
       console.log("Updated admin user role to 'admin'.");
       return;
     }
@@ -40,27 +35,14 @@ async function createAdminUser() {
     console.log("Creating admin user...");
     const hashedPassword = await hashPassword("admin123");
 
-    const insertUserSQL = `
-      INSERT INTO users (
-        username, password, email, first_name, last_name, role, is_active, created_at, updated_at
-      )
-      VALUES (
-        $1, $2, $3, $4, $5, $6, $7, NOW(), NOW()
-      )
-      RETURNING id, username, email, role
-    `;
-    
-    const values = [
-      "admin",
-      hashedPassword,
-      "admin@example.com",
-      "Admin",
-      "User",
-      "admin",
-      true
-    ];
-    
-    await query(insertUserSQL, values);
+    await db.insert(users).values({
+      username: "admin",
+      password: hashedPassword,
+      email: "admin@example.com",
+      firstName: "Admin",
+      lastName: "User",
+      role: "admin",
+    });
 
     console.log("Admin user created successfully!");
     console.log("Username: admin");
@@ -68,7 +50,6 @@ async function createAdminUser() {
   } catch (error) {
     console.error("Error creating admin user:", error);
   } finally {
-    pool.end();
     process.exit(0);
   }
 }

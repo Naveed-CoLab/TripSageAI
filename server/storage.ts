@@ -1,4 +1,18 @@
 import { 
+  users, 
+  trips, 
+  tripDays, 
+  activities, 
+  bookings,
+  destinations,
+  reviews,
+  flightSearches,
+  userSettings,
+  wishlistItems,
+  flightBookings,
+  hotelSearches,
+  hotelBookings,
+  adminLogs,
   type User, 
   type InsertUser, 
   type Trip, 
@@ -28,7 +42,8 @@ import {
   type AdminLog,
   type InsertAdminLog
 } from "@shared/schema";
-import { pool, query, queryOne, queryMany, transaction } from "./db";
+import { db, pool, query, transaction } from "./db";
+import { eq, and, desc, gte, count } from "drizzle-orm";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 
@@ -210,101 +225,50 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUser(id: number, userData: Partial<User>): Promise<User> {
-    // Convert userData object into SQL SET format with parameters
-    const entries = Object.entries(userData);
-    const setClauses = entries.map((_, index) => {
-      // Convert camelCase to snake_case for column names
-      const key = entries[index][0].replace(/([A-Z])/g, '_$1').toLowerCase();
-      return `${key} = $${index + 2}`;
-    });
-    
-    // Add updated_at to the SET clause
-    setClauses.push("updated_at = NOW()");
-    
-    const SQL = `
-      UPDATE users
-      SET ${setClauses.join(', ')}
-      WHERE id = $1
-      RETURNING *
-    `;
-    
-    // Create array of values with id as first parameter
-    const values = [id, ...entries.map(entry => entry[1])];
-    
-    const result = await query(SQL, values);
-    return result.rows[0];
+    const [updatedUser] = await db
+      .update(users)
+      .set({ ...userData, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return updatedUser;
   }
 
   async updateUserPassword(id: number, newPassword: string): Promise<User> {
-    const SQL = `
-      UPDATE users
-      SET password = $1, updated_at = NOW()
-      WHERE id = $2
-      RETURNING *
-    `;
-    
-    const result = await query(SQL, [newPassword, id]);
-    return result.rows[0];
+    const [updatedUser] = await db
+      .update(users)
+      .set({ password: newPassword, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return updatedUser;
   }
 
   async updateUserEmail(id: number, newEmail: string): Promise<User> {
-    const SQL = `
-      UPDATE users
-      SET email = $1, updated_at = NOW()
-      WHERE id = $2
-      RETURNING *
-    `;
-    
-    const result = await query(SQL, [newEmail, id]);
-    return result.rows[0];
+    const [updatedUser] = await db
+      .update(users)
+      .set({ email: newEmail, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return updatedUser;
   }
 
   async updateUserProfileImage(id: number, imageUrl: string): Promise<User> {
-    const SQL = `
-      UPDATE users
-      SET profile_image = $1, updated_at = NOW()
-      WHERE id = $2
-      RETURNING *
-    `;
-    
-    const result = await query(SQL, [imageUrl, id]);
-    return result.rows[0];
+    const [updatedUser] = await db
+      .update(users)
+      .set({ profileImage: imageUrl, updatedAt: new Date() })
+      .where(eq(users.id, id))
+      .returning();
+    return updatedUser;
   }
   
   // User settings methods
   async getUserSettings(userId: number): Promise<UserSettings | undefined> {
-    const SQL = `
-      SELECT * FROM user_settings
-      WHERE user_id = $1
-    `;
-    
-    const result = await query(SQL, [userId]);
-    return result.rows[0];
+    const [settings] = await db.select().from(userSettings).where(eq(userSettings.userId, userId));
+    return settings;
   }
 
   async createUserSettings(settings: InsertUserSettings): Promise<UserSettings> {
-    // Convert camelCase keys to snake_case for PostgreSQL column names
-    const processedData: Record<string, any> = {};
-    
-    for (const [key, value] of Object.entries(settings)) {
-      // Convert camelCase to snake_case
-      const snakeCaseKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
-      processedData[snakeCaseKey] = value;
-    }
-    
-    const keys = Object.keys(processedData);
-    const values = Object.values(processedData);
-    const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
-    const columnNames = keys.join(', ');
-    
-    const SQL = `
-      INSERT INTO user_settings (${columnNames})
-      VALUES (${placeholders})
-      RETURNING *
-    `;
-    
-    const result = await query(SQL, values);
-    return result.rows[0];
+    const [newSettings] = await db.insert(userSettings).values(settings).returning();
+    return newSettings;
   }
 
   async updateUserSettings(userId: number, settingsData: Partial<UserSettings>): Promise<UserSettings> {
@@ -315,73 +279,47 @@ export class DatabaseStorage implements IStorage {
       return this.createUserSettings({ userId, ...settingsData } as InsertUserSettings);
     }
     
-    // Convert userData object into SQL SET format with parameters
-    const entries = Object.entries(settingsData);
-    const setClauses = entries.map((_, index) => {
-      // Convert camelCase to snake_case for column names
-      const key = entries[index][0].replace(/([A-Z])/g, '_$1').toLowerCase();
-      return `${key} = $${index + 2}`;
-    });
-    
-    // Add updated_at to the SET clause
-    setClauses.push("updated_at = NOW()");
-    
-    const SQL = `
-      UPDATE user_settings
-      SET ${setClauses.join(', ')}
-      WHERE user_id = $1
-      RETURNING *
-    `;
-    
-    // Create array of values with userId as first parameter
-    const values = [userId, ...entries.map(entry => entry[1])];
-    
-    const result = await query(SQL, values);
-    return result.rows[0];
+    // Otherwise update existing settings
+    const [updatedSettings] = await db
+      .update(userSettings)
+      .set({ ...settingsData, updatedAt: new Date() })
+      .where(eq(userSettings.userId, userId))
+      .returning();
+    return updatedSettings;
   }
   
   async getUserCount(): Promise<number> {
-    const SQL = `
-      SELECT COUNT(*) as count FROM users
-    `;
-    const result = await query(SQL);
-    return parseInt(result.rows[0].count);
+    const result = await db.select({ count: count() }).from(users);
+    return result[0].count;
   }
   
   async getNewUserCountToday(): Promise<number> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    const SQL = `
-      SELECT COUNT(*) as count 
-      FROM users 
-      WHERE created_at >= $1
-    `;
+    const result = await db
+      .select({ count: count() })
+      .from(users)
+      .where(gte(users.createdAt, today));
     
-    const result = await query(SQL, [today]);
-    return parseInt(result.rows[0].count);
+    return result[0].count;
   }
   
   async getTripCount(): Promise<number> {
-    const SQL = `
-      SELECT COUNT(*) as count FROM trips
-    `;
-    const result = await query(SQL);
-    return parseInt(result.rows[0].count);
+    const result = await db.select({ count: count() }).from(trips);
+    return result[0].count;
   }
   
   async getNewTripCountToday(): Promise<number> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    const SQL = `
-      SELECT COUNT(*) as count 
-      FROM trips 
-      WHERE created_at >= $1
-    `;
+    const result = await db
+      .select({ count: count() })
+      .from(trips)
+      .where(gte(trips.createdAt, today));
     
-    const result = await query(SQL, [today]);
-    return parseInt(result.rows[0].count);
+    return result[0].count;
   }
   
   // Admin logs methods
@@ -991,103 +929,26 @@ export class DatabaseStorage implements IStorage {
 
   // Trip methods
   async getTripsByUserId(userId: number): Promise<Trip[]> {
-    try {
-      const SQL = `
-        SELECT * FROM trips
-        WHERE user_id = $1
-        ORDER BY created_at DESC
-      `;
-      
-      const result = await query(SQL, [userId]);
-      return result.rows;
-    } catch (error) {
-      console.error('Error fetching trips by user ID:', error);
-      throw error;
-    }
+    return db.select().from(trips).where(eq(trips.userId, userId)).orderBy(desc(trips.createdAt));
   }
 
   async getTripById(id: number): Promise<Trip | undefined> {
-    try {
-      const SQL = `
-        SELECT * FROM trips
-        WHERE id = $1
-        LIMIT 1
-      `;
-      
-      const result = await query(SQL, [id]);
-      return result.rows[0];
-    } catch (error) {
-      console.error('Error fetching trip by ID:', error);
-      throw error;
-    }
+    const [trip] = await db.select().from(trips).where(eq(trips.id, id));
+    return trip;
   }
 
   async createTrip(trip: InsertTrip): Promise<Trip> {
-    try {
-      // Convert camelCase to snake_case for column names
-      const columns = Object.keys(trip).map(key => 
-        key.replace(/([A-Z])/g, '_$1').toLowerCase()
-      ).join(', ');
-      
-      const placeholders = Object.keys(trip).map((_, index) => 
-        `$${index + 1}`
-      ).join(', ');
-      
-      const SQL = `
-        INSERT INTO trips (${columns}, created_at, updated_at)
-        VALUES (${placeholders}, NOW(), NOW())
-        RETURNING *
-      `;
-      
-      const values = Object.values(trip);
-      const result = await query(SQL, values);
-      return result.rows[0];
-    } catch (error) {
-      console.error('Error creating trip:', error);
-      throw error;
-    }
+    const [newTrip] = await db.insert(trips).values(trip).returning();
+    return newTrip;
   }
 
   async updateTrip(id: number, trip: InsertTrip): Promise<Trip> {
-    try {
-      // Create SET clause with proper parameterization
-      const setValues: string[] = [];
-      const queryValues: any[] = [];
-      let paramCounter = 1;
-      
-      Object.entries(trip).forEach(([key, value]) => {
-        if (value !== undefined) {
-          // Convert camelCase to snake_case for column names
-          const columnName = key.replace(/([A-Z])/g, '_$1').toLowerCase();
-          setValues.push(`${columnName} = $${paramCounter++}`);
-          queryValues.push(value);
-        }
-      });
-      
-      // Add updated_at timestamp
-      setValues.push(`updated_at = NOW()`);
-      
-      // Add the ID parameter
-      queryValues.push(id);
-      
-      const SQL = `
-        UPDATE trips
-        SET ${setValues.join(', ')}
-        WHERE id = $${paramCounter}
-        RETURNING *
-      `;
-      
-      const result = await query(SQL, queryValues);
-      
-      if (result.rows.length === 0) {
-        throw new Error(`Trip with ID ${id} not found`);
-      }
-      
-      return result.rows[0];
-    } catch (error) {
-      console.error('Error updating trip:', error);
-      throw error;
-    }
+    const [updatedTrip] = await db
+      .update(trips)
+      .set({ ...trip, updatedAt: new Date() })
+      .where(eq(trips.id, id))
+      .returning();
+    return updatedTrip;
   }
 
   async deleteTrip(id: number): Promise<void> {
@@ -1130,100 +991,26 @@ export class DatabaseStorage implements IStorage {
 
   // Trip day methods
   async getTripDaysByTripId(tripId: number): Promise<TripDay[]> {
-    try {
-      const SQL = `
-        SELECT * FROM trip_days
-        WHERE trip_id = $1
-        ORDER BY day_number
-      `;
-      
-      const result = await query(SQL, [tripId]);
-      return result.rows;
-    } catch (error) {
-      console.error('Error fetching trip days by trip ID:', error);
-      throw error;
-    }
+    return db.select().from(tripDays).where(eq(tripDays.tripId, tripId)).orderBy(tripDays.dayNumber);
   }
 
   async getTripDayById(id: number): Promise<TripDay | undefined> {
-    try {
-      const SQL = `
-        SELECT * FROM trip_days
-        WHERE id = $1
-        LIMIT 1
-      `;
-      
-      const result = await query(SQL, [id]);
-      return result.rows[0];
-    } catch (error) {
-      console.error('Error fetching trip day by ID:', error);
-      throw error;
-    }
+    const [day] = await db.select().from(tripDays).where(eq(tripDays.id, id));
+    return day;
   }
 
   async createTripDay(tripDay: InsertTripDay): Promise<TripDay> {
-    try {
-      // Convert camelCase to snake_case for column names
-      const columns = Object.keys(tripDay).map(key => 
-        key.replace(/([A-Z])/g, '_$1').toLowerCase()
-      ).join(', ');
-      
-      const placeholders = Object.keys(tripDay).map((_, index) => 
-        `$${index + 1}`
-      ).join(', ');
-      
-      const SQL = `
-        INSERT INTO trip_days (${columns}, created_at)
-        VALUES (${placeholders}, NOW())
-        RETURNING *
-      `;
-      
-      const values = Object.values(tripDay);
-      const result = await query(SQL, values);
-      return result.rows[0];
-    } catch (error) {
-      console.error('Error creating trip day:', error);
-      throw error;
-    }
+    const [newDay] = await db.insert(tripDays).values(tripDay).returning();
+    return newDay;
   }
 
   async updateTripDay(id: number, tripDay: InsertTripDay): Promise<TripDay> {
-    try {
-      // Create SET clause with proper parameterization
-      const setValues: string[] = [];
-      const queryValues: any[] = [];
-      let paramCounter = 1;
-      
-      Object.entries(tripDay).forEach(([key, value]) => {
-        if (value !== undefined) {
-          // Convert camelCase to snake_case for column names
-          const columnName = key.replace(/([A-Z])/g, '_$1').toLowerCase();
-          setValues.push(`${columnName} = $${paramCounter++}`);
-          queryValues.push(value);
-        }
-      });
-      
-      // Add the ID parameter
-      queryValues.push(id);
-      
-      const SQL = `
-        UPDATE trip_days
-        SET ${setValues.join(', ')}
-        WHERE id = $${paramCounter}
-        RETURNING *
-      `;
-      
-      const result = await query(SQL, queryValues);
-      
-      if (result.rows.length === 0) {
-        throw new Error(`Trip day with ID ${id} not found`);
-      }
-      
-      return result.rows[0];
-    } catch (error) {
-      console.error('Error updating trip day:', error);
-      throw error;
-    }
+    const [updatedDay] = await db
+      .update(tripDays)
+      .set(tripDay)
+      .where(eq(tripDays.id, id))
+      .returning();
+    return updatedDay;
   }
 
   async deleteTripDay(id: number): Promise<void> {
@@ -1252,240 +1039,54 @@ export class DatabaseStorage implements IStorage {
 
   // Activity methods
   async getActivitiesByTripDayId(tripDayId: number): Promise<Activity[]> {
-    try {
-      const SQL = `
-        SELECT * FROM activities
-        WHERE trip_day_id = $1
-        ORDER BY start_time
-      `;
-      
-      const result = await query(SQL, [tripDayId]);
-      return result.rows;
-    } catch (error) {
-      console.error('Error fetching activities by trip day ID:', error);
-      throw error;
-    }
+    return db.select().from(activities).where(eq(activities.tripDayId, tripDayId));
   }
 
   async getActivityById(id: number): Promise<Activity | undefined> {
-    try {
-      const SQL = `
-        SELECT * FROM activities
-        WHERE id = $1
-        LIMIT 1
-      `;
-      
-      const result = await query(SQL, [id]);
-      return result.rows[0];
-    } catch (error) {
-      console.error('Error fetching activity by ID:', error);
-      throw error;
-    }
+    const [activity] = await db.select().from(activities).where(eq(activities.id, id));
+    return activity;
   }
 
   async createActivity(activity: InsertActivity): Promise<Activity> {
-    try {
-      // Convert camelCase to snake_case for column names
-      const columns = Object.keys(activity).map(key => 
-        key.replace(/([A-Z])/g, '_$1').toLowerCase()
-      ).join(', ');
-      
-      const placeholders = Object.keys(activity).map((_, index) => 
-        `$${index + 1}`
-      ).join(', ');
-      
-      const SQL = `
-        INSERT INTO activities (${columns}, created_at)
-        VALUES (${placeholders}, NOW())
-        RETURNING *
-      `;
-      
-      const values = Object.values(activity);
-      const result = await query(SQL, values);
-      return result.rows[0];
-    } catch (error) {
-      console.error('Error creating activity:', error);
-      throw error;
-    }
+    const [newActivity] = await db.insert(activities).values(activity).returning();
+    return newActivity;
   }
 
   async updateActivity(id: number, activity: InsertActivity): Promise<Activity> {
-    try {
-      // Create SET clause with proper parameterization
-      const setValues: string[] = [];
-      const queryValues: any[] = [];
-      let paramCounter = 1;
-      
-      Object.entries(activity).forEach(([key, value]) => {
-        if (value !== undefined) {
-          // Convert camelCase to snake_case for column names
-          const columnName = key.replace(/([A-Z])/g, '_$1').toLowerCase();
-          setValues.push(`${columnName} = $${paramCounter++}`);
-          queryValues.push(value);
-        }
-      });
-      
-      // Add updated_at timestamp
-      setValues.push(`updated_at = NOW()`);
-      
-      // Add the ID parameter
-      queryValues.push(id);
-      
-      const SQL = `
-        UPDATE activities
-        SET ${setValues.join(', ')}
-        WHERE id = $${paramCounter}
-        RETURNING *
-      `;
-      
-      const result = await query(SQL, queryValues);
-      
-      if (result.rows.length === 0) {
-        throw new Error(`Activity with ID ${id} not found`);
-      }
-      
-      return result.rows[0];
-    } catch (error) {
-      console.error('Error updating activity:', error);
-      throw error;
-    }
+    const [updatedActivity] = await db
+      .update(activities)
+      .set(activity)
+      .where(eq(activities.id, id))
+      .returning();
+    return updatedActivity;
   }
 
   async deleteActivity(id: number): Promise<void> {
-    try {
-      const SQL = `
-        DELETE FROM activities
-        WHERE id = $1
-        RETURNING id
-      `;
-      
-      const result = await query(SQL, [id]);
-      
-      if (result.rows.length === 0) {
-        throw new Error(`Activity with ID ${id} not found or could not be deleted`);
-      }
-      
-      console.log(`Successfully deleted activity with ID ${id}`);
-    } catch (error) {
-      console.error(`Error deleting activity with ID ${id}:`, error);
-      throw error;
-    }
+    await db.delete(activities).where(eq(activities.id, id));
   }
 
   // Booking methods
   async getBookingsByTripId(tripId: number): Promise<Booking[]> {
-    try {
-      const SQL = `
-        SELECT * FROM bookings
-        WHERE trip_id = $1
-        ORDER BY created_at DESC
-      `;
-      
-      const result = await query(SQL, [tripId]);
-      return result.rows;
-    } catch (error) {
-      console.error('Error fetching bookings by trip ID:', error);
-      throw error;
-    }
+    return db.select().from(bookings).where(eq(bookings.tripId, tripId));
   }
 
   async getBookingById(id: number): Promise<Booking | undefined> {
-    try {
-      const SQL = `
-        SELECT * FROM bookings
-        WHERE id = $1
-        LIMIT 1
-      `;
-      
-      const result = await query(SQL, [id]);
-      return result.rows[0];
-    } catch (error) {
-      console.error('Error fetching booking by ID:', error);
-      throw error;
-    }
+    const [booking] = await db.select().from(bookings).where(eq(bookings.id, id));
+    return booking;
   }
 
   async createBooking(booking: InsertBooking): Promise<Booking> {
-    try {
-      const SQL = `
-        INSERT INTO bookings (
-          trip_id, type, title, provider, confirmation_code, 
-          price, currency, status, booking_date, start_date, 
-          end_date, details, notes
-        ) 
-        VALUES (
-          $1, $2, $3, $4, $5, 
-          $6, $7, $8, $9, $10, 
-          $11, $12, $13
-        )
-        RETURNING *
-      `;
-      const values = [
-        booking.tripId,
-        booking.type,
-        booking.title,
-        booking.provider,
-        booking.confirmationCode,
-        booking.price,
-        booking.currency,
-        booking.status,
-        booking.bookingDate || new Date(),
-        booking.startDate,
-        booking.endDate,
-        booking.details || null,
-        booking.notes || null
-      ];
-      
-      const result = await query(SQL, values);
-      return result.rows[0];
-    } catch (error) {
-      console.error('Error creating booking:', error);
-      throw error;
-    }
+    const [newBooking] = await db.insert(bookings).values(booking).returning();
+    return newBooking;
   }
 
-  async updateBooking(id: number, booking: Partial<InsertBooking>): Promise<Booking> {
-    try {
-      // Create SET clause dynamically based on provided fields
-      const updateFields: string[] = [];
-      const values: any[] = [];
-      let paramIndex = 1;
-      
-      // Add fields that are present in the booking object
-      Object.entries(booking).forEach(([key, value]) => {
-        if (value !== undefined) {
-          // Convert camelCase to snake_case for SQL
-          const snakeKey = key.replace(/[A-Z]/g, letter => `_${letter.toLowerCase()}`);
-          updateFields.push(`${snakeKey} = $${paramIndex}`);
-          values.push(value);
-          paramIndex++;
-        }
-      });
-      
-      // Add updated_at timestamp
-      updateFields.push(`updated_at = NOW()`);
-      
-      // Add the ID as the last parameter
-      values.push(id);
-      
-      const SQL = `
-        UPDATE bookings
-        SET ${updateFields.join(', ')}
-        WHERE id = $${paramIndex}
-        RETURNING *
-      `;
-      
-      const result = await query(SQL, values);
-      
-      if (result.rows.length === 0) {
-        throw new Error(`Booking with ID ${id} not found`);
-      }
-      
-      return result.rows[0];
-    } catch (error) {
-      console.error('Error updating booking:', error);
-      throw error;
-    }
+  async updateBooking(id: number, booking: InsertBooking): Promise<Booking> {
+    const [updatedBooking] = await db
+      .update(bookings)
+      .set(booking)
+      .where(eq(bookings.id, id))
+      .returning();
+    return updatedBooking;
   }
 
   async deleteBooking(id: number): Promise<void> {
@@ -1522,429 +1123,150 @@ export class DatabaseStorage implements IStorage {
 
   // Destination methods
   async getAllDestinations(): Promise<Destination[]> {
-    try {
-      const SQL = `
-        SELECT * FROM destinations
-        ORDER BY name
-      `;
-      
-      const result = await query(SQL);
-      return result.rows;
-    } catch (error) {
-      console.error('Error fetching all destinations:', error);
-      throw error;
-    }
+    return db.select().from(destinations);
   }
 
   async getDestinationById(id: number): Promise<Destination | undefined> {
-    try {
-      const SQL = `
-        SELECT * FROM destinations
-        WHERE id = $1
-        LIMIT 1
-      `;
-      
-      const result = await query(SQL, [id]);
-      return result.rows[0];
-    } catch (error) {
-      console.error('Error fetching destination by ID:', error);
-      throw error;
-    }
+    const [destination] = await db.select().from(destinations).where(eq(destinations.id, id));
+    return destination;
   }
 
   async createDestination(destination: InsertDestination): Promise<Destination> {
-    try {
-      // Convert camelCase to snake_case for column names
-      const columns = Object.keys(destination).map(key => 
-        key.replace(/([A-Z])/g, '_$1').toLowerCase()
-      ).join(', ');
-      
-      const placeholders = Object.keys(destination).map((_, index) => 
-        `$${index + 1}`
-      ).join(', ');
-      
-      const SQL = `
-        INSERT INTO destinations (${columns}, created_at)
-        VALUES (${placeholders}, NOW())
-        RETURNING *
-      `;
-      
-      const values = Object.values(destination);
-      const result = await query(SQL, values);
-      return result.rows[0];
-    } catch (error) {
-      console.error('Error creating destination:', error);
-      throw error;
-    }
+    const [newDestination] = await db.insert(destinations).values(destination).returning();
+    return newDestination;
   }
 
   // Review methods
   async getReviewsByTargetTypeAndId(targetType: string, targetId: string): Promise<Review[]> {
-    try {
-      const SQL = `
-        SELECT * FROM reviews
-        WHERE target_type = $1 
-        AND target_id = $2
-        ORDER BY created_at DESC
-      `;
-      
-      const result = await query(SQL, [targetType, targetId]);
-      return result.rows;
-    } catch (error) {
-      console.error('Error fetching reviews by target type and ID:', error);
-      throw error;
-    }
+    return db.select().from(reviews)
+      .where(and(
+        eq(reviews.targetType, targetType),
+        eq(reviews.targetId, targetId)
+      ))
+      .orderBy(desc(reviews.createdAt));
   }
   
   async getReviewsByUserId(userId: number): Promise<Review[]> {
-    try {
-      const SQL = `
-        SELECT * FROM reviews
-        WHERE user_id = $1
-        ORDER BY created_at DESC
-      `;
-      
-      const result = await query(SQL, [userId]);
-      return result.rows;
-    } catch (error) {
-      console.error('Error fetching reviews by user ID:', error);
-      throw error;
-    }
+    return db.select().from(reviews)
+      .where(eq(reviews.userId, userId))
+      .orderBy(desc(reviews.createdAt));
   }
 
   async getReviewById(id: number): Promise<Review | undefined> {
-    try {
-      const SQL = `
-        SELECT * FROM reviews
-        WHERE id = $1
-        LIMIT 1
-      `;
-      
-      const result = await query(SQL, [id]);
-      return result.rows[0];
-    } catch (error) {
-      console.error('Error fetching review by ID:', error);
-      throw error;
-    }
+    const [review] = await db.select().from(reviews).where(eq(reviews.id, id));
+    return review;
   }
 
   async createReview(review: InsertReview): Promise<Review> {
-    try {
-      // Convert camelCase to snake_case for column names
-      const columns = Object.keys(review).map(key => 
-        key.replace(/([A-Z])/g, '_$1').toLowerCase()
-      ).join(', ');
-      
-      const placeholders = Object.keys(review).map((_, index) => 
-        `$${index + 1}`
-      ).join(', ');
-      
-      const SQL = `
-        INSERT INTO reviews (${columns}, created_at, updated_at)
-        VALUES (${placeholders}, NOW(), NOW())
-        RETURNING *
-      `;
-      
-      const values = Object.values(review);
-      const result = await query(SQL, values);
-      return result.rows[0];
-    } catch (error) {
-      console.error('Error creating review:', error);
-      throw error;
-    }
+    const [newReview] = await db.insert(reviews).values(review).returning();
+    return newReview;
   }
 
   async updateReview(id: number, reviewData: Partial<Review>): Promise<Review> {
-    try {
-      // Create SET clause with proper parameterization
-      const setValues: string[] = [];
-      const queryValues: any[] = [];
-      let paramCounter = 1;
-      
-      Object.entries(reviewData).forEach(([key, value]) => {
-        if (value !== undefined) {
-          // Convert camelCase to snake_case for column names
-          const columnName = key.replace(/([A-Z])/g, '_$1').toLowerCase();
-          setValues.push(`${columnName} = $${paramCounter++}`);
-          queryValues.push(value);
-        }
-      });
-      
-      // Add updated_at timestamp
-      setValues.push(`updated_at = NOW()`);
-      
-      // Add the ID parameter
-      queryValues.push(id);
-      
-      const SQL = `
-        UPDATE reviews
-        SET ${setValues.join(', ')}
-        WHERE id = $${paramCounter}
-        RETURNING *
-      `;
-      
-      const result = await query(SQL, queryValues);
-      
-      if (result.rows.length === 0) {
-        throw new Error(`Review with ID ${id} not found`);
-      }
-      
-      return result.rows[0];
-    } catch (error) {
-      console.error('Error updating review:', error);
-      throw error;
-    }
+    const [updatedReview] = await db
+      .update(reviews)
+      .set({
+        ...reviewData,
+        updatedAt: new Date(),
+      })
+      .where(eq(reviews.id, id))
+      .returning();
+    return updatedReview;
   }
 
   async deleteReview(id: number): Promise<void> {
-    try {
-      const SQL = `
-        DELETE FROM reviews
-        WHERE id = $1
-        RETURNING id
-      `;
-      
-      const result = await query(SQL, [id]);
-      
-      if (result.rows.length === 0) {
-        throw new Error(`Review with ID ${id} not found or could not be deleted`);
-      }
-      
-      console.log(`Successfully deleted review with ID ${id}`);
-    } catch (error) {
-      console.error(`Error deleting review with ID ${id}:`, error);
-      throw error;
-    }
+    await db.delete(reviews).where(eq(reviews.id, id));
   }
 
   async markReviewHelpful(id: number): Promise<Review> {
-    try {
-      const review = await this.getReviewById(id);
-      if (!review) {
-        throw new Error("Review not found");
-      }
-      
-      const SQL = `
-        UPDATE reviews
-        SET helpful_count = $1, updated_at = NOW()
-        WHERE id = $2
-        RETURNING *
-      `;
-      
-      const helpfulCount = (review.helpfulCount || 0) + 1;
-      const result = await query(SQL, [helpfulCount, id]);
-      
-      if (result.rows.length === 0) {
-        throw new Error(`Review with ID ${id} not found`);
-      }
-      
-      return result.rows[0];
-    } catch (error) {
-      console.error(`Error marking review ${id} as helpful:`, error);
-      throw error;
+    const review = await this.getReviewById(id);
+    if (!review) {
+      throw new Error("Review not found");
     }
+    
+    const [updatedReview] = await db
+      .update(reviews)
+      .set({
+        helpfulCount: (review.helpfulCount || 0) + 1,
+      })
+      .where(eq(reviews.id, id))
+      .returning();
+    
+    return updatedReview;
   }
 
   async reportReview(id: number): Promise<Review> {
-    try {
-      const review = await this.getReviewById(id);
-      if (!review) {
-        throw new Error("Review not found");
-      }
-      
-      const SQL = `
-        UPDATE reviews
-        SET report_count = $1, updated_at = NOW()
-        WHERE id = $2
-        RETURNING *
-      `;
-      
-      const reportCount = (review.reportCount || 0) + 1;
-      const result = await query(SQL, [reportCount, id]);
-      
-      if (result.rows.length === 0) {
-        throw new Error(`Review with ID ${id} not found`);
-      }
-      
-      return result.rows[0];
-    } catch (error) {
-      console.error(`Error reporting review ${id}:`, error);
-      throw error;
+    const review = await this.getReviewById(id);
+    if (!review) {
+      throw new Error("Review not found");
     }
+    
+    const [updatedReview] = await db
+      .update(reviews)
+      .set({
+        reportCount: (review.reportCount || 0) + 1,
+      })
+      .where(eq(reviews.id, id))
+      .returning();
+    
+    return updatedReview;
   }
   
   // Flight search methods
   async getFlightSearchesByUserId(userId: number): Promise<FlightSearch[]> {
-    try {
-      const SQL = `
-        SELECT * FROM flight_searches
-        WHERE user_id = $1
-        ORDER BY created_at DESC
-      `;
-      
-      const result = await query(SQL, [userId]);
-      return result.rows;
-    } catch (error) {
-      console.error('Error getting flight searches:', error);
-      throw error;
-    }
+    return db.select()
+      .from(flightSearches)
+      .where(eq(flightSearches.userId, userId))
+      .orderBy(desc(flightSearches.createdAt));
   }
   
   async createFlightSearch(flightSearch: InsertFlightSearch): Promise<FlightSearch> {
-    try {
-      const SQL = `
-        INSERT INTO flight_searches (
-          user_id, origin_location_code, destination_location_code, 
-          departure_date, return_date, adults, children, infants, 
-          travel_class, trip_type, max_price, currency_code
-        )
-        VALUES (
-          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
-        )
-        RETURNING *
-      `;
-      
-      const values = [
-        flightSearch.userId,
-        flightSearch.originLocationCode,
-        flightSearch.destinationLocationCode,
-        flightSearch.departureDate,
-        flightSearch.returnDate || null,
-        flightSearch.adults || 1,
-        flightSearch.children || 0,
-        flightSearch.infants || 0,
-        flightSearch.travelClass || 'ECONOMY',
-        flightSearch.tripType || 'ONE_WAY',
-        flightSearch.maxPrice || null,
-        flightSearch.currencyCode || 'USD'
-      ];
-      
-      console.log('Inserting flight search with values:', JSON.stringify(values, null, 2));
-      const result = await query(SQL, values);
-      console.log('Flight search saved successfully:', result.rows[0]);
-      return result.rows[0];
-    } catch (error) {
-      console.error('Error creating flight search:', error);
-      throw error;
-    }
+    const [newFlightSearch] = await db
+      .insert(flightSearches)
+      .values(flightSearch)
+      .returning();
+    return newFlightSearch;
   }
   
   async deleteFlightSearch(id: number): Promise<void> {
-    try {
-      const SQL = `
-        DELETE FROM flight_searches
-        WHERE id = $1
-        RETURNING id
-      `;
-      
-      const result = await query(SQL, [id]);
-      
-      if (result.rows.length === 0) {
-        throw new Error(`Flight search with ID ${id} not found or could not be deleted`);
-      }
-    } catch (error) {
-      console.error('Error deleting flight search:', error);
-      throw error;
-    }
+    await db.delete(flightSearches).where(eq(flightSearches.id, id));
   }
   
   // Wishlist methods
   async getWishlistItemsByUserId(userId: number): Promise<WishlistItem[]> {
-    try {
-      const SQL = `
-        SELECT * FROM wishlist_items
-        WHERE user_id = $1
-        ORDER BY created_at DESC
-      `;
-      
-      const result = await query(SQL, [userId]);
-      return result.rows;
-    } catch (error) {
-      console.error('Error getting wishlist items:', error);
-      throw error;
-    }
+    return db
+      .select()
+      .from(wishlistItems)
+      .where(eq(wishlistItems.userId, userId))
+      .orderBy(desc(wishlistItems.createdAt));
   }
   
   async getWishlistItemById(id: number): Promise<WishlistItem | undefined> {
-    try {
-      const SQL = `
-        SELECT * FROM wishlist_items
-        WHERE id = $1
-      `;
-      
-      const result = await query(SQL, [id]);
-      return result.rows[0];
-    } catch (error) {
-      console.error('Error getting wishlist item by ID:', error);
-      throw error;
-    }
+    const [item] = await db.select().from(wishlistItems).where(eq(wishlistItems.id, id));
+    return item;
   }
   
   async createWishlistItem(item: InsertWishlistItem): Promise<WishlistItem> {
-    try {
-      const SQL = `
-        INSERT INTO wishlist_items (
-          user_id, item_type, item_id, item_name, 
-          item_image, additional_data
-        )
-        VALUES (
-          $1, $2, $3, $4,
-          $5, $6
-        )
-        RETURNING *
-      `;
-      
-      const values = [
-        item.userId,
-        item.itemType,
-        item.itemId,
-        item.itemName,
-        item.itemImage || null,
-        item.additionalData ? JSON.stringify(item.additionalData) : null
-      ];
-      
-      const result = await query(SQL, values);
-      return result.rows[0];
-    } catch (error) {
-      console.error('Error creating wishlist item:', error);
-      throw error;
-    }
+    const [newItem] = await db.insert(wishlistItems).values(item).returning();
+    return newItem;
   }
   
   async deleteWishlistItem(id: number): Promise<void> {
-    try {
-      const SQL = `
-        DELETE FROM wishlist_items
-        WHERE id = $1
-        RETURNING id
-      `;
-      
-      const result = await query(SQL, [id]);
-      
-      if (result.rows.length === 0) {
-        throw new Error(`Wishlist item with ID ${id} not found or could not be deleted`);
-      }
-    } catch (error) {
-      console.error('Error deleting wishlist item:', error);
-      throw error;
-    }
+    await db.delete(wishlistItems).where(eq(wishlistItems.id, id));
   }
   
   async getWishlistItemByTypeAndId(userId: number, itemType: string, itemId: string): Promise<WishlistItem | undefined> {
-    try {
-      const SQL = `
-        SELECT * FROM wishlist_items
-        WHERE user_id = $1
-          AND item_type = $2
-          AND item_id = $3
-      `;
-      
-      const result = await query(SQL, [userId, itemType, itemId]);
-      return result.rows[0];
-    } catch (error) {
-      console.error('Error getting wishlist item by type and ID:', error);
-      throw error;
-    }
+    const [item] = await db
+      .select()
+      .from(wishlistItems)
+      .where(
+        and(
+          eq(wishlistItems.userId, userId),
+          eq(wishlistItems.itemType, itemType),
+          eq(wishlistItems.itemId, itemId)
+        )
+      );
+    return item;
   }
   
   // Flight booking methods
@@ -2120,29 +1442,27 @@ export class DatabaseStorage implements IStorage {
 
   async createHotelSearch(hotelSearch: any): Promise<HotelSearch> {
     try {
-      const SQL = `
-        INSERT INTO hotel_searches (
-          user_id, location, check_in_date, check_out_date, 
-          guests, rooms, created_at, updated_at
-        )
-        VALUES (
-          $1, $2, $3, $4, $5, $6, NOW(), NOW()
-        )
+      // Convert camelCase keys to snake_case for PostgreSQL
+      const processedData: Record<string, any> = {};
+      
+      for (const [key, value] of Object.entries(hotelSearch)) {
+        // Convert camelCase to snake_case
+        const snakeCaseKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+        processedData[snakeCaseKey] = value;
+      }
+      
+      const keys = Object.keys(processedData);
+      const values = Object.values(processedData);
+      const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
+      const columnNames = keys.join(', ');
+      
+      const query = `
+        INSERT INTO hotel_searches (${columnNames})
+        VALUES (${placeholders})
         RETURNING *
       `;
       
-      const values = [
-        hotelSearch.userId,
-        hotelSearch.location,
-        hotelSearch.checkInDate,
-        hotelSearch.checkOutDate,
-        hotelSearch.guests || 1,
-        hotelSearch.rooms || 1
-      ];
-      
-      console.log('Inserting hotel search with values:', JSON.stringify(values, null, 2));
-      const result = await pool.query(SQL, values);
-      console.log('Hotel search saved successfully:', result.rows[0]);
+      const result = await pool.query(query, values);
       return result.rows[0] as HotelSearch;
     } catch (error) {
       console.error("Error in createHotelSearch:", error);

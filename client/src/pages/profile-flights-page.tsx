@@ -290,12 +290,12 @@ export default function ProfileFlightsPage() {
                           <div className="flex items-center">
                             <Calendar className="h-4 w-4 mr-1.5 text-gray-400" />
                             <span>
-                              {search.departureDate ? new Date(search.departureDate).toLocaleDateString('en-US', {
+                              {new Date(search.departureDate).toLocaleDateString('en-US', {
                                 month: 'short',
                                 day: 'numeric',
                                 year: 'numeric'
-                              }) : "Invalid Date"}
-                              {search.returnDate && search.returnDate !== "Invalid Date" && ` - ${new Date(search.returnDate).toLocaleDateString('en-US', {
+                              })}
+                              {search.returnDate && ` - ${new Date(search.returnDate).toLocaleDateString('en-US', {
                                 month: 'short',
                                 day: 'numeric',
                                 year: 'numeric'

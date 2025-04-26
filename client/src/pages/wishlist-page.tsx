@@ -1,37 +1,61 @@
 import { useState, useEffect } from "react";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";
 import { Loader2, Trash2, Search } from "lucide-react";
+import { apiRequest } from "@/lib/queryClient";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/hooks/use-auth";
 import { Redirect, useLocation } from "wouter";
+import { EmptyState } from "../components/empty-state";
 import MainLayout from "@/components/layout/main-layout";
-import { useWishlist, WishlistItem } from "@/hooks/use-wishlist";
+type WishlistItem = {
+  id: number;
+  userId: number;
+  itemType: string;
+  itemId: string;
+  itemName: string;
+  itemImage?: string;
+  additionalData?: any;
+  createdAt: string;
+};
 
 export default function WishlistPage() {
   const { user, isLoading: isAuthLoading } = useAuth();
+  const { toast } = useToast();
+  const queryClient = useQueryClient();
   const [searchQuery, setSearchQuery] = useState("");
   const [activeTab, setActiveTab] = useState("all");
   const [, navigate] = useLocation();
 
-  // Use our custom wishlist hook
-  const { 
-    wishlistItems, 
-    isLoading, 
-    removeFromWishlist, 
-    refetchWishlist 
-  } = useWishlist();
-  
-  // Periodic refetch to ensure data is fresh
-  useEffect(() => {
-    const intervalId = setInterval(() => {
-      refetchWishlist();
-    }, 5000); // Refetch every 5 seconds
-    
-    return () => clearInterval(intervalId);
-  }, [refetchWishlist]);
+  // Fetch wishlist items
+  const { data: wishlistItems, isLoading } = useQuery<WishlistItem[]>({
+    queryKey: ["/api/wishlist"],
+    enabled: !!user,
+  });
 
-  // We use the removeFromWishlist.mutate directly in the render
+  // Delete wishlist item mutation
+  const deleteWishlistItem = useMutation({
+    mutationFn: async (id: number) => {
+      return apiRequest("DELETE", `/api/wishlist/${id}`);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["/api/wishlist"] });
+      toast({
+        title: "Item removed",
+        description: "The item has been removed from your wishlist.",
+      });
+    },
+    onError: (error) => {
+      toast({
+        title: "Error",
+        description: "Failed to remove item from wishlist. Please try again.",
+        variant: "destructive",
+      });
+    },
+  });
 
   // Filter wishlist items based on search query and active tab
   const filteredItems = wishlistItems ? wishlistItems.filter((item: WishlistItem) => {
@@ -51,6 +75,11 @@ export default function WishlistPage() {
   if (!isAuthLoading && !user) {
     return <Redirect to="/auth" />;
   }
+
+  // Handle removing an item from wishlist
+  const handleRemoveItem = (id: number) => {
+    deleteWishlistItem.mutate(id);
+  };
 
   return (
     <MainLayout>
@@ -91,23 +120,23 @@ export default function WishlistPage() {
               </TabsList>
               
               <TabsContent value="all" className="mt-0">
-                {renderWishlistItems(filteredItems, isLoading, (id) => removeFromWishlist.mutate(id), () => navigate('/'))}
+                {renderWishlistItems(filteredItems, isLoading, handleRemoveItem, () => navigate('/'))}
               </TabsContent>
               
               <TabsContent value="destinations" className="mt-0">
-                {renderWishlistItems(filteredItems, isLoading, (id) => removeFromWishlist.mutate(id), () => navigate('/'))}
+                {renderWishlistItems(filteredItems, isLoading, handleRemoveItem, () => navigate('/'))}
               </TabsContent>
               
               <TabsContent value="hotels" className="mt-0">
-                {renderWishlistItems(filteredItems, isLoading, (id) => removeFromWishlist.mutate(id), () => navigate('/'))}
+                {renderWishlistItems(filteredItems, isLoading, handleRemoveItem, () => navigate('/'))}
               </TabsContent>
               
               <TabsContent value="experiences" className="mt-0">
-                {renderWishlistItems(filteredItems, isLoading, (id) => removeFromWishlist.mutate(id), () => navigate('/'))}
+                {renderWishlistItems(filteredItems, isLoading, handleRemoveItem, () => navigate('/'))}
               </TabsContent>
               
               <TabsContent value="trips" className="mt-0">
-                {renderWishlistItems(filteredItems, isLoading, (id) => removeFromWishlist.mutate(id), () => navigate('/'))}
+                {renderWishlistItems(filteredItems, isLoading, handleRemoveItem, () => navigate('/'))}
               </TabsContent>
             </Tabs>
           </div>
@@ -164,21 +193,13 @@ function renderWishlistItems(
                 alt={item.itemName}
                 className="w-full h-full object-cover"
                 onError={(e) => {
-                  // Use a default image based on item type
-                  let searchTerm = item.itemType;
-                  if (item.itemType === 'destination') searchTerm = item.itemName;
-                  if (item.itemType === 'hotel') searchTerm = 'restaurant';
-                  if (item.itemType === 'experience') searchTerm = 'activity';
-                  e.currentTarget.src = `https://source.unsplash.com/featured/?${encodeURIComponent(searchTerm)}`;
+                  e.currentTarget.src = `https://source.unsplash.com/featured/?${encodeURIComponent(item.itemName)}`;
                 }}
               />
             ) : (
-              // Always use a fallback image instead of text
-              <img
-                src={`https://source.unsplash.com/featured/?${encodeURIComponent(item.itemType === 'hotel' ? 'restaurant' : item.itemType)}`}
-                alt={item.itemName}
-                className="w-full h-full object-cover"
-              />
+              <div className="w-full h-full flex items-center justify-center text-gray-400">
+                No image available
+              </div>
             )}
             <button 
               className="absolute top-2 right-2 p-2 rounded-full bg-white shadow-sm transition-colors duration-200 hover:bg-gray-100"

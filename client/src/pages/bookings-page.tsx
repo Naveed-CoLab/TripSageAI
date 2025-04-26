@@ -43,7 +43,7 @@ export default function BookingsPage() {
   const { toast } = useToast();
   const [tab, setTab] = useState("all");
   
-  const { data: bookings = [], isLoading, error } = useQuery<FlightBooking[]>({
+  const { data: bookings, isLoading, error } = useQuery<FlightBooking[]>({
     queryKey: ["/api/flight-bookings"],
     enabled: !!user,
     onSuccess: (data) => {

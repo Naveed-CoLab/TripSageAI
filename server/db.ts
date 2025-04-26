@@ -1,4 +1,6 @@
 import pg from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import * as schema from "@shared/schema";
 
 const { Pool } = pg;
 
@@ -9,6 +11,7 @@ if (!process.env.DATABASE_URL) {
 }
 
 export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
+export const db = drizzle(pool, { schema });
 
 // Helper function to run parameterized queries safely (prevents SQL injection)
 export async function query(text: string, params: any[] = []) {
@@ -22,18 +25,6 @@ export async function query(text: string, params: any[] = []) {
     console.error('Error executing query', { text, error });
     throw error;
   }
-}
-
-// Helper function for single result queries
-export async function queryOne<T>(text: string, params: any[] = []): Promise<T | undefined> {
-  const result = await query(text, params);
-  return result.rows[0] as T;
-}
-
-// Helper function for multiple result queries
-export async function queryMany<T>(text: string, params: any[] = []): Promise<T[]> {
-  const result = await query(text, params);
-  return result.rows as T[];
 }
 
 // Helper function to run transactions
