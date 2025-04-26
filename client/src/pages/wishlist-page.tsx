@@ -217,11 +217,42 @@ function renderWishlistItems(
           <div className="p-4">
             <div className="flex items-center">
               {item.additionalData?.rating && (
-                <BubbleRating 
-                  rating={parseFloat(item.additionalData.rating)} 
-                  reviewCount={item.additionalData?.reviewCount} 
-                  size="sm"
-                />
+                <div className="flex items-center">
+                  {/* Custom amber-colored bubble rating */}
+                  <div className="flex mr-1.5">
+                    {Array(5).fill(0).map((_, index) => {
+                      const bubbleValue = index + 1;
+                      const roundedRating = Math.round(parseFloat(item.additionalData.rating) * 2) / 2;
+                      let fillClass = '';
+                      
+                      if (bubbleValue <= roundedRating) {
+                        // Full bubble
+                        fillClass = 'bg-amber-500';
+                      } else if (bubbleValue - 0.5 === roundedRating) {
+                        // Half bubble
+                        fillClass = 'bg-gradient-to-r from-amber-500 to-amber-500 bg-[length:50%_100%] bg-no-repeat';
+                      } else {
+                        // Empty bubble
+                        fillClass = 'bg-gray-200';
+                      }
+                      
+                      return (
+                        <div
+                          key={`bubble-${index}`}
+                          className={`rounded-full ${fillClass} w-3.5 h-3.5 mx-0.5`}
+                        />
+                      );
+                    })}
+                  </div>
+                  <span className="text-sm font-medium text-amber-500">
+                    {parseFloat(item.additionalData.rating).toFixed(1)}
+                  </span>
+                  {item.additionalData?.reviewCount && (
+                    <span className="ml-1 text-sm text-gray-600">
+                      ({item.additionalData.reviewCount.toLocaleString()})
+                    </span>
+                  )}
+                </div>
               )}
             </div>
             <h3 className="font-bold text-gray-900 mt-1">{item.itemName}</h3>
