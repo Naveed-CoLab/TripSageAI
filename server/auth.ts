@@ -75,10 +75,28 @@ export function setupAuth(app: Express) {
     console.warn("Google authentication is not configured. GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET must be set.");
   }
 
+  // User cache to reduce database queries
+  const userCache = new Map<number, Express.User>();
+  const USER_CACHE_EXPIRY = 5 * 60 * 1000; // 5 minutes in milliseconds
+
   passport.serializeUser((user, done) => done(null, user.id));
   passport.deserializeUser(async (id: number, done) => {
     try {
+      // Check the cache first
+      if (userCache.has(id)) {
+        return done(null, userCache.get(id));
+      }
+
+      // If not in cache, get from database
       const user = await storage.getUser(id);
+      if (user) {
+        // Cache the user for 5 minutes
+        userCache.set(id, user);
+        
+        // Set a timeout to clear the cache entry
+        setTimeout(() => userCache.delete(id), USER_CACHE_EXPIRY);
+      }
+      
       done(null, user);
     } catch (error) {
       done(error);
