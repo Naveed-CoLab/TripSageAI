@@ -233,14 +233,14 @@ export default function BookingsPage() {
   const renderFlightCard = (booking: FlightBooking) => {
     return (
       <Card key={booking.id} className="overflow-hidden border border-gray-200 hover:shadow-md transition-shadow duration-300">
-        <CardHeader className="bg-indigo-50 border-b border-gray-200 pb-3">
+        <CardHeader className="bg-blue-50 border-b border-gray-200 pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <div className="bg-indigo-100 text-indigo-800 font-bold h-10 w-10 rounded-md flex items-center justify-center mr-3">
+              <div className="bg-blue-100 text-blue-600 font-bold h-10 w-10 rounded-md flex items-center justify-center mr-3">
                 <Plane className="h-5 w-5" />
               </div>
               <div>
-                <CardTitle className="text-lg">{booking.airline}</CardTitle>
+                <CardTitle className="text-lg">{booking.airline || "Flight Booking"}</CardTitle>
                 <CardDescription className="text-xs">
                   Flight {booking.flightNumber} • {booking.cabinClass}
                 </CardDescription>
@@ -264,84 +264,88 @@ export default function BookingsPage() {
           </div>
         </CardHeader>
         <CardContent className="pt-4">
-          <div className="flex items-start justify-between mb-4">
+          <div className="flex items-start justify-between mb-4 bg-blue-50 rounded-lg p-3">
             <div className="text-center">
-              <div className="text-2xl font-bold">{formatTime(booking.departureTime)}</div>
+              <div className="text-2xl font-bold text-blue-700">{formatTime(booking.departureTime)}</div>
               <div className="text-sm text-gray-500">{booking.departureCode}</div>
             </div>
             <div className="flex-1 px-4 flex flex-col items-center">
-              <div className="text-xs text-gray-500 mb-1">{formatDuration(booking.departureTime, booking.arrivalTime)}</div>
+              <div className="text-xs text-blue-600 font-semibold mb-1">{formatDuration(booking.departureTime, booking.arrivalTime)}</div>
               <div className="w-full flex items-center">
-                <div className="h-1 w-1 rounded-full bg-gray-400"></div>
-                <div className="flex-1 h-[2px] bg-gray-300"></div>
-                <Plane className="h-4 w-4 text-indigo-500 mx-1" />
-                <div className="flex-1 h-[2px] bg-gray-300"></div>
-                <div className="h-1 w-1 rounded-full bg-gray-400"></div>
+                <div className="h-1 w-1 rounded-full bg-blue-600"></div>
+                <div className="flex-1 h-[2px] bg-blue-300"></div>
+                <Plane className="h-4 w-4 text-blue-600 mx-1" />
+                <div className="flex-1 h-[2px] bg-blue-300"></div>
+                <div className="h-1 w-1 rounded-full bg-blue-600"></div>
               </div>
               <div className="text-xs text-gray-500 mt-1">Direct</div>
             </div>
             <div className="text-center">
-              <div className="text-2xl font-bold">{formatTime(booking.arrivalTime)}</div>
+              <div className="text-2xl font-bold text-blue-700">{formatTime(booking.arrivalTime)}</div>
               <div className="text-sm text-gray-500">{booking.arrivalCode}</div>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div className="flex items-start">
-              <Calendar className="h-4 w-4 text-indigo-500 mt-0.5 mr-2 flex-shrink-0" />
+              <Calendar className="h-4 w-4 text-blue-500 mt-0.5 mr-2 flex-shrink-0" />
               <div>
                 <div className="text-sm font-medium">Date</div>
                 <div className="text-sm text-gray-600">{formatDate(booking.departureTime)}</div>
               </div>
             </div>
             <div className="flex items-start">
-              <Clock className="h-4 w-4 text-indigo-500 mt-0.5 mr-2 flex-shrink-0" />
+              <Clock className="h-4 w-4 text-blue-500 mt-0.5 mr-2 flex-shrink-0" />
               <div>
                 <div className="text-sm font-medium">Duration</div>
                 <div className="text-sm text-gray-600">{formatDuration(booking.departureTime, booking.arrivalTime)}</div>
               </div>
             </div>
             <div className="flex items-start">
-              <MapPin className="h-4 w-4 text-indigo-500 mt-0.5 mr-2 flex-shrink-0" />
+              <MapPin className="h-4 w-4 text-blue-500 mt-0.5 mr-2 flex-shrink-0" />
               <div>
                 <div className="text-sm font-medium">From</div>
                 <div className="text-sm text-gray-600">{booking.departureAirport}</div>
+                <div className="text-xs text-gray-500">{booking.departureCode}</div>
               </div>
             </div>
             <div className="flex items-start">
-              <MapPin className="h-4 w-4 text-indigo-500 mt-0.5 mr-2 flex-shrink-0" />
+              <MapPin className="h-4 w-4 text-blue-500 mt-0.5 mr-2 flex-shrink-0" />
               <div>
                 <div className="text-sm font-medium">To</div>
                 <div className="text-sm text-gray-600">{booking.arrivalAirport}</div>
+                <div className="text-xs text-gray-500">{booking.arrivalCode}</div>
               </div>
             </div>
             <div className="flex items-start">
-              <Users className="h-4 w-4 text-indigo-500 mt-0.5 mr-2 flex-shrink-0" />
+              <Users className="h-4 w-4 text-blue-500 mt-0.5 mr-2 flex-shrink-0" />
               <div>
                 <div className="text-sm font-medium">Passenger</div>
                 <div className="text-sm text-gray-600">{booking.passengerName}</div>
+                {booking.passengerEmail && <div className="text-xs text-gray-500">{booking.passengerEmail}</div>}
               </div>
             </div>
             <div className="flex items-start">
-              <CreditCard className="h-4 w-4 text-indigo-500 mt-0.5 mr-2 flex-shrink-0" />
+              <CreditCard className="h-4 w-4 text-blue-500 mt-0.5 mr-2 flex-shrink-0" />
               <div>
                 <div className="text-sm font-medium">Price</div>
-                <div className="text-sm text-gray-600">{booking.price} {booking.currency}</div>
+                <div className="text-sm text-gray-600 font-semibold">{booking.price} {booking.currency}</div>
+                <div className="text-xs text-gray-500">{booking.cabinClass}</div>
               </div>
             </div>
           </div>
 
-          <div className="bg-gray-50 -mx-6 -mb-6 p-4 border-t border-gray-200 flex items-center justify-between">
+          <div className="bg-blue-50 -mx-6 -mb-6 p-4 border-t border-gray-200 flex items-center justify-between">
             <div>
-              <div className="text-sm font-medium">Booking Reference</div>
-              <div className="text-sm font-mono text-gray-700">{booking.bookingReference}</div>
+              <div className="text-sm font-medium text-blue-700">Booking Reference</div>
+              <div className="text-sm font-mono text-blue-600 font-bold">{booking.bookingReference}</div>
             </div>
             <div className="flex space-x-2">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="border-blue-200 text-blue-700 hover:bg-blue-50">
                 View Details
               </Button>
               {booking.status.toUpperCase() === "CONFIRMED" && (
-                <Button size="sm" variant="default" className="bg-indigo-600 hover:bg-indigo-700 text-white">
+                <Button size="sm" variant="default" className="bg-blue-600 hover:bg-blue-700 text-white">
                   <CheckCircle className="mr-1 h-4 w-4" />
                   Check In
                 </Button>
@@ -356,16 +360,19 @@ export default function BookingsPage() {
   const renderHotelCard = (booking: HotelBooking) => {
     return (
       <Card key={booking.id} className="overflow-hidden border border-gray-200 hover:shadow-md transition-shadow duration-300">
-        <CardHeader className="bg-cyan-50 border-b border-gray-200 pb-3">
+        <CardHeader className="bg-blue-50 border-b border-gray-200 pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center">
-              <div className="bg-cyan-100 text-cyan-800 font-bold h-10 w-10 rounded-md flex items-center justify-center mr-3">
+              <div className="bg-blue-100 text-blue-600 font-bold h-10 w-10 rounded-md flex items-center justify-center mr-3">
                 <BedDouble className="h-5 w-5" />
               </div>
               <div>
-                <CardTitle className="text-lg">{booking.hotelName}</CardTitle>
-                <CardDescription className="text-xs">
-                  {booking.hotelStars}-Star • {booking.roomType}
+                <CardTitle className="text-lg">{booking.hotelName || "Hotel Booking"}</CardTitle>
+                <CardDescription className="text-xs flex items-center gap-1">
+                  {Array.from({ length: booking.hotelStars || 0 }).map((_, i) => (
+                    <span key={i} className="text-yellow-400">★</span>
+                  ))}
+                  {booking.hotelStars ? ` • ${booking.roomType}` : booking.roomType}
                 </CardDescription>
               </div>
             </div>
@@ -387,66 +394,77 @@ export default function BookingsPage() {
           </div>
         </CardHeader>
         <CardContent className="pt-4">
-          <div className="flex items-center justify-between mb-4 bg-cyan-50 rounded-md p-3">
+          <div className="flex items-center justify-between mb-4 bg-blue-50 rounded-md p-3">
             <div className="flex items-center">
-              <Calendar className="h-5 w-5 text-cyan-600 mr-3" />
+              <Calendar className="h-5 w-5 text-blue-500 mr-3" />
               <div>
                 <div className="text-sm font-medium">{formatDate(booking.checkInDate)}</div>
                 <div className="text-xs text-gray-500">Check-in</div>
               </div>
             </div>
-            <div className="text-xs text-gray-500 px-3">{nightsStay(booking.checkInDate, booking.checkOutDate)}</div>
+            <div className="text-xs text-blue-600 px-3 font-semibold">{nightsStay(booking.checkInDate, booking.checkOutDate)}</div>
             <div className="flex items-center">
               <div>
                 <div className="text-sm font-medium text-right">{formatDate(booking.checkOutDate)}</div>
                 <div className="text-xs text-gray-500 text-right">Check-out</div>
               </div>
-              <Calendar className="h-5 w-5 text-cyan-600 ml-3" />
+              <Calendar className="h-5 w-5 text-blue-500 ml-3" />
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-4 mb-4">
             <div className="flex items-start">
-              <Building className="h-4 w-4 text-cyan-500 mt-0.5 mr-2 flex-shrink-0" />
+              <Building className="h-4 w-4 text-blue-500 mt-0.5 mr-2 flex-shrink-0" />
               <div>
                 <div className="text-sm font-medium">Location</div>
-                <div className="text-sm text-gray-600">{booking.hotelCity}, {booking.hotelCountry}</div>
+                <div className="text-sm text-gray-600">
+                  {booking.hotelAddress && <div className="text-xs text-gray-500">{booking.hotelAddress}</div>}
+                  {booking.hotelCity || "City"}, {booking.hotelCountry || "Country"}
+                </div>
               </div>
             </div>
             <div className="flex items-start">
-              <BedDouble className="h-4 w-4 text-cyan-500 mt-0.5 mr-2 flex-shrink-0" />
+              <BedDouble className="h-4 w-4 text-blue-500 mt-0.5 mr-2 flex-shrink-0" />
               <div>
-                <div className="text-sm font-medium">Room</div>
-                <div className="text-sm text-gray-600">{booking.roomType}</div>
+                <div className="text-sm font-medium">Room & Guests</div>
+                <div className="text-sm text-gray-600">
+                  {booking.roomType || "Standard Room"}
+                  <div className="text-xs text-gray-500">
+                    {booking.nightsCount} {booking.nightsCount === 1 ? 'Night' : 'Nights'} • 
+                    {booking.guestCount} {booking.guestCount === 1 ? 'Guest' : 'Guests'}
+                  </div>
+                </div>
               </div>
             </div>
             <div className="flex items-start">
-              <Users className="h-4 w-4 text-cyan-500 mt-0.5 mr-2 flex-shrink-0" />
+              <Users className="h-4 w-4 text-blue-500 mt-0.5 mr-2 flex-shrink-0" />
               <div>
-                <div className="text-sm font-medium">Guests</div>
-                <div className="text-sm text-gray-600">{booking.guestCount} {booking.guestCount === 1 ? 'Person' : 'People'}</div>
+                <div className="text-sm font-medium">Guest Name</div>
+                <div className="text-sm text-gray-600">{booking.guestName || "Guest"}</div>
+                {booking.guestEmail && <div className="text-xs text-gray-500">{booking.guestEmail}</div>}
               </div>
             </div>
             <div className="flex items-start">
-              <CreditCard className="h-4 w-4 text-cyan-500 mt-0.5 mr-2 flex-shrink-0" />
+              <CreditCard className="h-4 w-4 text-blue-500 mt-0.5 mr-2 flex-shrink-0" />
               <div>
                 <div className="text-sm font-medium">Price</div>
-                <div className="text-sm text-gray-600">{booking.price} {booking.currency}</div>
+                <div className="text-sm text-gray-600 font-semibold">{booking.price} {booking.currency}</div>
+                <div className="text-xs text-gray-500">Total for {booking.nightsCount} {booking.nightsCount === 1 ? 'night' : 'nights'}</div>
               </div>
             </div>
           </div>
 
-          <div className="bg-gray-50 -mx-6 -mb-6 p-4 border-t border-gray-200 flex items-center justify-between">
+          <div className="bg-blue-50 -mx-6 -mb-6 p-4 border-t border-gray-200 flex items-center justify-between">
             <div>
-              <div className="text-sm font-medium">Booking Reference</div>
-              <div className="text-sm font-mono text-gray-700">{booking.bookingReference}</div>
+              <div className="text-sm font-medium text-blue-700">Booking Reference</div>
+              <div className="text-sm font-mono text-blue-600 font-bold">{booking.bookingReference}</div>
             </div>
             <div className="flex space-x-2">
-              <Button variant="outline" size="sm">
+              <Button variant="outline" size="sm" className="border-blue-200 text-blue-700 hover:bg-blue-50">
                 View Details
               </Button>
               {booking.status.toUpperCase() === "CONFIRMED" && (
-                <Button size="sm" variant="default" className="bg-cyan-600 hover:bg-cyan-700 text-white">
+                <Button size="sm" variant="default" className="bg-blue-600 hover:bg-blue-700 text-white">
                   <Bookmark className="mr-1 h-4 w-4" />
                   View Voucher
                 </Button>
@@ -524,7 +542,7 @@ export default function BookingsPage() {
             <div className="mb-8">
               {bookingType === "all" && (
                 <div className="flex items-center gap-2 mb-4">
-                  <Plane className="h-5 w-5 text-indigo-600" />
+                  <Plane className="h-5 w-5 text-blue-600" />
                   <h2 className="text-xl font-semibold text-gray-800">Flight Bookings</h2>
                 </div>
               )}
@@ -539,7 +557,7 @@ export default function BookingsPage() {
             <div>
               {bookingType === "all" && (
                 <div className="flex items-center gap-2 mb-4">
-                  <BedDouble className="h-5 w-5 text-cyan-600" />
+                  <BedDouble className="h-5 w-5 text-blue-600" />
                   <h2 className="text-xl font-semibold text-gray-800">Hotel Bookings</h2>
                 </div>
               )}
