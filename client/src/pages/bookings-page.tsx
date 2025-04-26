@@ -543,7 +543,7 @@ export default function BookingsPage() {
               {bookingType === "all" && (
                 <div className="flex items-center gap-2 mb-4">
                   <Plane className="h-5 w-5 text-blue-600" />
-                  <h2 className="text-xl font-semibold text-gray-800">Flight Bookings</h2>
+                  <h2 className="text-xl font-semibold text-gray-900">Flight Bookings</h2>
                 </div>
               )}
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
