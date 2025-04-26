@@ -1400,6 +1400,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       const bookings = await hotelService.getUserHotelBookings(req.user!.id);
+      console.log('Hotel bookings from database:', JSON.stringify(bookings, null, 2));
       return res.status(200).json(bookings);
     } catch (error) {
       console.error("Error fetching hotel bookings:", error);
