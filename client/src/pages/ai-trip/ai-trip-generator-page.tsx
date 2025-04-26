@@ -91,8 +91,8 @@ export default function AITripGeneratorPage() {
   // Generate trip mutation
   const generateTripMutation = useMutation({
     mutationFn: (data: any) => apiRequest('/api/ai-trips', 'POST', data),
-    onSuccess: (data) => {
-      setGeneratedTrip(data);
+    onSuccess: (data: any) => {
+      setGeneratedTrip(data as GeneratedTrip);
       setActiveTab('result');
       toast({
         title: 'Trip Generated!',
@@ -112,7 +112,7 @@ export default function AITripGeneratorPage() {
   // Save trip mutation
   const saveTripMutation = useMutation({
     mutationFn: (id: number) => apiRequest(`/api/ai-trips/${id}/save`, 'POST', {}),
-    onSuccess: (data) => {
+    onSuccess: (data: any) => {
       toast({
         title: 'Trip Saved!',
         description: 'Your trip has been saved to your account.',
@@ -303,7 +303,7 @@ export default function AITripGeneratorPage() {
             </CardContent>
             
             <CardFooter className="flex justify-between">
-              <Button variant="outline" onClick={() => navigate('/trips')}>
+              <Button variant="outline" onClick={() => setLocation('/trips')}>
                 Cancel
               </Button>
               <Button 
