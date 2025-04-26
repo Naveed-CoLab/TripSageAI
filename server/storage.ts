@@ -1794,39 +1794,34 @@ export class DatabaseStorage implements IStorage {
     try {
       const SQL = `
         INSERT INTO flight_searches (
-          user_id, departure_city, departure_code, arrival_city, 
-          arrival_code, departure_date, return_date, adults, 
-          children, infants, cabin_class, direct_flights_only, 
-          flexible_dates, one_way, max_price
+          user_id, origin_location_code, destination_location_code, 
+          departure_date, return_date, adults, children, infants, 
+          travel_class, trip_type, max_price, currency_code
         )
         VALUES (
-          $1, $2, $3, $4, 
-          $5, $6, $7, $8, 
-          $9, $10, $11, $12, 
-          $13, $14, $15
+          $1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12
         )
         RETURNING *
       `;
       
       const values = [
         flightSearch.userId,
-        flightSearch.departureCity,
-        flightSearch.departureCode,
-        flightSearch.arrivalCity,
-        flightSearch.arrivalCode,
+        flightSearch.originLocationCode,
+        flightSearch.destinationLocationCode,
         flightSearch.departureDate,
-        flightSearch.returnDate,
+        flightSearch.returnDate || null,
         flightSearch.adults || 1,
         flightSearch.children || 0,
         flightSearch.infants || 0,
-        flightSearch.cabinClass || 'ECONOMY',
-        flightSearch.directFlightsOnly || false,
-        flightSearch.flexibleDates || false,
-        flightSearch.oneWay || false,
-        flightSearch.maxPrice || null
+        flightSearch.travelClass || 'ECONOMY',
+        flightSearch.tripType || 'ONE_WAY',
+        flightSearch.maxPrice || null,
+        flightSearch.currencyCode || 'USD'
       ];
       
+      console.log('Inserting flight search with values:', JSON.stringify(values, null, 2));
       const result = await query(SQL, values);
+      console.log('Flight search saved successfully:', result.rows[0]);
       return result.rows[0];
     } catch (error) {
       console.error('Error creating flight search:', error);
@@ -2125,27 +2120,29 @@ export class DatabaseStorage implements IStorage {
 
   async createHotelSearch(hotelSearch: any): Promise<HotelSearch> {
     try {
-      // Convert camelCase keys to snake_case for PostgreSQL
-      const processedData: Record<string, any> = {};
-      
-      for (const [key, value] of Object.entries(hotelSearch)) {
-        // Convert camelCase to snake_case
-        const snakeCaseKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
-        processedData[snakeCaseKey] = value;
-      }
-      
-      const keys = Object.keys(processedData);
-      const values = Object.values(processedData);
-      const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
-      const columnNames = keys.join(', ');
-      
-      const query = `
-        INSERT INTO hotel_searches (${columnNames})
-        VALUES (${placeholders})
+      const SQL = `
+        INSERT INTO hotel_searches (
+          user_id, location, check_in_date, check_out_date, 
+          guests, rooms, created_at, updated_at
+        )
+        VALUES (
+          $1, $2, $3, $4, $5, $6, NOW(), NOW()
+        )
         RETURNING *
       `;
       
-      const result = await pool.query(query, values);
+      const values = [
+        hotelSearch.userId,
+        hotelSearch.location,
+        hotelSearch.checkInDate,
+        hotelSearch.checkOutDate,
+        hotelSearch.guests || 1,
+        hotelSearch.rooms || 1
+      ];
+      
+      console.log('Inserting hotel search with values:', JSON.stringify(values, null, 2));
+      const result = await pool.query(SQL, values);
+      console.log('Hotel search saved successfully:', result.rows[0]);
       return result.rows[0] as HotelSearch;
     } catch (error) {
       console.error("Error in createHotelSearch:", error);
