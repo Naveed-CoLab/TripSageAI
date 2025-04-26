@@ -21,6 +21,16 @@ import {
   Download,
   Share2,
 } from "lucide-react";
+import { 
+  AreaChart, 
+  Area,
+  XAxis, 
+  YAxis, 
+  CartesianGrid, 
+  Tooltip as RechartsTooltip, 
+  Legend,
+  ResponsiveContainer 
+} from 'recharts';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -587,12 +597,71 @@ export default function DashboardPage() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="h-80 w-full rounded-lg bg-gradient-to-b from-gray-50 to-white p-4 flex items-center justify-center">
-                      <div className="text-center">
-                        <BarChart3 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
-                        <p className="text-gray-500 text-sm">
-                          Analytics visualization will appear here when more data is available
-                        </p>
+                    <div className="h-80 w-full rounded-lg bg-white p-4">
+                      <div className="h-full w-full">
+                        <ResponsiveContainer width="100%" height="100%">
+                          <AreaChart
+                            data={[
+                              { name: 'Mon', users: 15, sessions: 23 },
+                              { name: 'Tue', users: 20, sessions: 28 },
+                              { name: 'Wed', users: 25, sessions: 35 },
+                              { name: 'Thu', users: 22, sessions: 32 },
+                              { name: 'Fri', users: 28, sessions: 40 },
+                              { name: 'Sat', users: 30, sessions: 45 },
+                              { name: 'Sun', users: 35, sessions: 50 },
+                            ]}
+                            margin={{ top: 10, right: 30, left: 0, bottom: 0 }}
+                          >
+                            <defs>
+                              <linearGradient id="colorUsers" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#4f46e5" stopOpacity={0.8}/>
+                                <stop offset="95%" stopColor="#4f46e5" stopOpacity={0}/>
+                              </linearGradient>
+                              <linearGradient id="colorSessions" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="5%" stopColor="#0ea5e9" stopOpacity={0.8}/>
+                                <stop offset="95%" stopColor="#0ea5e9" stopOpacity={0}/>
+                              </linearGradient>
+                            </defs>
+                            <XAxis 
+                              dataKey="name" 
+                              tick={{ fontSize: 12 }}
+                              tickLine={false}
+                              axisLine={{ stroke: '#E5E7EB', strokeWidth: 1 }}
+                            />
+                            <YAxis 
+                              tick={{ fontSize: 12 }}
+                              tickLine={false}
+                              axisLine={false}
+                              tickFormatter={(value) => `${value}`}
+                            />
+                            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                            <RechartsTooltip 
+                              contentStyle={{ 
+                                background: "white", 
+                                border: "1px solid #E5E7EB",
+                                borderRadius: "6px",
+                                boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)"
+                              }}
+                            />
+                            <Legend wrapperStyle={{ fontSize: 12, marginTop: 10 }} />
+                            <Area 
+                              type="monotone" 
+                              dataKey="users" 
+                              stroke="#4f46e5" 
+                              fillOpacity={1} 
+                              fill="url(#colorUsers)" 
+                              name="Active Users"
+                            />
+                            <Area 
+                              type="monotone" 
+                              dataKey="sessions" 
+                              stroke="#0ea5e9" 
+                              fillOpacity={1} 
+                              fill="url(#colorSessions)" 
+                              name="Sessions"
+                            />
+                          </AreaChart>
+                        </ResponsiveContainer>
                       </div>
                     </div>
                   </CardContent>
