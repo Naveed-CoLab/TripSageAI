@@ -358,7 +358,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
-    const userId = req.session.userId!;
+    // Get userId from req.user instead of session
+    const userId = (req.user as any).id;
     
     try {
       const { destination, startDate, endDate, tripType, interests, withPets } = req.body;
@@ -476,7 +477,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
-    const userId = req.session.userId!;
+    // Get userId from req.user instead of session
+    const userId = (req.user as any).id;
     const generationId = parseInt(req.params.id);
     
     try {
@@ -604,7 +606,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
-    const userId = req.session.userId!;
+    // Get userId from req.user instead of session
+    const userId = (req.user as any).id;
     
     try {
       const result = await query(
@@ -627,7 +630,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
     if (!req.isAuthenticated()) {
       return res.status(401).json({ error: 'Unauthorized' });
     }
-    const userId = req.session.userId!;
+    // Get userId from req.user instead of session
+    const userId = (req.user as any).id;
     const generationId = parseInt(req.params.id);
     
     try {
