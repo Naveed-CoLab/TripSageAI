@@ -201,10 +201,10 @@ export default function HeroSection() {
   };
 
   return (
-    <section className="relative min-h-[600px] flex items-center justify-center px-4 text-slate-800 overflow-hidden bg-gradient-to-b from-slate-50 to-slate-100 pt-10 pb-16">
+    <section className="relative min-h-[600px] flex items-center justify-center px-4 text-slate-800 overflow-hidden bg-white pt-10 pb-16">
       <div className="max-w-6xl mx-auto w-full z-10">
         <div className="text-center mb-12">
-          <h1 className="text-4xl md:text-6xl font-bold mb-4 bg-clip-text text-transparent bg-gradient-to-r from-[#3264ff] to-[#5884ff] animate-pulse">
+          <h1 className="text-4xl md:text-6xl font-bold mb-4 text-black">
             Where to?
           </h1>
           <p className="text-lg md:text-xl text-gray-600 max-w-2xl mx-auto">
