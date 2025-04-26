@@ -380,7 +380,6 @@ export default function BookingsPage() {
                     ))}
                     {booking.hotelStars ? ` • ${booking.roomType}` : booking.roomType}
                   </div>
-                  <div className="text-xs font-semibold text-blue-600">Ref: {booking.bookingReference || "N/A"}</div>
                 </CardDescription>
               </div>
             </div>
