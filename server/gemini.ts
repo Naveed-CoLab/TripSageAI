@@ -343,6 +343,161 @@ export async function generateItinerary(trip: Trip): Promise<GeneratedItinerary>
   }
 }
 
+// Generate a fallback itinerary when the API is unavailable
+function generateFallbackItinerary(trip: Trip): GeneratedItinerary {
+  // Calculate the number of days for the trip
+  let numDays = 3; // Default to 3 days if no dates provided
+  if (trip.startDate && trip.endDate) {
+    const start = new Date(trip.startDate);
+    const end = new Date(trip.endDate);
+    const diffTime = Math.abs(end.getTime() - start.getTime());
+    numDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include the end day
+  }
+  
+  // Create an array of days with activities
+  const days: ItineraryDay[] = [];
+  for (let i = 0; i < numDays; i++) {
+    let dayDate: Date | undefined = undefined;
+    if (trip.startDate) {
+      dayDate = new Date(trip.startDate);
+      dayDate.setDate(dayDate.getDate() + i);
+    }
+    
+    // Different activities based on the day number
+    let activities = [];
+    if (i === 0) {
+      // First day - arrival activities
+      activities = [
+        {
+          title: "Check-in at accommodation",
+          description: "Arrive at your hotel or rental and get settled in",
+          time: "2:00 PM",
+          location: `${trip.destination} central area`,
+          type: "accommodation"
+        },
+        {
+          title: "Local area orientation",
+          description: "Take a relaxed walk around the neighborhood to get familiar with your surroundings",
+          time: "4:00 PM",
+          location: "Surrounding area",
+          type: "exploration"
+        },
+        {
+          title: "Welcome dinner",
+          description: "Enjoy local cuisine at a nearby restaurant",
+          time: "7:00 PM",
+          location: "Local restaurant",
+          type: "meal"
+        }
+      ];
+    } else if (i === numDays - 1) {
+      // Last day - departure activities
+      activities = [
+        {
+          title: "Breakfast at accommodation",
+          description: "Enjoy your final breakfast at your accommodation",
+          time: "8:00 AM",
+          location: "Accommodation",
+          type: "meal"
+        },
+        {
+          title: "Last-minute shopping",
+          description: "Pick up souvenirs or any items you want to bring back",
+          time: "10:00 AM",
+          location: "Local shops",
+          type: "shopping"
+        },
+        {
+          title: "Check-out and departure",
+          description: "Check out from your accommodation and prepare for departure",
+          time: "12:00 PM",
+          location: "Accommodation",
+          type: "transportation"
+        }
+      ];
+    } else {
+      // Middle days - sightseeing activities
+      activities = [
+        {
+          title: `Explore ${trip.destination} highlights - Day ${i+1}`,
+          description: "Visit main attractions and landmarks",
+          time: "9:00 AM",
+          location: `${trip.destination} center`,
+          type: "sightseeing"
+        },
+        {
+          title: "Local lunch experience",
+          description: "Taste local specialties at a popular restaurant",
+          time: "1:00 PM",
+          location: "Local restaurant",
+          type: "meal"
+        },
+        {
+          title: "Cultural experience",
+          description: `Participate in a cultural activity unique to ${trip.destination}`,
+          time: "3:00 PM",
+          location: "Cultural venue",
+          type: "cultural"
+        },
+        {
+          title: "Evening relaxation",
+          description: "Enjoy dinner and evening entertainment",
+          time: "7:00 PM",
+          location: "Entertainment district",
+          type: "entertainment"
+        }
+      ];
+    }
+    
+    days.push({
+      dayNumber: i + 1,
+      title: `Day ${i + 1}: ${i === 0 ? "Arrival & Orientation" : i === numDays - 1 ? "Departure" : `Exploring ${trip.destination}`}`,
+      date: dayDate,
+      activities: activities
+    });
+  }
+  
+  // Create basic booking suggestions
+  const bookings: ItineraryBooking[] = [
+    {
+      type: "accommodation",
+      title: `Hotel in ${trip.destination}`,
+      provider: "Various hotels available",
+      price: "$80-200 per night",
+      details: {
+        checkIn: "After 2:00 PM",
+        checkOut: "Before 12:00 PM",
+        amenities: ["Wi-Fi", "Breakfast", "Air conditioning"]
+      }
+    },
+    {
+      type: "transportation",
+      title: `Airport transfer to ${trip.destination}`,
+      provider: "Local taxi service",
+      price: "$20-40",
+      details: {
+        type: "Taxi/Shuttle",
+        duration: "30-45 minutes"
+      }
+    },
+    {
+      type: "activity",
+      title: `${trip.destination} guided tour`,
+      provider: "Local tour operator",
+      price: "$25-50 per person",
+      details: {
+        duration: "3 hours",
+        includes: ["Professional guide", "Entrance fees"]
+      }
+    }
+  ];
+  
+  return {
+    days,
+    bookings
+  };
+}
+
 // AI-powered chatbot function
 export async function getAIChatResponse(
   userMessage: string,
@@ -471,129 +626,5 @@ export async function getAIChatResponse(
   }
 }
 
-// Helper function to generate fallback itinerary data when API fails
-function generateFallbackItinerary(trip: Trip): GeneratedItinerary {
-  // Calculate number of days for the trip
-  const numDays = trip.startDate && trip.endDate
-    ? Math.ceil((new Date(trip.endDate).getTime() - new Date(trip.startDate).getTime()) / (1000 * 3600 * 24))
-    : 3;
-  
-  // Create destination-specific itinerary based on common tourist destinations
-  let activities: Array<{title: string, description: string, time: string, type: string, location?: string}[]> = [];
-  let bookings: ItineraryBooking[] = [];
-  
-  // Customize activities based on destination
-  switch(trip.destination.toLowerCase()) {
-    case 'tokyo':
-    case 'japan':
-      activities = [
-        [
-          { title: "Visit Sensō-ji Temple", description: "Explore Tokyo's oldest and most famous Buddhist temple", time: "9:00 AM", type: "sightseeing", location: "Asakusa" },
-          { title: "Lunch at local ramen shop", description: "Try authentic Japanese ramen", time: "12:30 PM", type: "meal", location: "Asakusa area" },
-          { title: "Explore Akihabara", description: "Visit the electronics and anime district", time: "2:30 PM", type: "shopping", location: "Akihabara" }
-        ],
-        [
-          { title: "Tokyo Skytree", description: "Visit one of the tallest towers in the world", time: "10:00 AM", type: "sightseeing", location: "Sumida" },
-          { title: "Sushi lunch", description: "Experience traditional sushi at a local restaurant", time: "1:00 PM", type: "meal", location: "Tsukiji Outer Market" },
-          { title: "Meiji Shrine", description: "Visit the famous Shinto shrine", time: "3:30 PM", type: "sightseeing", location: "Shibuya" }
-        ],
-        [
-          { title: "Shibuya Crossing", description: "Experience the famous pedestrian crossing", time: "9:30 AM", type: "sightseeing", location: "Shibuya" },
-          { title: "Shopping in Harajuku", description: "Shop in Tokyo's fashion district", time: "11:30 AM", type: "shopping", location: "Harajuku" },
-          { title: "Robot Restaurant Show", description: "Experience a unique Japanese entertainment show", time: "7:00 PM", type: "entertainment", location: "Shinjuku" }
-        ]
-      ];
-      bookings = [
-        { type: "hotel", title: "Shinjuku Washington Hotel", provider: "Booking.com", price: "$120 per night", details: { location: "Shinjuku, central Tokyo" } },
-        { type: "activity", title: "Robot Restaurant Show Tickets", provider: "Viator", price: "$80 per person", details: { duration: "90 minutes" } },
-        { type: "transportation", title: "Tokyo Metro 72-Hour Pass", provider: "Tokyo Metro", price: "$20 per person", details: { validity: "72 hours" } }
-      ];
-      break;
-      
-    case 'paris':
-    case 'france':
-      activities = [
-        [
-          { title: "Eiffel Tower Visit", description: "Visit the iconic landmark of Paris", time: "9:00 AM", type: "sightseeing", location: "Champ de Mars" },
-          { title: "Seine River Cruise", description: "Enjoy a relaxing cruise along the Seine", time: "1:00 PM", type: "tour", location: "Seine River" },
-          { title: "Dinner at Le Jules Verne", description: "Fine dining with Eiffel Tower views", time: "7:30 PM", type: "meal", location: "Eiffel Tower" }
-        ],
-        [
-          { title: "Louvre Museum", description: "Visit one of the world's largest art museums", time: "9:30 AM", type: "museum", location: "Rue de Rivoli" },
-          { title: "Lunch at Café Marly", description: "Dine with a view of the Louvre Pyramid", time: "1:30 PM", type: "meal", location: "Louvre Museum" },
-          { title: "Champs-Élysées shopping", description: "Shop along the famous avenue", time: "3:30 PM", type: "shopping", location: "Champs-Élysées" }
-        ],
-        [
-          { title: "Montmartre & Sacré-Cœur", description: "Explore the artistic neighborhood", time: "10:00 AM", type: "sightseeing", location: "Montmartre" },
-          { title: "Lunch at La Maison Rose", description: "Dine at the famous pink restaurant", time: "1:00 PM", type: "meal", location: "Montmartre" },
-          { title: "Evening at Moulin Rouge", description: "Experience a classic Parisian cabaret", time: "8:00 PM", type: "entertainment", location: "Pigalle" }
-        ]
-      ];
-      bookings = [
-        { type: "hotel", title: "Hôtel Plaza Athénée", provider: "Hotels.com", price: "$350 per night", details: { location: "Avenue Montaigne, 8th arr." } },
-        { type: "activity", title: "Skip-the-line Eiffel Tower Tickets", provider: "GetYourGuide", price: "$45 per person", details: { access: "Second floor with option to Summit" } },
-        { type: "activity", title: "Moulin Rouge Show with Champagne", provider: "Viator", price: "$120 per person", details: { showtime: "9:00 PM" } }
-      ];
-      break;
-      
-    case 'rome':
-    case 'italy':
-      activities = [
-        [
-          { title: "Colosseum Tour", description: "Explore the ancient Roman amphitheater", time: "9:00 AM", type: "sightseeing", location: "Piazza del Colosseo" },
-          { title: "Roman Forum & Palatine Hill", description: "Visit the heart of ancient Rome", time: "1:00 PM", type: "sightseeing", location: "Via della Salara Vecchia" },
-          { title: "Dinner in Trastevere", description: "Authentic Italian dinner in a charming district", time: "7:30 PM", type: "meal", location: "Trastevere" }
-        ],
-        [
-          { title: "Vatican Museums & Sistine Chapel", description: "Explore world-class art and Michelangelo's masterpiece", time: "8:30 AM", type: "museum", location: "Vatican City" },
-          { title: "St. Peter's Basilica", description: "Visit one of the world's largest churches", time: "1:30 PM", type: "sightseeing", location: "St. Peter's Square" },
-          { title: "Trevi Fountain", description: "Visit the famous baroque fountain", time: "5:00 PM", type: "sightseeing", location: "Piazza di Trevi" }
-        ],
-        [
-          { title: "Spanish Steps", description: "Visit the famous stairway", time: "10:00 AM", type: "sightseeing", location: "Piazza di Spagna" },
-          { title: "Shopping on Via Condotti", description: "Luxury shopping experience", time: "11:30 AM", type: "shopping", location: "Via Condotti" },
-          { title: "Evening food tour", description: "Sample Roman cuisine across multiple stops", time: "6:00 PM", type: "food tour", location: "Campo de' Fiori area" }
-        ]
-      ];
-      bookings = [
-        { type: "hotel", title: "Hotel Artemide", provider: "Booking.com", price: "$180 per night", details: { location: "Via Nazionale, near Repubblica Metro" } },
-        { type: "activity", title: "Skip-the-line Colosseum & Roman Forum", provider: "GetYourGuide", price: "$55 per person", details: { duration: "3 hours" } },
-        { type: "activity", title: "Early Access Vatican Tour", provider: "Viator", price: "$65 per person", details: { startTime: "8:00 AM" } }
-      ];
-      break;
-      
-    // Default fallback for any other destination
-    default:
-      activities = Array(numDays).fill(0).map(() => [
-        { title: "Morning exploration", description: `Explore ${trip.destination} attractions`, time: "9:00 AM", type: "sightseeing" },
-        { title: "Lunch at local restaurant", description: "Enjoy local cuisine", time: "1:00 PM", type: "meal" },
-        { title: "Afternoon activities", description: "Visit cultural sites", time: "3:00 PM", type: "sightseeing" }
-      ]);
-      bookings = [
-        { type: "hotel", title: `Accommodation in ${trip.destination}`, provider: "Local Hotel", price: trip.budget || "$150 per night", details: { location: "City center" } },
-        { type: "transportation", title: "Local Transportation Pass", provider: `${trip.destination} Transit`, price: "$25 per person", details: { validity: "3 days" } }
-      ];
-  }
-  
-  // Create the fallback itinerary
-  const result: GeneratedItinerary = {
-    days: activities.slice(0, numDays).map((dayActivities, index) => ({
-      dayNumber: index + 1,
-      title: `Day ${index + 1}: Exploring ${trip.destination}`,
-      activities: dayActivities
-    })),
-    bookings: bookings
-  };
-  
-  // Add dates to the days if trip dates are specified
-  if (trip.startDate) {
-    const startDateObj = new Date(trip.startDate);
-    result.days.forEach((day, index) => {
-      const dayDate = new Date(startDateObj);
-      dayDate.setDate(startDateObj.getDate() + index);
-      day.date = dayDate;
-    });
-  }
-  
-  return result;
-}
+// This second implementation of generateFallbackItinerary has been removed
+// The main implementation is at line 347

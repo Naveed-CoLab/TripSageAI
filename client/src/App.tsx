@@ -20,6 +20,7 @@ import WishlistPage from "@/pages/wishlist-page";
 import BookingsPage from "@/pages/bookings-page";
 import HotelsPage from "@/pages/hotels-page";
 import HotelBookingPage from "@/pages/hotel-booking-page";
+import AITripGeneratorPage from "@/pages/ai-trip/ai-trip-generator-page";
 import AdminLoginPage from "@/pages/admin/login-page";
 import DashboardPage from "@/pages/admin/dashboard-page";
 import { AuthProvider } from "@/hooks/use-auth";
@@ -47,6 +48,7 @@ function Router() {
       <ProtectedRoute path="/flight-booking/:outboundId/:returnId?" component={FlightBookingPage} />
       <ProtectedRoute path="/hotels" component={HotelsPage} />
       <ProtectedRoute path="/hotel-booking" component={HotelBookingPage} />
+      <ProtectedRoute path="/ai-trip-generator" component={AITripGeneratorPage} />
       
       {/* Admin routes */}
       <Route path="/admin/login" component={AdminLoginPage} />
