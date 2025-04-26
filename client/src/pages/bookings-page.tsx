@@ -78,10 +78,42 @@ export default function BookingsPage() {
     enabled: !!user
   });
   
-  const { data: hotelBookings, isLoading: isLoadingHotels, error: hotelError } = useQuery<HotelBooking[]>({
+  // Extract API response and convert to proper format
+  const { data: hotelBookingsRaw, isLoading: isLoadingHotels, error: hotelError } = useQuery<any[]>({
     queryKey: ["/api/hotel-bookings"],
     enabled: !!user
   });
+  
+  // Map snake_case from API to camelCase for our component
+  const hotelBookings = useMemo(() => {
+    if (!hotelBookingsRaw) return undefined;
+    
+    return hotelBookingsRaw.map(booking => ({
+      id: booking.id,
+      userId: booking.user_id,
+      hotelName: booking.hotel_name,
+      hotelAddress: booking.hotel_address,
+      hotelCity: booking.hotel_city,
+      hotelCountry: booking.hotel_country,
+      hotelStars: booking.hotel_rating || 0,
+      roomType: booking.room_type,
+      checkInDate: booking.check_in_date,
+      checkOutDate: booking.check_out_date,
+      guestCount: booking.guests,
+      nightsCount: booking.rooms,
+      bookingReference: booking.booking_reference,
+      price: booking.price,
+      currency: booking.currency,
+      status: booking.status,
+      guestName: booking.guest_name,
+      guestEmail: booking.guest_email,
+      guestPhone: booking.guest_phone,
+      hotelDetails: booking.hotel_image ? { 
+        imageUrl: booking.hotel_image 
+      } : null,
+      createdAt: booking.created_at
+    }));
+  }, [hotelBookingsRaw]);
 
   // Handle combined loading state
   if (isLoadingFlights || isLoadingHotels) {
