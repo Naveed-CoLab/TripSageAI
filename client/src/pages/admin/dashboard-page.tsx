@@ -689,11 +689,23 @@ export default function DashboardPage() {
                               </div>
                               <div className="text-right">
                                 <p className="text-sm font-medium">${formatPrice(booking.price)}</p>
-                                <p className={`text-xs ${
+                                <p className={`text-xs font-medium ${
                                   booking.status === 'confirmed' ? 'text-green-600' : 
                                   booking.status === 'pending' ? 'text-amber-600' : 'text-red-600'
                                 }`}>
-                                  {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                                  {booking.status === 'confirmed' ? (
+                                    <span className="flex items-center">
+                                      <Check className="mr-1 h-3 w-3" />
+                                      Confirmed
+                                    </span>
+                                  ) : booking.status === 'rejected' ? (
+                                    <span className="flex items-center">
+                                      <X className="mr-1 h-3 w-3" />
+                                      Rejected
+                                    </span>
+                                  ) : (
+                                    booking.status.charAt(0).toUpperCase() + booking.status.slice(1)
+                                  )}
                                 </p>
                               </div>
                             </div>
@@ -728,34 +740,49 @@ export default function DashboardPage() {
                           size="sm" 
                           className="h-8 px-3 gap-1 border-gray-300 text-gray-700"
                           onClick={() => {
-                            const data = {
-                              tripDuration: [
-                                { duration: "1-3 days", percentage: 15 },
-                                { duration: "4-7 days", percentage: 45 },
-                                { duration: "8-14 days", percentage: 30 },
-                                { duration: "14+ days", percentage: 10 }
-                              ],
-                              budgetRanges: [
-                                { range: "Budget (≤$1000)", percentage: 25 },
-                                { range: "Mid-range ($1001-$3000)", percentage: 45 },
-                                { range: "Luxury ($3001-$5000)", percentage: 20 },
-                                { range: "Premium ($5000+)", percentage: 10 }
-                              ]
-                            };
-                            const json = JSON.stringify(data, null, 2);
-                            const blob = new Blob([json], { type: 'application/json' });
-                            const url = URL.createObjectURL(blob);
-                            const a = document.createElement('a');
-                            a.href = url;
-                            a.download = 'trip-planning-analytics.json';
-                            document.body.appendChild(a);
-                            a.click();
-                            document.body.removeChild(a);
-                            URL.revokeObjectURL(url);
-                            
-                            toast({
-                              title: "Data exported",
-                              description: "Trip planning analytics data has been exported successfully.",
+                            import('xlsx').then(XLSX => {
+                              // Prepare data in a format suitable for Excel
+                              const tripDurationData = [
+                                ["Duration", "Percentage"],
+                                ["1-3 days", 15],
+                                ["4-7 days", 45],
+                                ["8-14 days", 30],
+                                ["14+ days", 10]
+                              ];
+                              
+                              const budgetRangesData = [
+                                ["Budget Range", "Percentage"],
+                                ["Budget (≤$1000)", 25],
+                                ["Mid-range ($1001-$3000)", 45],
+                                ["Luxury ($3001-$5000)", 20],
+                                ["Premium ($5000+)", 10]
+                              ];
+                              
+                              // Create a new workbook with multiple sheets
+                              const wb = XLSX.utils.book_new();
+                              
+                              // Create worksheets for each data set
+                              const tripDurationWs = XLSX.utils.aoa_to_sheet(tripDurationData);
+                              const budgetRangesWs = XLSX.utils.aoa_to_sheet(budgetRangesData);
+                              
+                              // Add the worksheets to the workbook
+                              XLSX.utils.book_append_sheet(wb, tripDurationWs, "Trip Duration");
+                              XLSX.utils.book_append_sheet(wb, budgetRangesWs, "Budget Ranges");
+                              
+                              // Generate Excel file and trigger download
+                              XLSX.writeFile(wb, "trip-planning-analytics.xlsx");
+                              
+                              toast({
+                                title: "Data exported",
+                                description: "Trip planning analytics data has been exported as Excel file.",
+                              });
+                            }).catch(error => {
+                              console.error("Error exporting to Excel:", error);
+                              toast({
+                                title: "Export failed",
+                                description: "Unable to export data. Please try again.",
+                                variant: "destructive",
+                              });
                             });
                           }}
                         >
