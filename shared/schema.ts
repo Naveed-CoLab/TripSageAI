@@ -645,3 +645,5 @@ export type BookingApproval = typeof bookingApprovals.$inferSelect;
 export type InsertBookingApproval = z.infer<typeof insertBookingApprovalSchema>;
 export type SearchAnalytic = typeof searchAnalytics.$inferSelect;
 export type InsertSearchAnalytic = z.infer<typeof insertSearchAnalyticsSchema>;
+export type AiTripGeneration = typeof aiTripGenerations.$inferSelect;
+export type InsertAiTripGeneration = z.infer<typeof insertAiTripGenerationSchema>;

@@ -352,6 +352,302 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch destination" });
     }
   });
+  
+  // AI Trip Generation Routes
+  app.post("/api/ai-trips", async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const userId = req.session.userId!;
+    
+    try {
+      const { destination, startDate, endDate, tripType, interests, withPets } = req.body;
+      
+      if (!destination) {
+        return res.status(400).json({ error: 'Destination is required' });
+      }
+      
+      // Build the prompt for Gemini
+      const startDateStr = startDate ? new Date(startDate).toISOString().split('T')[0] : null;
+      const endDateStr = endDate ? new Date(endDate).toISOString().split('T')[0] : null;
+      
+      const interestsStr = interests?.length > 0 ? interests.join(', ') : 'general tourism';
+      const tripTypeStr = tripType || 'Solo Trip';
+      const withPetsStr = withPets ? 'with pets' : 'without pets';
+      
+      const dateRangeStr = startDateStr && endDateStr 
+        ? `from ${startDateStr} to ${endDateStr}` 
+        : 'with flexible dates';
+      
+      const prompt = `
+        Create a detailed day-by-day itinerary for a ${tripTypeStr.toLowerCase()} to ${destination} ${dateRangeStr}.
+        The traveler is interested in: ${interestsStr}.
+        This is a trip ${withPetsStr}.
+        
+        Format your response as a JSON object with the following structure:
+        {
+          "days": [
+            {
+              "dayNumber": 1,
+              "title": "Day 1: Arrival & Orientation",
+              "activities": [
+                {
+                  "title": "Activity name",
+                  "description": "Brief description",
+                  "time": "Approximate time (e.g., '9:00 AM')",
+                  "location": "Location name",
+                  "type": "Type of activity (e.g., 'sightseeing', 'meal', 'transportation')"
+                }
+              ]
+            }
+          ],
+          "bookings": [
+            {
+              "type": "Type of booking (hotel, flight, activity)",
+              "title": "Name of the booking",
+              "provider": "Service provider name",
+              "price": "Estimated price",
+              "details": { "Additional details": "as needed" }
+            }
+          ]
+        }
+        
+        Include approximately 3-5 activities per day.
+        For bookings, include at least one accommodation option, transportation options if applicable, and key attractions that require booking.
+      `;
+      
+      // Call Gemini API to generate itinerary
+      const generatedTrip = await generateItinerary({
+        id: 0,
+        userId,
+        title: `Trip to ${destination}`,
+        destination,
+        startDate: startDateStr ? new Date(startDateStr) : undefined,
+        endDate: endDateStr ? new Date(endDateStr) : undefined,
+        budget: null,
+        preferences: interests || [],
+        status: 'draft',
+        createdAt: new Date(),
+        updatedAt: new Date()
+      });
+      
+      // Store the AI generation data in the database using parameterized query
+      const result = await query(
+        `INSERT INTO ai_trip_generations 
+         (user_id, destination, start_date, end_date, trip_type, interests, with_pets, prompt, ai_response, generated_trip, saved) 
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11) 
+         RETURNING id`,
+        [
+          userId,
+          destination,
+          startDateStr ? new Date(startDateStr) : null,
+          endDateStr ? new Date(endDateStr) : null,
+          tripType,
+          interests || [],
+          withPets || false,
+          prompt,
+          JSON.stringify(generatedTrip), // Store the raw AI response
+          JSON.stringify(generatedTrip), // Store the parsed trip data
+          false
+        ]
+      );
+      
+      const generationId = result.rows[0].id;
+      
+      res.json({
+        id: generationId,
+        destination,
+        startDate: startDateStr,
+        endDate: endDateStr,
+        tripType,
+        interests,
+        withPets,
+        generatedTrip
+      });
+      
+    } catch (error) {
+      console.error('Error generating AI trip:', error);
+      res.status(500).json({ error: 'Failed to generate trip. Please try again.' });
+    }
+  });
+  
+  // Save AI generated trip
+  app.post("/api/ai-trips/:id/save", async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const userId = req.session.userId!;
+    const generationId = parseInt(req.params.id);
+    
+    try {
+      // Get the AI trip generation
+      const result = await query(
+        'SELECT * FROM ai_trip_generations WHERE id = $1 AND user_id = $2',
+        [generationId, userId]
+      );
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'AI trip generation not found' });
+      }
+      
+      const generation = result.rows[0];
+      const generatedTrip = generation.generated_trip;
+      
+      // Begin transaction
+      await query('BEGIN');
+      
+      // Create the trip
+      const tripResult = await query(
+        `INSERT INTO trips
+         (user_id, title, destination, start_date, end_date, preferences, status)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING id`,
+        [
+          userId,
+          `Trip to ${generation.destination}`,
+          generation.destination,
+          generation.start_date,
+          generation.end_date,
+          generation.interests,
+          'planned'
+        ]
+      );
+      
+      const tripId = tripResult.rows[0].id;
+      
+      // Create trip days and activities
+      if (generatedTrip.days && Array.isArray(generatedTrip.days)) {
+        for (const day of generatedTrip.days) {
+          const dayResult = await query(
+            `INSERT INTO trip_days
+             (trip_id, day_number, title, date)
+             VALUES ($1, $2, $3, $4)
+             RETURNING id`,
+            [
+              tripId,
+              day.dayNumber,
+              day.title,
+              day.date || null
+            ]
+          );
+          
+          const dayId = dayResult.rows[0].id;
+          
+          // Create activities for this day
+          if (day.activities && Array.isArray(day.activities)) {
+            for (const activity of day.activities) {
+              await query(
+                `INSERT INTO activities
+                 (trip_day_id, title, description, time, location, type)
+                 VALUES ($1, $2, $3, $4, $5, $6)`,
+                [
+                  dayId,
+                  activity.title,
+                  activity.description || null,
+                  activity.time || null,
+                  activity.location || null,
+                  activity.type || null
+                ]
+              );
+            }
+          }
+        }
+      }
+      
+      // Create bookings
+      if (generatedTrip.bookings && Array.isArray(generatedTrip.bookings)) {
+        for (const booking of generatedTrip.bookings) {
+          await query(
+            `INSERT INTO bookings
+             (trip_id, type, title, provider, price, details)
+             VALUES ($1, $2, $3, $4, $5, $6)`,
+            [
+              tripId,
+              booking.type,
+              booking.title,
+              booking.provider || null,
+              booking.price || null,
+              booking.details ? JSON.stringify(booking.details) : null
+            ]
+          );
+        }
+      }
+      
+      // Update the AI trip generation to mark it as saved
+      await query(
+        `UPDATE ai_trip_generations
+         SET saved = TRUE, saved_trip_id = $1
+         WHERE id = $2`,
+        [tripId, generationId]
+      );
+      
+      // Commit transaction
+      await query('COMMIT');
+      
+      res.json({ 
+        success: true, 
+        tripId,
+        message: 'Trip saved successfully'
+      });
+      
+    } catch (error) {
+      // Rollback transaction on error
+      await query('ROLLBACK');
+      
+      console.error('Error saving AI trip:', error);
+      res.status(500).json({ error: 'Failed to save trip. Please try again.' });
+    }
+  });
+  
+  // Get all AI trip generations for current user
+  app.get("/api/ai-trips", async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const userId = req.session.userId!;
+    
+    try {
+      const result = await query(
+        `SELECT * FROM ai_trip_generations 
+         WHERE user_id = $1 
+         ORDER BY created_at DESC`,
+        [userId]
+      );
+      
+      res.json(result.rows);
+      
+    } catch (error) {
+      console.error('Error fetching AI trips:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
+  
+  // Get single AI trip generation
+  app.get("/api/ai-trips/:id", async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) {
+      return res.status(401).json({ error: 'Unauthorized' });
+    }
+    const userId = req.session.userId!;
+    const generationId = parseInt(req.params.id);
+    
+    try {
+      const result = await query(
+        `SELECT * FROM ai_trip_generations 
+         WHERE id = $1 AND user_id = $2`,
+        [generationId, userId]
+      );
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: 'AI trip generation not found' });
+      }
+      
+      res.json(result.rows[0]);
+      
+    } catch (error) {
+      console.error('Error fetching AI trip:', error);
+      res.status(500).json({ error: 'Internal server error' });
+    }
+  });
 
   // Flight search APIs using Amadeus
   app.get("/api/airports/search", async (req: Request, res: Response) => {
