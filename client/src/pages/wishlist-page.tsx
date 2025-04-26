@@ -164,13 +164,21 @@ function renderWishlistItems(
                 alt={item.itemName}
                 className="w-full h-full object-cover"
                 onError={(e) => {
-                  e.currentTarget.src = `https://source.unsplash.com/featured/?${encodeURIComponent(item.itemName)}`;
+                  // Use a default image based on item type
+                  let searchTerm = item.itemType;
+                  if (item.itemType === 'destination') searchTerm = item.itemName;
+                  if (item.itemType === 'hotel') searchTerm = 'restaurant';
+                  if (item.itemType === 'experience') searchTerm = 'activity';
+                  e.currentTarget.src = `https://source.unsplash.com/featured/?${encodeURIComponent(searchTerm)}`;
                 }}
               />
             ) : (
-              <div className="w-full h-full flex items-center justify-center text-gray-400">
-                No image available
-              </div>
+              // Always use a fallback image instead of text
+              <img
+                src={`https://source.unsplash.com/featured/?${encodeURIComponent(item.itemType === 'hotel' ? 'restaurant' : item.itemType)}`}
+                alt={item.itemName}
+                className="w-full h-full object-cover"
+              />
             )}
             <button 
               className="absolute top-2 right-2 p-2 rounded-full bg-white shadow-sm transition-colors duration-200 hover:bg-gray-100"

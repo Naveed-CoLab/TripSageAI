@@ -554,7 +554,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(404).json({ message: "Wishlist item not found" });
       }
       
-      if (item.userId !== userId) {
+      // Check if user_id (database field) matches userId (from request)
+      if (item.user_id !== userId) {
         return res.status(403).json({ message: "You do not have permission to delete this wishlist item" });
       }
       
