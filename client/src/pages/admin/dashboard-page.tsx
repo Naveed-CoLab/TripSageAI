@@ -350,82 +350,113 @@ export default function DashboardPage() {
   ];
 
   return (
-    <div className="flex h-screen bg-gray-100">
-      {/* Sidebar */}
-      <div className="w-64 bg-slate-800 text-white flex flex-col">
-        <div className="p-4 border-b border-slate-700">
-          <h1 className="text-xl font-bold">TripSage Admin</h1>
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
+      {/* Sidebar - Modern design with gradient */}
+      <div className="w-72 bg-gradient-to-br from-indigo-700 to-indigo-900 text-white flex flex-col shadow-xl">
+        <div className="p-6 border-b border-indigo-600/30 flex items-center gap-3">
+          <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
+            <LayoutDashboard className="h-6 w-6 text-indigo-700" />
+          </div>
+          <h1 className="text-xl font-bold tracking-tight">TripSage Admin</h1>
         </div>
-        <div className="flex-1 overflow-y-auto py-2">
-          <nav className="px-2 space-y-1">
+        
+        <div className="flex-1 overflow-y-auto py-4">
+          <div className="px-4 mb-6">
+            <div className="bg-indigo-800/40 backdrop-blur-sm rounded-lg p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+                <User className="h-5 w-5 text-white" />
+              </div>
+              <div>
+                <p className="text-sm font-medium text-white">{user.username}</p>
+                <p className="text-xs opacity-70">{user.email}</p>
+              </div>
+            </div>
+          </div>
+          
+          <nav className="px-4 space-y-1.5">
             {menuItems.map((item) => (
               <button
                 key={item.id}
-                className={`flex items-center w-full px-2 py-2 text-sm rounded-md ${
+                className={`flex items-center w-full px-4 py-3 text-sm rounded-lg transition-all duration-200 ${
                   activeMenuItem === item.id
-                    ? "bg-slate-700 text-white"
-                    : "text-slate-300 hover:bg-slate-700"
+                    ? "bg-white text-indigo-700 shadow-md"
+                    : "text-white/90 hover:bg-indigo-800/50"
                 }`}
                 onClick={() => setActiveMenuItem(item.id)}
               >
-                <span className="mr-3">{item.icon}</span>
-                {item.label}
+                <span className={`mr-3 ${activeMenuItem === item.id ? "text-indigo-600" : ""}`}>
+                  {item.icon}
+                </span>
+                <span className="font-medium">{item.label}</span>
               </button>
             ))}
           </nav>
         </div>
-        <div className="p-4 border-t border-slate-700">
+        
+        <div className="p-5 border-t border-indigo-600/30">
           <button
             onClick={handleLogout}
-            className="flex items-center w-full px-2 py-2 text-sm rounded-md text-slate-300 hover:bg-slate-700"
+            className="flex items-center w-full px-4 py-2.5 text-sm rounded-lg text-white/90 hover:bg-indigo-800/50 transition-all duration-200"
           >
             <LogOut className="h-5 w-5 mr-3" />
-            Logout
+            <span className="font-medium">Logout</span>
           </button>
         </div>
       </div>
 
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
-        {/* Top Navigation */}
-        <header className="bg-white shadow-sm z-10">
-          <div className="px-4 py-3 flex items-center justify-between">
-            <div className="flex items-center space-x-2">
-              <h2 className="text-lg font-semibold">
+        {/* Top Navigation - Modern with blur effect */}
+        <header className="bg-white bg-opacity-80 backdrop-blur-sm shadow-sm z-10 sticky top-0">
+          <div className="px-6 py-4 flex items-center justify-between">
+            <div className="flex items-center space-x-3">
+              <h2 className="text-xl font-semibold text-gray-800">
                 {menuItems.find((item) => item.id === activeMenuItem)?.label}
               </h2>
+              <div className="bg-indigo-100 text-indigo-800 px-2.5 py-1 rounded-full text-xs font-medium hidden md:block">
+                Admin Panel
+              </div>
             </div>
 
-            <div className="flex items-center space-x-4">
-              <div className="relative">
+            <div className="flex items-center space-x-5">
+              <div className="relative hidden md:block">
                 <Input
                   type="search"
-                  placeholder="Search..."
-                  className="w-64 pl-8"
+                  placeholder="Search in admin panel..."
+                  className="w-64 pl-10 py-2 rounded-lg border-gray-300 focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
                 />
-                <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               </div>
 
-              <Button size="icon" variant="ghost">
+              <Button size="icon" variant="outline" className="rounded-full border-gray-300 hover:bg-indigo-50 hover:text-indigo-500">
                 <BellRing className="h-5 w-5" />
               </Button>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center space-x-2">
-                    <User className="h-5 w-5" />
-                    <span>{user.username}</span>
+                  <Button variant="ghost" className="flex items-center space-x-2 hover:bg-indigo-50 hover:text-indigo-500">
+                    <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700">
+                      {user.username.charAt(0).toUpperCase()}
+                    </div>
+                    <span className="font-medium hidden md:inline-block">{user.username}</span>
                     <ChevronDown className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  <DropdownMenuItem onClick={() => navigate("/admin/profile")}>
+                <DropdownMenuContent align="end" className="w-56 rounded-lg p-2">
+                  <div className="px-3 py-2 border-b border-gray-100 mb-2">
+                    <p className="font-medium text-gray-800">{user.username}</p>
+                    <p className="text-xs text-gray-500">{user.email}</p>
+                  </div>
+                  <DropdownMenuItem onClick={() => navigate("/admin/profile")} className="cursor-pointer rounded-md my-1 py-2">
+                    <User className="h-4 w-4 mr-2 text-gray-500" />
                     Profile
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={() => navigate("/admin/settings")}>
+                  <DropdownMenuItem onClick={() => navigate("/admin/settings")} className="cursor-pointer rounded-md my-1 py-2">
+                    <Settings className="h-4 w-4 mr-2 text-gray-500" />
                     Settings
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleLogout}>
+                  <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 rounded-md my-1 py-2">
+                    <LogOut className="h-4 w-4 mr-2" />
                     Logout
                   </DropdownMenuItem>
                 </DropdownMenuContent>
@@ -435,124 +466,338 @@ export default function DashboardPage() {
         </header>
 
         {/* Dashboard Content */}
-        <main className="flex-1 overflow-y-auto bg-slate-50 p-4">
+        <main className="flex-1 overflow-y-auto bg-gray-50 p-6">
           {activeMenuItem === "dashboard" && (
             <>
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4 mb-6">
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-medium">
-                      Total Users
-                    </CardTitle>
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{userStats?.totalUsers || 0}</div>
-                    <p className="text-xs text-muted-foreground">
-                      +{userStats?.newUsersToday || 0} today
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-medium">
-                      Total Trips
-                    </CardTitle>
-                    <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{tripStats?.totalTrips || 0}</div>
-                    <p className="text-xs text-muted-foreground">
-                      +{tripStats?.newTripsToday || 0} today
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-medium">
-                      Popular Destinations
-                    </CardTitle>
-                    <Map className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">{destinationStats?.totalDestinations || 0}</div>
-                    <p className="text-xs text-muted-foreground">
-                      {destinationStats?.mostPopular || "No data"}
-                    </p>
-                  </CardContent>
-                </Card>
-                <Card>
-                  <CardHeader className="flex flex-row items-center justify-between pb-2">
-                    <CardTitle className="text-sm font-medium">
-                      Active Sessions
-                    </CardTitle>
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                  </CardHeader>
-                  <CardContent>
-                    <div className="text-2xl font-bold">
-                      {userStats?.activeSessions || 0}
+              <div className="mb-6">
+                <h1 className="text-2xl font-bold text-gray-800 mb-1">Dashboard Overview</h1>
+                <p className="text-gray-500">Welcome back, {user.firstName || user.username}! Here's what's happening with your travel platform.</p>
+              </div>
+            
+              <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4 mb-8">
+                <Card className="border-0 shadow-md hover:shadow-lg transition-shadow duration-200">
+                  <CardContent className="p-6">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500 mb-1">Total Users</p>
+                        <div className="text-3xl font-bold text-gray-800">{userStats?.totalUsers || 0}</div>
+                        <div className="mt-1 flex items-center">
+                          <span className="text-xs text-green-600 font-medium flex items-center">
+                            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                            </svg>
+                            {userStats?.newUsersToday || 0} today
+                          </span>
+                        </div>
+                      </div>
+                      <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center">
+                        <Users className="h-6 w-6 text-indigo-600" />
+                      </div>
                     </div>
-                    <p className="text-xs text-muted-foreground">
-                      Active in the last hour
-                    </p>
+                  </CardContent>
+                </Card>
+                
+                <Card className="border-0 shadow-md hover:shadow-lg transition-shadow duration-200">
+                  <CardContent className="p-6">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500 mb-1">Total Trips</p>
+                        <div className="text-3xl font-bold text-gray-800">{tripStats?.totalTrips || 0}</div>
+                        <div className="mt-1 flex items-center">
+                          <span className="text-xs text-green-600 font-medium flex items-center">
+                            <svg className="w-3 h-3 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+                            </svg>
+                            {tripStats?.newTripsToday || 0} today
+                          </span>
+                        </div>
+                      </div>
+                      <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
+                        <BarChart3 className="h-6 w-6 text-purple-600" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card className="border-0 shadow-md hover:shadow-lg transition-shadow duration-200">
+                  <CardContent className="p-6">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500 mb-1">Destinations</p>
+                        <div className="text-3xl font-bold text-gray-800">{destinationStats?.totalDestinations || 0}</div>
+                        <div className="mt-1 flex items-center">
+                          <span className="text-xs text-blue-600 font-medium">
+                            {destinationStats?.mostPopular ? `Top: ${destinationStats?.mostPopular}` : "No data"}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                        <Map className="h-6 w-6 text-blue-600" />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <Card className="border-0 shadow-md hover:shadow-lg transition-shadow duration-200">
+                  <CardContent className="p-6">
+                    <div className="flex justify-between items-start">
+                      <div>
+                        <p className="text-sm font-medium text-gray-500 mb-1">Active Sessions</p>
+                        <div className="text-3xl font-bold text-gray-800">{userStats?.activeSessions || 0}</div>
+                        <div className="mt-1 flex items-center">
+                          <span className="text-xs text-gray-500 font-medium">
+                            Last hour activity
+                          </span>
+                        </div>
+                      </div>
+                      <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
+                        <Users className="h-6 w-6 text-amber-600" />
+                      </div>
+                    </div>
                   </CardContent>
                 </Card>
               </div>
 
-              <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
-                <Card className="col-span-2">
-                  <CardHeader>
-                    <CardTitle>User Activity</CardTitle>
-                    <CardDescription>
-                      User registrations and activity over time
-                    </CardDescription>
+              <div className="grid gap-6 md:grid-cols-7 mb-6">
+                <Card className="md:col-span-4 border-0 shadow-md hover:shadow-lg transition-shadow duration-200">
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <CardTitle className="text-lg font-bold text-gray-800">User Growth Analytics</CardTitle>
+                        <CardDescription className="text-gray-500">
+                          User registrations and activity over time
+                        </CardDescription>
+                      </div>
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="outline" size="sm" className="h-8 gap-1 border-gray-300 text-gray-700">
+                            Last 30 Days
+                            <ChevronDown className="h-4 w-4 opacity-50" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end" className="w-36">
+                          <DropdownMenuItem>Last 7 Days</DropdownMenuItem>
+                          <DropdownMenuItem>Last 30 Days</DropdownMenuItem>
+                          <DropdownMenuItem>Last 90 Days</DropdownMenuItem>
+                          <DropdownMenuItem>All Time</DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="h-80 flex items-center justify-center border rounded-md">
-                      <p className="text-muted-foreground">Activity chart will appear here</p>
+                    <div className="h-80 w-full rounded-lg bg-gradient-to-b from-indigo-50 to-white p-4 flex items-center justify-center">
+                      <div className="text-center">
+                        <BarChart3 className="w-12 h-12 text-indigo-300 mx-auto mb-3" />
+                        <p className="text-gray-500 text-sm">
+                          Analytics visualization will appear here when more data is available
+                        </p>
+                      </div>
                     </div>
                   </CardContent>
                 </Card>
-                <Card>
-                  <CardHeader>
-                    <CardTitle>Top Destinations</CardTitle>
-                    <CardDescription>
-                      Most searched and planned destinations
-                    </CardDescription>
+                
+                <Card className="md:col-span-3 border-0 shadow-md hover:shadow-lg transition-shadow duration-200">
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <CardTitle className="text-lg font-bold text-gray-800">Top Destinations</CardTitle>
+                        <CardDescription className="text-gray-500">
+                          Most popular travel destinations
+                        </CardDescription>
+                      </div>
+                      <Button variant="ghost" size="sm" className="gap-1 text-indigo-600">
+                        View All
+                      </Button>
+                    </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="space-y-4">
+                    <div className="space-y-5">
                       {/* This would be populated with actual data */}
                       <div className="flex items-center">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center mr-4 shrink-0">
+                          <span className="font-bold">P</span>
+                        </div>
                         <div className="w-full">
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium">Paris, France</p>
-                            <p className="text-sm text-muted-foreground">24%</p>
+                          <div className="flex items-center justify-between mb-1">
+                            <p className="text-sm font-medium text-gray-800">Paris, France</p>
+                            <p className="text-sm font-medium text-indigo-600">24%</p>
                           </div>
-                          <div className="mt-1 h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                            <div className="bg-primary h-full rounded-full" style={{ width: "24%" }}></div>
+                          <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                            <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 h-full rounded-full" style={{ width: "24%" }}></div>
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-red-600 text-white flex items-center justify-center mr-4 shrink-0">
+                          <span className="font-bold">T</span>
+                        </div>
                         <div className="w-full">
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium">Tokyo, Japan</p>
-                            <p className="text-sm text-muted-foreground">18%</p>
+                          <div className="flex items-center justify-between mb-1">
+                            <p className="text-sm font-medium text-gray-800">Tokyo, Japan</p>
+                            <p className="text-sm font-medium text-indigo-600">18%</p>
                           </div>
-                          <div className="mt-1 h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                            <div className="bg-primary h-full rounded-full" style={{ width: "18%" }}></div>
+                          <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                            <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 h-full rounded-full" style={{ width: "18%" }}></div>
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center">
+                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-green-600 text-white flex items-center justify-center mr-4 shrink-0">
+                          <span className="font-bold">N</span>
+                        </div>
                         <div className="w-full">
-                          <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium">New York, USA</p>
-                            <p className="text-sm text-muted-foreground">14%</p>
+                          <div className="flex items-center justify-between mb-1">
+                            <p className="text-sm font-medium text-gray-800">New York, USA</p>
+                            <p className="text-sm font-medium text-indigo-600">14%</p>
                           </div>
-                          <div className="mt-1 h-2 w-full bg-slate-100 rounded-full overflow-hidden">
-                            <div className="bg-primary h-full rounded-full" style={{ width: "14%" }}></div>
+                          <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
+                            <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 h-full rounded-full" style={{ width: "14%" }}></div>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </div>
+              
+              <div className="grid gap-6 md:grid-cols-3">
+                <Card className="border-0 shadow-md hover:shadow-lg transition-shadow duration-200">
+                  <CardHeader className="pb-2">
+                    <CardTitle className="text-lg font-bold text-gray-800">Recent Bookings</CardTitle>
+                    <CardDescription className="text-gray-500">
+                      Latest travel arrangements
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="px-0">
+                    <div className="space-y-0">
+                      {bookingStats?.recentBookings && bookingStats.recentBookings.length > 0 ? (
+                        bookingStats.recentBookings.slice(0, 4).map((booking, index) => (
+                          <div key={index} className="py-3 px-6 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center">
+                                <div className={`w-8 h-8 rounded-full flex items-center justify-center mr-3 ${
+                                  booking.type === 'flight' ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600'
+                                }`}>
+                                  {booking.type === 'flight' ? '✈️' : '🏨'}
+                                </div>
+                                <div>
+                                  <p className="text-sm font-medium text-gray-800">{booking.type.charAt(0).toUpperCase() + booking.type.slice(1)} Booking</p>
+                                  <p className="text-xs text-gray-500">{new Date(booking.created_at).toLocaleDateString()}</p>
+                                </div>
+                              </div>
+                              <div className="text-right">
+                                <p className="text-sm font-medium">${formatPrice(booking.price)}</p>
+                                <p className={`text-xs ${
+                                  booking.status === 'confirmed' ? 'text-green-600' : 
+                                  booking.status === 'pending' ? 'text-amber-600' : 'text-red-600'
+                                }`}>
+                                  {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                                </p>
+                              </div>
+                            </div>
+                          </div>
+                        ))
+                      ) : (
+                        <div className="py-8 text-center text-gray-500">
+                          <p>No recent bookings to display</p>
+                        </div>
+                      )}
+                    </div>
+                  </CardContent>
+                  <CardFooter className="pt-0 pb-3 border-t border-gray-100">
+                    <Button variant="ghost" size="sm" className="w-full text-indigo-600">
+                      View All Bookings
+                    </Button>
+                  </CardFooter>
+                </Card>
+                
+                <Card className="border-0 shadow-md hover:shadow-lg transition-shadow duration-200 md:col-span-2">
+                  <CardHeader className="pb-2">
+                    <div className="flex justify-between items-center">
+                      <div>
+                        <CardTitle className="text-lg font-bold text-gray-800">Trip Planning Analytics</CardTitle>
+                        <CardDescription className="text-gray-500">
+                          User preferences and planning trends
+                        </CardDescription>
+                      </div>
+                      <div className="flex gap-2">
+                        <Button variant="outline" size="sm" className="h-8 px-3 gap-1 border-gray-300 text-gray-700">Export</Button>
+                        <Button variant="outline" size="sm" className="h-8 px-3 gap-1 border-gray-300 text-gray-700">Share</Button>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="border rounded-lg p-4 bg-white">
+                        <h3 className="text-sm font-medium text-gray-600 mb-1">Popular Trip Duration</h3>
+                        <div className="space-y-2 mt-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs">1-3 days</span>
+                            <span className="text-xs font-medium">15%</span>
+                          </div>
+                          <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                            <div className="bg-orange-500 h-full rounded-full" style={{ width: "15%" }}></div>
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs">4-7 days</span>
+                            <span className="text-xs font-medium">45%</span>
+                          </div>
+                          <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                            <div className="bg-indigo-500 h-full rounded-full" style={{ width: "45%" }}></div>
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs">8-14 days</span>
+                            <span className="text-xs font-medium">30%</span>
+                          </div>
+                          <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                            <div className="bg-blue-500 h-full rounded-full" style={{ width: "30%" }}></div>
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs">14+ days</span>
+                            <span className="text-xs font-medium">10%</span>
+                          </div>
+                          <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                            <div className="bg-green-500 h-full rounded-full" style={{ width: "10%" }}></div>
+                          </div>
+                        </div>
+                      </div>
+                      
+                      <div className="border rounded-lg p-4 bg-white">
+                        <h3 className="text-sm font-medium text-gray-600 mb-1">Budget Ranges</h3>
+                        <div className="space-y-2 mt-3">
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs">Budget (≤$1000)</span>
+                            <span className="text-xs font-medium">25%</span>
+                          </div>
+                          <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                            <div className="bg-gray-500 h-full rounded-full" style={{ width: "25%" }}></div>
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs">Mid-range ($1001-$3000)</span>
+                            <span className="text-xs font-medium">45%</span>
+                          </div>
+                          <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                            <div className="bg-indigo-500 h-full rounded-full" style={{ width: "45%" }}></div>
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs">Luxury ($3001-$5000)</span>
+                            <span className="text-xs font-medium">20%</span>
+                          </div>
+                          <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                            <div className="bg-purple-500 h-full rounded-full" style={{ width: "20%" }}></div>
+                          </div>
+                          
+                          <div className="flex items-center justify-between">
+                            <span className="text-xs">Premium ($5000+)</span>
+                            <span className="text-xs font-medium">10%</span>
+                          </div>
+                          <div className="h-1.5 w-full bg-gray-100 rounded-full overflow-hidden">
+                            <div className="bg-amber-500 h-full rounded-full" style={{ width: "10%" }}></div>
                           </div>
                         </div>
                       </div>

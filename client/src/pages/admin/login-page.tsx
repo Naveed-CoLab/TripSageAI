@@ -52,35 +52,41 @@ export default function AdminLoginPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-100">
-      <div className="max-w-md w-full p-4 md:p-6">
+    <div className="min-h-screen flex flex-col items-center justify-center bg-gradient-to-br from-gray-50 to-gray-100">
+      <div className="max-w-md w-full p-4 md:p-8">
         <div className="mb-8 text-center">
-          <div className="flex justify-center mb-4">
-            <div className="h-16 w-16 bg-red-600 rounded-full flex items-center justify-center">
-              <ShieldAlert className="h-8 w-8 text-white" />
+          <div className="flex justify-center mb-5">
+            <div className="h-20 w-20 bg-gradient-to-br from-indigo-600 to-indigo-800 rounded-2xl flex items-center justify-center shadow-lg">
+              <ShieldAlert className="h-10 w-10 text-white" />
             </div>
           </div>
-          <h1 className="text-2xl font-bold text-gray-900">Admin Login</h1>
-          <p className="mt-2 text-gray-600">Access the administrative dashboard</p>
+          <h1 className="text-2xl font-bold text-gray-900 mb-2">Admin Portal</h1>
+          <p className="text-gray-600 max-w-sm mx-auto">Secure access to the TripSage administrative dashboard</p>
         </div>
         
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-center text-lg">Admin Authentication</CardTitle>
-          </CardHeader>
-          <CardContent>
+        <Card className="border-0 shadow-lg">
+          <CardContent className="p-6 pt-6">
             <Form {...adminLoginForm}>
-              <form onSubmit={adminLoginForm.handleSubmit(onAdminLoginSubmit)} className="space-y-4">
+              <form onSubmit={adminLoginForm.handleSubmit(onAdminLoginSubmit)} className="space-y-5">
+                <div className="mb-5">
+                  <h2 className="text-xl font-semibold text-gray-800 mb-1">Sign In</h2>
+                  <p className="text-sm text-gray-500">Enter your admin credentials to continue</p>
+                </div>
+                
                 <FormField
                   control={adminLoginForm.control}
                   name="username"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Username</FormLabel>
+                      <FormLabel className="text-gray-700">Username</FormLabel>
                       <FormControl>
-                        <Input placeholder="Enter admin username" {...field} />
+                        <Input 
+                          placeholder="Enter your admin username" 
+                          className="h-11 rounded-lg border-gray-300 focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                          {...field} 
+                        />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-red-500" />
                     </FormItem>
                   )}
                 />
@@ -90,44 +96,58 @@ export default function AdminLoginPage() {
                   name="password"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>Password</FormLabel>
+                      <div className="flex items-center justify-between">
+                        <FormLabel className="text-gray-700">Password</FormLabel>
+                        <Button variant="link" className="text-xs h-auto p-0 text-indigo-600">
+                          Forgot password?
+                        </Button>
+                      </div>
                       <FormControl>
-                        <Input type="password" placeholder="Enter admin password" {...field} />
+                        <Input 
+                          type="password" 
+                          placeholder="Enter your password" 
+                          className="h-11 rounded-lg border-gray-300 focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                          {...field} 
+                        />
                       </FormControl>
-                      <FormMessage />
+                      <FormMessage className="text-red-500" />
                     </FormItem>
                   )}
                 />
                 
                 <Button 
                   type="submit" 
-                  className="w-full" 
-                  variant="destructive"
+                  className="w-full h-11 rounded-lg bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 transition-all duration-200 font-medium shadow-md" 
                   disabled={loginMutation.isPending}
                 >
                   {loginMutation.isPending ? (
                     <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                      <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                       Signing in...
                     </>
                   ) : (
-                    "Login as Admin"
+                    "Sign In"
                   )}
                 </Button>
                 
-                <div className="text-center mt-4">
+                <div className="text-center mt-6 pt-4 border-t border-gray-100">
                   <Button 
-                    variant="link" 
+                    variant="ghost" 
                     onClick={() => navigate("/")}
                     type="button"
+                    className="text-gray-600 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
                   >
-                    Return to website
+                    Return to TripSage
                   </Button>
                 </div>
               </form>
             </Form>
           </CardContent>
         </Card>
+        
+        <div className="mt-8 text-center text-sm text-gray-500">
+          <p>Protected administrative area • {new Date().getFullYear()} © TripSage</p>
+        </div>
       </div>
     </div>
   );
