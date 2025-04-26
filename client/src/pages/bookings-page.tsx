@@ -13,6 +13,7 @@ import {
   Check, X
 } from "lucide-react";
 import { Link } from "wouter";
+import MainLayout from "@/components/layout/main-layout";
 
 type FlightBooking = {
   id: number;
@@ -85,28 +86,32 @@ export default function BookingsPage() {
   // Handle combined loading state
   if (isLoadingFlights || isLoadingHotels) {
     return (
-      <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
-        <Loader2 className="h-10 w-10 animate-spin text-primary-500" />
-      </div>
+      <MainLayout>
+        <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
+          <Loader2 className="h-10 w-10 animate-spin text-primary-500" />
+        </div>
+      </MainLayout>
     );
   }
 
   // Handle error states
   if (flightError && hotelError) {
     return (
-      <div className="flex flex-col items-center justify-center min-h-[calc(100vh-64px)] p-4">
-        <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-        <h2 className="text-xl font-bold text-gray-900 mb-2">Unable to load bookings</h2>
-        <p className="text-gray-600 mb-4 text-center max-w-md">
-          We encountered an error while loading your bookings. Please try again later.
-        </p>
-        <Button 
-          onClick={() => window.location.reload()}
-          className="bg-primary-600 hover:bg-primary-700"
-        >
-          Retry
-        </Button>
-      </div>
+      <MainLayout>
+        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-64px)] p-4">
+          <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
+          <h2 className="text-xl font-bold text-gray-900 mb-2">Unable to load bookings</h2>
+          <p className="text-gray-600 mb-4 text-center max-w-md">
+            We encountered an error while loading your bookings. Please try again later.
+          </p>
+          <Button 
+            onClick={() => window.location.reload()}
+            className="bg-primary-600 hover:bg-primary-700"
+          >
+            Retry
+          </Button>
+        </div>
+      </MainLayout>
     );
   }
 
@@ -480,97 +485,99 @@ export default function BookingsPage() {
   };
   
   return (
-    <div className="container mx-auto px-4 py-8 max-w-6xl">
-      <div className="mb-6">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">My Bookings</h1>
-        <p className="text-gray-600">View and manage all your travel bookings in one place</p>
-      </div>
-
-      <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
-        <Tabs defaultValue="all" value={tab} onValueChange={setTab} className="mb-2 md:mb-0">
-          <TabsList className="grid grid-cols-4 w-full max-w-md">
-            <TabsTrigger value="all" className="text-sm">All</TabsTrigger>
-            <TabsTrigger value="confirmed" className="text-sm">Confirmed</TabsTrigger>
-            <TabsTrigger value="pending" className="text-sm">Pending</TabsTrigger>
-            <TabsTrigger value="cancelled" className="text-sm">Cancelled</TabsTrigger>
-          </TabsList>
-        </Tabs>
-        
-        <Tabs defaultValue="all" value={bookingType} onValueChange={(value) => setBookingType(value as "all" | "flights" | "hotels")}>
-          <TabsList>
-            <TabsTrigger value="all" className="flex items-center gap-1">
-              <span className="hidden md:inline">All Types</span>
-              <span className="md:hidden">All</span>
-            </TabsTrigger>
-            <TabsTrigger value="flights" className="flex items-center gap-1">
-              <Plane className="h-4 w-4" />
-              <span className="hidden md:inline">Flights</span>
-            </TabsTrigger>
-            <TabsTrigger value="hotels" className="flex items-center gap-1">
-              <BedDouble className="h-4 w-4" />
-              <span className="hidden md:inline">Hotels</span>
-            </TabsTrigger>
-          </TabsList>
-        </Tabs>
-      </div>
-
-      {hasNoBookings || (!flightBookings?.length && !hotelBookings?.length) ? (
-        <div className="flex flex-col items-center justify-center p-12 border border-dashed border-gray-300 rounded-lg bg-gray-50">
-          <HelpCircle className="h-12 w-12 text-gray-400 mb-4" />
-          <h3 className="text-xl font-semibold text-gray-800 mb-2">No bookings found</h3>
-          <p className="text-gray-600 mb-6 text-center max-w-md">
-            {tab === "all" 
-              ? "You haven't made any bookings yet. Start by searching for flights or hotels."
-              : `You don't have any ${tab.toLowerCase()} bookings. Try checking the "All Bookings" tab.`}
-          </p>
-          <div className="flex gap-4">
-            <Link href="/flights">
-              <Button className="bg-indigo-600 hover:bg-indigo-700 flex items-center gap-2">
-                <Plane className="h-4 w-4" />
-                Search Flights
-              </Button>
-            </Link>
-            <Link href="/hotels">
-              <Button variant="outline" className="flex items-center gap-2">
-                <BedDouble className="h-4 w-4" />
-                Search Hotels
-              </Button>
-            </Link>
-          </div>
+    <MainLayout>
+      <div className="container mx-auto px-4 py-8 max-w-6xl">
+        <div className="mb-6">
+          <h1 className="text-3xl font-bold text-gray-900 mb-2">My Bookings</h1>
+          <p className="text-gray-600">View and manage all your travel bookings in one place</p>
         </div>
-      ) : (
-        <>
-          {/* Flight Bookings Section */}
-          {(hasFlightBookings && (bookingType === "all" || bookingType === "flights")) && (
-            <div className="mb-8">
-              {bookingType === "all" && (
-                <div className="flex items-center gap-2 mb-4">
-                  <Plane className="h-5 w-5 text-blue-600" />
-                  <h2 className="text-xl font-semibold text-gray-900">Flight Bookings</h2>
-                </div>
-              )}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {filteredFlightBookings?.map(renderFlightCard)}
-              </div>
-            </div>
-          )}
+
+        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-6">
+          <Tabs defaultValue="all" value={tab} onValueChange={setTab} className="mb-2 md:mb-0">
+            <TabsList className="grid grid-cols-4 w-full max-w-md">
+              <TabsTrigger value="all" className="text-sm">All</TabsTrigger>
+              <TabsTrigger value="confirmed" className="text-sm">Confirmed</TabsTrigger>
+              <TabsTrigger value="pending" className="text-sm">Pending</TabsTrigger>
+              <TabsTrigger value="cancelled" className="text-sm">Cancelled</TabsTrigger>
+            </TabsList>
+          </Tabs>
           
-          {/* Hotel Bookings Section */}
-          {(hasHotelBookings && (bookingType === "all" || bookingType === "hotels")) && (
-            <div>
-              {bookingType === "all" && (
-                <div className="flex items-center gap-2 mb-4">
-                  <BedDouble className="h-5 w-5 text-blue-600" />
-                  <h2 className="text-xl font-semibold text-gray-900">Hotel Bookings</h2>
-                </div>
-              )}
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {filteredHotelBookings?.map(renderHotelCard)}
-              </div>
+          <Tabs defaultValue="all" value={bookingType} onValueChange={(value) => setBookingType(value as "all" | "flights" | "hotels")}>
+            <TabsList>
+              <TabsTrigger value="all" className="flex items-center gap-1">
+                <span className="hidden md:inline">All Types</span>
+                <span className="md:hidden">All</span>
+              </TabsTrigger>
+              <TabsTrigger value="flights" className="flex items-center gap-1">
+                <Plane className="h-4 w-4" />
+                <span className="hidden md:inline">Flights</span>
+              </TabsTrigger>
+              <TabsTrigger value="hotels" className="flex items-center gap-1">
+                <BedDouble className="h-4 w-4" />
+                <span className="hidden md:inline">Hotels</span>
+              </TabsTrigger>
+            </TabsList>
+          </Tabs>
+        </div>
+
+        {hasNoBookings || (!flightBookings?.length && !hotelBookings?.length) ? (
+          <div className="flex flex-col items-center justify-center p-12 border border-dashed border-gray-300 rounded-lg bg-gray-50">
+            <HelpCircle className="h-12 w-12 text-gray-400 mb-4" />
+            <h3 className="text-xl font-semibold text-gray-800 mb-2">No bookings found</h3>
+            <p className="text-gray-600 mb-6 text-center max-w-md">
+              {tab === "all" 
+                ? "You haven't made any bookings yet. Start by searching for flights or hotels."
+                : `You don't have any ${tab.toLowerCase()} bookings. Try checking the "All Bookings" tab.`}
+            </p>
+            <div className="flex gap-4">
+              <Link href="/flights">
+                <Button className="bg-indigo-600 hover:bg-indigo-700 flex items-center gap-2">
+                  <Plane className="h-4 w-4" />
+                  Search Flights
+                </Button>
+              </Link>
+              <Link href="/hotels">
+                <Button variant="outline" className="flex items-center gap-2">
+                  <BedDouble className="h-4 w-4" />
+                  Search Hotels
+                </Button>
+              </Link>
             </div>
-          )}
-        </>
-      )}
-    </div>
+          </div>
+        ) : (
+          <>
+            {/* Flight Bookings Section */}
+            {(hasFlightBookings && (bookingType === "all" || bookingType === "flights")) && (
+              <div className="mb-8">
+                {bookingType === "all" && (
+                  <div className="flex items-center gap-2 mb-4">
+                    <Plane className="h-5 w-5 text-blue-600" />
+                    <h2 className="text-xl font-semibold text-gray-900">Flight Bookings</h2>
+                  </div>
+                )}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {filteredFlightBookings?.map(renderFlightCard)}
+                </div>
+              </div>
+            )}
+            
+            {/* Hotel Bookings Section */}
+            {(hasHotelBookings && (bookingType === "all" || bookingType === "hotels")) && (
+              <div>
+                {bookingType === "all" && (
+                  <div className="flex items-center gap-2 mb-4">
+                    <BedDouble className="h-5 w-5 text-blue-600" />
+                    <h2 className="text-xl font-semibold text-gray-900">Hotel Bookings</h2>
+                  </div>
+                )}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                  {filteredHotelBookings?.map(renderHotelCard)}
+                </div>
+              </div>
+            )}
+          </>
+        )}
+      </div>
+    </MainLayout>
   );
 }
