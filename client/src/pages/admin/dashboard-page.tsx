@@ -352,18 +352,18 @@ export default function DashboardPage() {
   return (
     <div className="flex h-screen bg-gray-50 overflow-hidden">
       {/* Sidebar - Modern design with gradient */}
-      <div className="w-72 bg-gradient-to-br from-indigo-700 to-indigo-900 text-white flex flex-col shadow-xl">
-        <div className="p-6 border-b border-indigo-600/30 flex items-center gap-3">
-          <div className="w-10 h-10 bg-white rounded-lg flex items-center justify-center">
-            <LayoutDashboard className="h-6 w-6 text-indigo-700" />
+      <div className="w-72 bg-slate-800 text-white flex flex-col shadow-md">
+        <div className="p-6 border-b border-slate-700/30 flex items-center gap-3">
+          <div className="w-10 h-10 bg-white/10 rounded-lg flex items-center justify-center">
+            <LayoutDashboard className="h-6 w-6 text-white" />
           </div>
           <h1 className="text-xl font-bold tracking-tight">TripSage Admin</h1>
         </div>
         
-        <div className="flex-1 overflow-y-auto py-4">
+        <div className="flex-1 py-4">
           <div className="px-4 mb-6">
-            <div className="bg-indigo-800/40 backdrop-blur-sm rounded-lg p-4 flex items-center gap-3">
-              <div className="w-10 h-10 rounded-full bg-white/20 flex items-center justify-center">
+            <div className="bg-slate-700/40 rounded-lg p-4 flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center">
                 <User className="h-5 w-5 text-white" />
               </div>
               <div>
@@ -373,18 +373,18 @@ export default function DashboardPage() {
             </div>
           </div>
           
-          <nav className="px-4 space-y-1.5">
+          <nav className="px-4 space-y-1 max-h-[calc(100vh-280px)] overflow-hidden hover:overflow-y-auto scrollbar-thin scrollbar-thumb-slate-600 scrollbar-track-transparent">
             {menuItems.map((item) => (
               <button
                 key={item.id}
                 className={`flex items-center w-full px-4 py-3 text-sm rounded-lg transition-all duration-200 ${
                   activeMenuItem === item.id
-                    ? "bg-white text-indigo-700 shadow-md"
-                    : "text-white/90 hover:bg-indigo-800/50"
+                    ? "bg-slate-700 text-white shadow-sm border-l-4 border-blue-400"
+                    : "text-white/80 hover:bg-slate-700/50 hover:text-white"
                 }`}
                 onClick={() => setActiveMenuItem(item.id)}
               >
-                <span className={`mr-3 ${activeMenuItem === item.id ? "text-indigo-600" : ""}`}>
+                <span className="mr-3">
                   {item.icon}
                 </span>
                 <span className="font-medium">{item.label}</span>
@@ -393,10 +393,10 @@ export default function DashboardPage() {
           </nav>
         </div>
         
-        <div className="p-5 border-t border-indigo-600/30">
+        <div className="p-5 border-t border-slate-700/30">
           <button
             onClick={handleLogout}
-            className="flex items-center w-full px-4 py-2.5 text-sm rounded-lg text-white/90 hover:bg-indigo-800/50 transition-all duration-200"
+            className="flex items-center w-full px-4 py-2.5 text-sm rounded-lg text-white/80 hover:bg-slate-700/50 hover:text-white transition-all duration-200"
           >
             <LogOut className="h-5 w-5 mr-3" />
             <span className="font-medium">Logout</span>
@@ -407,13 +407,13 @@ export default function DashboardPage() {
       {/* Main Content */}
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Top Navigation - Modern with blur effect */}
-        <header className="bg-white bg-opacity-80 backdrop-blur-sm shadow-sm z-10 sticky top-0">
+        <header className="bg-white shadow-sm z-10 sticky top-0">
           <div className="px-6 py-4 flex items-center justify-between">
             <div className="flex items-center space-x-3">
               <h2 className="text-xl font-semibold text-gray-800">
                 {menuItems.find((item) => item.id === activeMenuItem)?.label}
               </h2>
-              <div className="bg-indigo-100 text-indigo-800 px-2.5 py-1 rounded-full text-xs font-medium hidden md:block">
+              <div className="bg-gray-100 text-gray-600 px-2.5 py-1 rounded-full text-xs font-medium hidden md:block">
                 Admin Panel
               </div>
             </div>
@@ -423,19 +423,19 @@ export default function DashboardPage() {
                 <Input
                   type="search"
                   placeholder="Search in admin panel..."
-                  className="w-64 pl-10 py-2 rounded-lg border-gray-300 focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
+                  className="w-64 pl-10 py-2 rounded-lg border-gray-300 focus:border-blue-400 focus:ring focus:ring-blue-100 focus:ring-opacity-50"
                 />
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-gray-400" />
               </div>
 
-              <Button size="icon" variant="outline" className="rounded-full border-gray-300 hover:bg-indigo-50 hover:text-indigo-500">
+              <Button size="icon" variant="outline" className="rounded-full border-gray-300 hover:bg-gray-100 hover:text-gray-700">
                 <BellRing className="h-5 w-5" />
               </Button>
 
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
-                  <Button variant="ghost" className="flex items-center space-x-2 hover:bg-indigo-50 hover:text-indigo-500">
-                    <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-700">
+                  <Button variant="ghost" className="flex items-center space-x-2 hover:bg-gray-100 hover:text-gray-800">
+                    <div className="w-8 h-8 rounded-full bg-blue-50 flex items-center justify-center text-blue-700">
                       {user.username.charAt(0).toUpperCase()}
                     </div>
                     <span className="font-medium hidden md:inline-block">{user.username}</span>
@@ -455,7 +455,7 @@ export default function DashboardPage() {
                     <Settings className="h-4 w-4 mr-2 text-gray-500" />
                     Settings
                   </DropdownMenuItem>
-                  <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-red-600 rounded-md my-1 py-2">
+                  <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-slate-600 rounded-md my-1 py-2">
                     <LogOut className="h-4 w-4 mr-2" />
                     Logout
                   </DropdownMenuItem>
@@ -490,8 +490,8 @@ export default function DashboardPage() {
                           </span>
                         </div>
                       </div>
-                      <div className="w-12 h-12 rounded-full bg-indigo-100 flex items-center justify-center">
-                        <Users className="h-6 w-6 text-indigo-600" />
+                      <div className="w-12 h-12 rounded-full bg-blue-50 flex items-center justify-center">
+                        <Users className="h-6 w-6 text-blue-500" />
                       </div>
                     </div>
                   </CardContent>
@@ -512,8 +512,8 @@ export default function DashboardPage() {
                           </span>
                         </div>
                       </div>
-                      <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
-                        <BarChart3 className="h-6 w-6 text-purple-600" />
+                      <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+                        <BarChart3 className="h-6 w-6 text-gray-600" />
                       </div>
                     </div>
                   </CardContent>
@@ -531,8 +531,8 @@ export default function DashboardPage() {
                           </span>
                         </div>
                       </div>
-                      <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
-                        <Map className="h-6 w-6 text-blue-600" />
+                      <div className="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">
+                        <Map className="h-6 w-6 text-slate-600" />
                       </div>
                     </div>
                   </CardContent>
@@ -550,8 +550,8 @@ export default function DashboardPage() {
                           </span>
                         </div>
                       </div>
-                      <div className="w-12 h-12 rounded-full bg-amber-100 flex items-center justify-center">
-                        <Users className="h-6 w-6 text-amber-600" />
+                      <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center">
+                        <Users className="h-6 w-6 text-gray-600" />
                       </div>
                     </div>
                   </CardContent>
@@ -585,9 +585,9 @@ export default function DashboardPage() {
                     </div>
                   </CardHeader>
                   <CardContent>
-                    <div className="h-80 w-full rounded-lg bg-gradient-to-b from-indigo-50 to-white p-4 flex items-center justify-center">
+                    <div className="h-80 w-full rounded-lg bg-gradient-to-b from-gray-50 to-white p-4 flex items-center justify-center">
                       <div className="text-center">
-                        <BarChart3 className="w-12 h-12 text-indigo-300 mx-auto mb-3" />
+                        <BarChart3 className="w-12 h-12 text-gray-300 mx-auto mb-3" />
                         <p className="text-gray-500 text-sm">
                           Analytics visualization will appear here when more data is available
                         </p>
@@ -614,44 +614,44 @@ export default function DashboardPage() {
                     <div className="space-y-5">
                       {/* This would be populated with actual data */}
                       <div className="flex items-center">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 text-white flex items-center justify-center mr-4 shrink-0">
+                        <div className="w-10 h-10 rounded-lg bg-slate-700 text-white flex items-center justify-center mr-4 shrink-0">
                           <span className="font-bold">P</span>
                         </div>
                         <div className="w-full">
                           <div className="flex items-center justify-between mb-1">
                             <p className="text-sm font-medium text-gray-800">Paris, France</p>
-                            <p className="text-sm font-medium text-indigo-600">24%</p>
+                            <p className="text-sm font-medium text-slate-600">24%</p>
                           </div>
                           <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                            <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 h-full rounded-full" style={{ width: "24%" }}></div>
+                            <div className="bg-slate-600 h-full rounded-full" style={{ width: "24%" }}></div>
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-500 to-red-600 text-white flex items-center justify-center mr-4 shrink-0">
+                        <div className="w-10 h-10 rounded-lg bg-slate-700 text-white flex items-center justify-center mr-4 shrink-0">
                           <span className="font-bold">T</span>
                         </div>
                         <div className="w-full">
                           <div className="flex items-center justify-between mb-1">
                             <p className="text-sm font-medium text-gray-800">Tokyo, Japan</p>
-                            <p className="text-sm font-medium text-indigo-600">18%</p>
+                            <p className="text-sm font-medium text-slate-600">18%</p>
                           </div>
                           <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                            <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 h-full rounded-full" style={{ width: "18%" }}></div>
+                            <div className="bg-slate-600 h-full rounded-full" style={{ width: "18%" }}></div>
                           </div>
                         </div>
                       </div>
                       <div className="flex items-center">
-                        <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-green-500 to-green-600 text-white flex items-center justify-center mr-4 shrink-0">
+                        <div className="w-10 h-10 rounded-lg bg-slate-700 text-white flex items-center justify-center mr-4 shrink-0">
                           <span className="font-bold">N</span>
                         </div>
                         <div className="w-full">
                           <div className="flex items-center justify-between mb-1">
                             <p className="text-sm font-medium text-gray-800">New York, USA</p>
-                            <p className="text-sm font-medium text-indigo-600">14%</p>
+                            <p className="text-sm font-medium text-slate-600">14%</p>
                           </div>
                           <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
-                            <div className="bg-gradient-to-r from-indigo-500 to-indigo-600 h-full rounded-full" style={{ width: "14%" }}></div>
+                            <div className="bg-slate-600 h-full rounded-full" style={{ width: "14%" }}></div>
                           </div>
                         </div>
                       </div>
