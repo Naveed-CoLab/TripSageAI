@@ -92,6 +92,24 @@ export function useWishlist() {
     return item ? item.id : null;
   };
 
+  // Toggle wishlist item (add if not in wishlist, remove if already there)
+  const toggleWishlistItem = (item: {
+    itemType: string;
+    itemId: string;
+    itemName: string;
+    itemImage?: string;
+    additionalData?: any;
+  }) => {
+    const itemExists = isInWishlist(item.itemType, item.itemId);
+    const itemId = getWishlistItemId(item.itemType, item.itemId);
+    
+    if (itemExists && itemId) {
+      removeFromWishlist.mutate(itemId);
+    } else {
+      addToWishlist.mutate(item);
+    }
+  };
+
   return {
     wishlistItems,
     isLoading,
@@ -99,6 +117,7 @@ export function useWishlist() {
     removeFromWishlist,
     isInWishlist,
     getWishlistItemId,
+    toggleWishlistItem,
     refetchWishlist: refetch,
   };
 }

@@ -31,10 +31,7 @@ export default function WishlistPage() {
     return () => clearInterval(intervalId);
   }, [refetchWishlist]);
 
-  // Handle removing an item from wishlist
-  const handleRemoveItem = (id: number) => {
-    removeFromWishlist.mutate(id);
-  };
+  // We use the removeFromWishlist.mutate directly in the render
 
   // Filter wishlist items based on search query and active tab
   const filteredItems = wishlistItems ? wishlistItems.filter((item: WishlistItem) => {
@@ -94,23 +91,23 @@ export default function WishlistPage() {
               </TabsList>
               
               <TabsContent value="all" className="mt-0">
-                {renderWishlistItems(filteredItems, isLoading, handleRemoveItem, () => navigate('/'))}
+                {renderWishlistItems(filteredItems, isLoading, (id) => removeFromWishlist.mutate(id), () => navigate('/'))}
               </TabsContent>
               
               <TabsContent value="destinations" className="mt-0">
-                {renderWishlistItems(filteredItems, isLoading, handleRemoveItem, () => navigate('/'))}
+                {renderWishlistItems(filteredItems, isLoading, (id) => removeFromWishlist.mutate(id), () => navigate('/'))}
               </TabsContent>
               
               <TabsContent value="hotels" className="mt-0">
-                {renderWishlistItems(filteredItems, isLoading, handleRemoveItem, () => navigate('/'))}
+                {renderWishlistItems(filteredItems, isLoading, (id) => removeFromWishlist.mutate(id), () => navigate('/'))}
               </TabsContent>
               
               <TabsContent value="experiences" className="mt-0">
-                {renderWishlistItems(filteredItems, isLoading, handleRemoveItem, () => navigate('/'))}
+                {renderWishlistItems(filteredItems, isLoading, (id) => removeFromWishlist.mutate(id), () => navigate('/'))}
               </TabsContent>
               
               <TabsContent value="trips" className="mt-0">
-                {renderWishlistItems(filteredItems, isLoading, handleRemoveItem, () => navigate('/'))}
+                {renderWishlistItems(filteredItems, isLoading, (id) => removeFromWishlist.mutate(id), () => navigate('/'))}
               </TabsContent>
             </Tabs>
           </div>
