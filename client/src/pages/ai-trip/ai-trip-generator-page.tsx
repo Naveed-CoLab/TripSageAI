@@ -170,7 +170,7 @@ export default function AITripGeneratorPage() {
   
   return (
     <div className="container mx-auto py-8">
-      <h1 className="text-3xl font-bold mb-8 text-center">AI Trip Generator</h1>
+      <h1 className="text-3xl font-bold mb-8 text-center">AI Trip Generator Tool</h1>
       
       <Tabs defaultValue="form" value={activeTab} onValueChange={setActiveTab}>
         <TabsList className="mb-8 mx-auto">
