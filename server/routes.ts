@@ -1500,8 +1500,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           n.title, 
           n.message, 
           n.type, 
-          n.created_at, 
-          n.read_at,
+          n.created_at,
           n.is_read,
           n.link,
           n.user_id,
@@ -1524,8 +1523,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         is_read: !!notification.is_read,
         // Format the date for consistent display
         created_at: notification.created_at,
-        // Only include read_at if it's actually set
-        read_at: notification.read_at || null
+        // Don't include read_at as it doesn't exist in the DB schema
       }));
       
       return res.status(200).json(notifications);
@@ -1960,7 +1958,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           UPDATE ${tableName}
           SET status = $1, updated_at = NOW()
           WHERE id = $2
-          RETURNING *, user_id
+          RETURNING *
         `;
         
         const newStatus = status === 'approved' ? 'CONFIRMED' : 'REJECTED';
@@ -2009,8 +2007,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Create a notification with high priority for real-time sound alerts
         const notificationSql = `
           INSERT INTO notifications (
-            user_id, admin_id, title, message, type, created_at, is_read, read_at
-          ) VALUES ($1, $2, $3, $4, $5, NOW(), FALSE, NULL)
+            user_id, admin_id, title, message, type, created_at, is_read
+          ) VALUES ($1, $2, $3, $4, $5, NOW(), FALSE)
           RETURNING id
         `;
         
