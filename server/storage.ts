@@ -1459,12 +1459,12 @@ export class DatabaseStorage implements IStorage {
     try {
       const SQL = `
         INSERT INTO wishlist_items (
-          user_id, item_type, item_id, title, 
-          image_url, description, metadata
+          user_id, item_type, item_id, item_name, 
+          item_image, additional_data
         )
         VALUES (
           $1, $2, $3, $4,
-          $5, $6, $7
+          $5, $6
         )
         RETURNING *
       `;
@@ -1473,10 +1473,9 @@ export class DatabaseStorage implements IStorage {
         item.userId,
         item.itemType,
         item.itemId,
-        item.title,
-        item.imageUrl || null,
-        item.description || null,
-        item.metadata ? JSON.stringify(item.metadata) : null
+        item.itemName,
+        item.itemImage || null,
+        item.additionalData ? JSON.stringify(item.additionalData) : null
       ];
       
       const result = await query(SQL, values);

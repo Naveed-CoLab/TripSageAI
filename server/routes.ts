@@ -2005,8 +2005,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
         // Create a notification with high priority for real-time sound alerts
         const notificationSql = `
           INSERT INTO notifications (
-            user_id, admin_id, title, message, type, created_at, is_read, read_at
-          ) VALUES ($1, $2, $3, $4, $5, NOW(), FALSE, NULL)
+            user_id, admin_id, title, message, type, created_at, is_read
+          ) VALUES ($1, $2, $3, $4, $5, NOW(), FALSE)
           RETURNING id
         `;
         
@@ -2140,8 +2140,8 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Create notification with sound alert capability for real-time notifications
       const createNotificationSql = `
         INSERT INTO notifications (
-          user_id, admin_id, title, message, type, link, valid_until, created_at, is_read, read_at
-        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), FALSE, NULL)
+          user_id, admin_id, title, message, type, link, valid_until, created_at, is_read
+        ) VALUES ($1, $2, $3, $4, $5, $6, $7, NOW(), FALSE)
         RETURNING id, title, message, type, created_at, user_id, admin_id
       `;
 
