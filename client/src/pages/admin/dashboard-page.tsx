@@ -18,6 +18,8 @@ import {
   Loader2,
   Check,
   X,
+  Download,
+  Share2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle, CardFooter } from "@/components/ui/card";
@@ -721,8 +723,65 @@ export default function DashboardPage() {
                         </CardDescription>
                       </div>
                       <div className="flex gap-2">
-                        <Button variant="outline" size="sm" className="h-8 px-3 gap-1 border-gray-300 text-gray-700">Export</Button>
-                        <Button variant="outline" size="sm" className="h-8 px-3 gap-1 border-gray-300 text-gray-700">Share</Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-8 px-3 gap-1 border-gray-300 text-gray-700"
+                          onClick={() => {
+                            const data = {
+                              tripDuration: [
+                                { duration: "1-3 days", percentage: 15 },
+                                { duration: "4-7 days", percentage: 45 },
+                                { duration: "8-14 days", percentage: 30 },
+                                { duration: "14+ days", percentage: 10 }
+                              ],
+                              budgetRanges: [
+                                { range: "Budget (≤$1000)", percentage: 25 },
+                                { range: "Mid-range ($1001-$3000)", percentage: 45 },
+                                { range: "Luxury ($3001-$5000)", percentage: 20 },
+                                { range: "Premium ($5000+)", percentage: 10 }
+                              ]
+                            };
+                            const json = JSON.stringify(data, null, 2);
+                            const blob = new Blob([json], { type: 'application/json' });
+                            const url = URL.createObjectURL(blob);
+                            const a = document.createElement('a');
+                            a.href = url;
+                            a.download = 'trip-planning-analytics.json';
+                            document.body.appendChild(a);
+                            a.click();
+                            document.body.removeChild(a);
+                            URL.revokeObjectURL(url);
+                            
+                            toast({
+                              title: "Data exported",
+                              description: "Trip planning analytics data has been exported successfully.",
+                            });
+                          }}
+                        >
+                          <Download className="h-4 w-4 mr-1" />
+                          Export
+                        </Button>
+                        <Button 
+                          variant="outline" 
+                          size="sm" 
+                          className="h-8 px-3 gap-1 border-gray-300 text-gray-700"
+                          onClick={() => {
+                            // Create a sharable link logic
+                            const shareableLink = `${window.location.origin}/admin/dashboard?view=analytics&t=${Date.now()}`;
+                            
+                            // Copy to clipboard
+                            navigator.clipboard.writeText(shareableLink).then(() => {
+                              toast({
+                                title: "Link copied to clipboard",
+                                description: "You can now share this analytics view with other admins.",
+                              });
+                            });
+                          }}
+                        >
+                          <Share2 className="h-4 w-4 mr-1" />
+                          Share
+                        </Button>
                       </div>
                     </div>
                   </CardHeader>
