@@ -45,8 +45,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
-      const res = await apiRequest("POST", "/api/login", credentials);
-      return await res.json();
+      return await apiRequest("/api/login", "POST", credentials);
     },
     onSuccess: (user: User) => {
       queryClient.setQueryData(["/api/user"], user);
@@ -68,10 +67,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     mutationFn: async (data: RegistrationData) => {
       console.log("useAuth: Starting registration with data:", data);
       try {
-        const res = await apiRequest("POST", "/api/register", data);
-        const userData = await res.json();
-        console.log("useAuth: Registration successful, received user data:", userData);
-        return userData;
+        const res = await apiRequest("/api/register", "POST", data);
+        return res;
       } catch (error) {
         console.error("useAuth: Registration error:", error);
         throw error;
