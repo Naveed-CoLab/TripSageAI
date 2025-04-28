@@ -139,7 +139,7 @@ export default function FlightBookingPage() {
   // Booking mutation
   const bookingMutation = useMutation({
     mutationFn: async (data: any) => {
-      return await apiRequest('POST', '/api/flight-bookings', data);
+      return await apiRequest('/api/flight-bookings', 'POST', data);
     },
     onSuccess: () => {
       setCurrentStep(3); // Show success state

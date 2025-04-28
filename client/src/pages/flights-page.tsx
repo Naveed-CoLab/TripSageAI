@@ -318,7 +318,7 @@ export default function FlightsPage() {
       // Save search to history if user is logged in
       if (user) {
         try {
-          await apiRequest('POST', '/api/flights/history', searchData);
+          await apiRequest('/api/flights/history', 'POST', searchData);
         } catch (error) {
           console.error('Failed to save search history:', error);
         }
@@ -363,7 +363,7 @@ export default function FlightsPage() {
   
   const deleteSearchMutation = useMutation({
     mutationFn: async (searchId: number) => {
-      return await apiRequest('DELETE', `/api/flights/history/${searchId}`);
+      return await apiRequest(`/api/flights/history/${searchId}`, 'DELETE');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/flights/history'] });
