@@ -30,7 +30,7 @@ export function ReviewForm({ targetType, targetId, onSuccess, onCancel }: Review
       content: string;
       rating: number;
     }) => {
-      const res = await apiRequest('POST', '/api/reviews', reviewData);
+      const res = await apiRequest('/api/reviews', 'POST', reviewData);
       return res.json();
     },
     onSuccess: () => {

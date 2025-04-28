@@ -48,7 +48,7 @@ export default function DestinationDetailPage() {
         }
       };
       
-      return apiRequest("POST", "/api/wishlist", wishlistItem);
+      return apiRequest("/api/wishlist", "POST", wishlistItem);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/wishlist"] });
@@ -70,7 +70,7 @@ export default function DestinationDetailPage() {
   // Remove from wishlist mutation
   const removeFromWishlist = useMutation({
     mutationFn: async (itemId: number) => {
-      return apiRequest("DELETE", `/api/wishlist/${itemId}`);
+      return apiRequest(`/api/wishlist/${itemId}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/wishlist"] });

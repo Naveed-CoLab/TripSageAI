@@ -40,7 +40,7 @@ export function ReviewList({ targetType, targetId, title = 'Reviews' }: ReviewLi
   
   const helpfulMutation = useMutation({
     mutationFn: async (reviewId: number) => {
-      const res = await apiRequest('POST', `/api/reviews/${reviewId}/helpful`);
+      const res = await apiRequest(`/api/reviews/${reviewId}/helpful`, 'POST');
       return res.json();
     },
     onError: (error: Error) => {
@@ -54,7 +54,7 @@ export function ReviewList({ targetType, targetId, title = 'Reviews' }: ReviewLi
   
   const reportMutation = useMutation({
     mutationFn: async (reviewId: number) => {
-      const res = await apiRequest('POST', `/api/reviews/${reviewId}/report`);
+      const res = await apiRequest(`/api/reviews/${reviewId}/report`, 'POST');
       return res.json();
     },
     onError: (error: Error) => {
@@ -74,7 +74,7 @@ export function ReviewList({ targetType, targetId, title = 'Reviews' }: ReviewLi
       content: string;
       rating: number;
     }) => {
-      const res = await apiRequest('POST', '/api/reviews', reviewData);
+      const res = await apiRequest('/api/reviews', 'POST', reviewData);
       return res.json();
     },
     onSuccess: () => {
