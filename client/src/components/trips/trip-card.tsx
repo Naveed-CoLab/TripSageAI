@@ -44,7 +44,7 @@ export default function TripCard({ trip }: TripCardProps) {
 
   const deleteTripMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest("DELETE", `/api/trips/${trip.id}`);
+      await apiRequest(`/api/trips/${trip.id}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/trips"] });
