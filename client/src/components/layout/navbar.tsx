@@ -28,49 +28,52 @@ export default function Navbar() {
   };
   
   return (
-    <nav className="bg-white border-b border-gray-100 sticky top-0 z-50 backdrop-blur-md bg-white/95">
+    <nav className="bg-white border-b border-gray-100 sticky top-0 z-50 backdrop-blur-md bg-white/95 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex justify-between h-16">
           <div className="flex items-center">
             <Link href="/" className="flex-shrink-0 flex items-center">
-              <div className="h-10 w-10 bg-gradient-to-r from-primary-600 to-primary-400 rounded-full flex items-center justify-center">
+              <div className="h-10 w-10 bg-gradient-to-r from-blue-600 to-blue-400 rounded-full flex items-center justify-center shadow-md">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                   <path d="M17.8 19.2 16 11l3.5-3.5C21 6 21.5 4 21 3c-1-.5-3 0-4.5 1.5L13 8 4.8 6.2c-.5-.1-.9.1-1.1.5l-.3.5c-.2.5-.1 1 .3 1.3L9 12l-2 3H4l-1 1 3 2 2 3 1-1v-3l3-2 3.5 5.3c.3.4.8.5 1.3.3l.5-.2c.4-.3.6-.7.5-1.2z"/>
                 </svg>
               </div>
-              <span className="font-bold text-xl ml-2 text-gray-900">
-                TripSage
-              </span>
+              <div className="flex flex-col ml-2">
+                <span className="font-bold text-xl text-gray-900">
+                  TripSage
+                </span>
+                <span className="text-xs text-gray-500 -mt-1">Travel Smarter</span>
+              </div>
             </Link>
             
-            <div className="hidden sm:ml-8 sm:flex sm:space-x-8">
-              <Link href="/" className={`${isActive('/') ? 'border-primary-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200`}>
+            <div className="hidden sm:ml-8 sm:flex sm:space-x-1">
+              <Link href="/" className={`${isActive('/') ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'} inline-flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200`}>
                 Home
               </Link>
-              <Link href="/explore" className={`${isActive('/explore') ? 'border-primary-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200`}>
+              <Link href="/explore" className={`${isActive('/explore') ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'} inline-flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200`}>
                 Explore
               </Link>
-              <Link href="/flights" className={`${isActive('/flights') ? 'border-primary-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200`}>
+              <Link href="/flights" className={`${isActive('/flights') ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'} inline-flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200`}>
                 Flights
               </Link>
-              <Link href="/hotels" className={`${isActive('/hotels') ? 'border-primary-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200`}>
+              <Link href="/hotels" className={`${isActive('/hotels') ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'} inline-flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200`}>
                 Hotels
               </Link>
               {user && (
                 <>
-                  <Link href="/trips" className={`${isActive('/trips') ? 'border-primary-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200`}>
+                  <Link href="/trips" className={`${isActive('/trips') ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'} inline-flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200`}>
                     My Trips
                   </Link>
-                  <Link href="/bookings" className={`${isActive('/bookings') ? 'border-primary-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200`}>
+                  <Link href="/bookings" className={`${isActive('/bookings') ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'} inline-flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200`}>
                     My Bookings
                   </Link>
-                  <Link href="/wishlist" className={`${isActive('/wishlist') ? 'border-primary-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200`}>
+                  <Link href="/wishlist" className={`${isActive('/wishlist') ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'} inline-flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200`}>
                     Wishlist
                   </Link>
                 </>
               )}
               {user?.role === 'admin' && (
-                <Link href="/admin/dashboard" className={`${isActive('/admin/dashboard') ? 'border-primary-500 text-gray-900' : 'border-transparent text-gray-500 hover:border-gray-300 hover:text-gray-700'} inline-flex items-center px-1 pt-1 border-b-2 text-sm font-medium transition-colors duration-200`}>
+                <Link href="/admin/dashboard" className={`${isActive('/admin/dashboard') ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'} inline-flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200`}>
                   Admin
                 </Link>
               )}
@@ -184,12 +187,12 @@ export default function Navbar() {
               </>
             ) : (
               <div className="flex items-center space-x-2">
-                <Link href="/auth" className="text-gray-600 hover:text-gray-900 font-medium text-sm mr-2">
+                <Link href="/auth" className="text-gray-600 hover:text-gray-900 font-medium text-sm py-2 px-4 rounded-md border border-gray-200 hover:bg-gray-50 transition-colors">
                   Sign In
                 </Link>
                 <Link href="/auth">
-                  <Button className="bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600 text-white shadow-sm">
-                    Sign Up
+                  <Button className="bg-gradient-to-r from-blue-600 to-blue-500 hover:from-blue-700 hover:to-blue-600 text-white shadow-sm font-medium">
+                    Sign Up Free
                   </Button>
                 </Link>
               </div>
@@ -211,12 +214,15 @@ export default function Navbar() {
                       className="flex items-center" 
                       onClick={() => setIsOpen(false)}
                     >
-                      <div className="bg-gradient-to-r from-primary-600 to-primary-400 rounded-full p-1.5 shadow-sm">
+                      <div className="bg-gradient-to-r from-blue-600 to-blue-400 rounded-full p-1.5 shadow-sm">
                         <Globe className="text-white h-5 w-5" />
                       </div>
-                      <span className="font-bold text-lg ml-2 bg-gradient-to-r from-primary-600 to-primary-400 text-transparent bg-clip-text">
-                        TripSage
-                      </span>
+                      <div className="flex flex-col ml-2">
+                        <span className="font-bold text-lg text-gray-900">
+                          TripSage
+                        </span>
+                        <span className="text-xs text-gray-500 -mt-1">Travel Smarter</span>
+                      </div>
                     </Link>
                     <Button variant="ghost" size="icon" className="rounded-full h-8 w-8" onClick={() => setIsOpen(false)}>
                       <X className="h-4 w-4" />
@@ -230,7 +236,7 @@ export default function Navbar() {
                     <div className="space-y-1">
                       <Link 
                         href="/" 
-                        className={`${isActive('/') ? 'bg-primary-50 text-primary-700 border-primary-500' : 'border-transparent text-gray-700 hover:bg-gray-50'} flex items-center px-3 py-2 text-sm font-medium rounded-md border-l-[3px] transition-colors duration-200`}
+                        className={`${isActive('/') ? 'bg-blue-50 text-blue-700 border-blue-500' : 'border-transparent text-gray-700 hover:bg-gray-50'} flex items-center px-3 py-2 text-sm font-medium rounded-md border-l-[3px] transition-colors duration-200`}
                         onClick={() => setIsOpen(false)}
                       >
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 mr-3 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
