@@ -12,15 +12,30 @@ export async function apiRequest(
   method: string = 'GET',
   data?: unknown | undefined,
 ): Promise<any> {
-  const res = await fetch(url, {
-    method,
-    headers: data ? { "Content-Type": "application/json" } : {},
-    body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
-  });
+  try {
+    console.log(`API Request: ${method} ${url}`, data ? 'with data' : 'without data');
+    
+    const res = await fetch(url, {
+      method,
+      headers: data ? { "Content-Type": "application/json" } : {},
+      body: data ? JSON.stringify(data) : undefined,
+      credentials: "include",
+    });
 
-  await throwIfResNotOk(res);
-  return res.json();
+    await throwIfResNotOk(res);
+    
+    // For responses with no content
+    if (res.status === 204) {
+      return null;
+    }
+    
+    const result = await res.json();
+    console.log(`API Response: ${method} ${url}`, result);
+    return result;
+  } catch (error) {
+    console.error(`API Error: ${method} ${url}`, error);
+    throw error;
+  }
 }
 
 type UnauthorizedBehavior = "returnNull" | "throw";
@@ -29,16 +44,33 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    const res = await fetch(queryKey[0] as string, {
-      credentials: "include",
-    });
+    try {
+      const url = queryKey[0] as string;
+      console.log(`Query: GET ${url}`);
+      
+      const res = await fetch(url, {
+        credentials: "include",
+      });
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;
+      if (unauthorizedBehavior === "returnNull" && res.status === 401) {
+        console.log(`Query: GET ${url} - Unauthorized (returning null)`);
+        return null;
+      }
+
+      await throwIfResNotOk(res);
+      
+      // For responses with no content
+      if (res.status === 204) {
+        return null;
+      }
+      
+      const result = await res.json();
+      console.log(`Query Result: GET ${url}`, result ? 'data received' : 'empty result');
+      return result;
+    } catch (error) {
+      console.error(`Query Error: ${queryKey[0]}`, error);
+      throw error;
     }
-
-    await throwIfResNotOk(res);
-    return await res.json();
   };
 
 export const queryClient = new QueryClient({

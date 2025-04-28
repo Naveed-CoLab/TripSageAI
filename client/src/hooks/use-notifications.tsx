@@ -36,9 +36,7 @@ export function useNotifications() {
   const { data: notifications = [], isLoading, refetch } = useQuery({
     queryKey: ['/api/notifications'],
     queryFn: async () => {
-      const res = await apiRequest('GET', '/api/notifications');
-      const data = await res.json();
-      return data;
+      return await apiRequest('/api/notifications', 'GET');
     },
     refetchInterval: 30000, // Refetch every 30 seconds
   });
@@ -46,8 +44,7 @@ export function useNotifications() {
   // Mark a notification as read
   const markAsReadMutation = useMutation({
     mutationFn: async (notificationId: number) => {
-      const res = await apiRequest('PUT', `/api/notifications/${notificationId}/read`);
-      return await res.json();
+      return await apiRequest(`/api/notifications/${notificationId}/read`, 'PUT');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
@@ -57,8 +54,7 @@ export function useNotifications() {
   // Mark all notifications as read
   const markAllAsReadMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest('PUT', '/api/notifications/mark-all-read');
-      return await res.json();
+      return await apiRequest('/api/notifications/mark-all-read', 'PUT');
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['/api/notifications'] });
