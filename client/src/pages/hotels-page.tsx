@@ -75,7 +75,7 @@ function HotelsPage() {
   const searchMutation = useMutation({
     mutationFn: async (data: FormValues) => {
       setIsSearching(true);
-      const res = await apiRequest("POST", "/api/hotels/search", {
+      const res = await apiRequest("/api/hotels/search", "POST", {
         ...data,
         checkInDate: format(data.checkInDate, "yyyy-MM-dd"),
         checkOutDate: format(data.checkOutDate, "yyyy-MM-dd"),

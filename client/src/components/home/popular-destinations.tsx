@@ -77,7 +77,7 @@ export default function PopularDestinations() {
   // Add to wishlist mutation
   const addToWishlist = useMutation({
     mutationFn: async (wishlistItem: any) => {
-      return apiRequest("POST", "/api/wishlist", wishlistItem);
+      return apiRequest("/api/wishlist", "POST", wishlistItem);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/wishlist"] });
@@ -98,7 +98,7 @@ export default function PopularDestinations() {
   // Remove from wishlist mutation
   const removeFromWishlist = useMutation({
     mutationFn: async (itemId: number) => {
-      return apiRequest("DELETE", `/api/wishlist/${itemId}`);
+      return apiRequest(`/api/wishlist/${itemId}`, "DELETE");
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/wishlist"] });

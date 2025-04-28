@@ -61,7 +61,7 @@ export default function TripCreatePage() {
   
   const createTripMutation = useMutation({
     mutationFn: async (data: CreateTripFormValues) => {
-      const res = await apiRequest("POST", "/api/trips", data);
+      const res = await apiRequest("/api/trips", "POST", data);
       return res.json();
     },
     onSuccess: (data) => {

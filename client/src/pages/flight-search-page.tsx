@@ -177,7 +177,7 @@ export default function FlightSearchPage() {
         returnDate: data.returnDate ? format(data.returnDate, "yyyy-MM-dd") : undefined,
       };
       
-      const response = await apiRequest("POST", "/api/flights/search", formattedData);
+      const response = await apiRequest("/api/flights/search", "POST", formattedData);
       return response.json();
     },
     onSuccess: (data) => {

@@ -112,7 +112,7 @@ function HotelBookingPage() {
       };
       
       console.log("Sending booking data:", JSON.stringify(requestData, null, 2));
-      const res = await apiRequest("POST", "/api/hotel-bookings", requestData);
+      const res = await apiRequest("/api/hotel-bookings", "POST", requestData);
       return await res.json();
     },
     onSuccess: () => {

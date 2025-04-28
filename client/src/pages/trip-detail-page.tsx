@@ -177,7 +177,7 @@ export default function TripDetailPage() {
 
   const generateItineraryMutation = useMutation({
     mutationFn: async () => {
-      const res = await apiRequest("POST", "/api/ai/generate-itinerary", { tripId });
+      const res = await apiRequest("/api/ai/generate-itinerary", "POST", { tripId });
       return res.json();
     },
     onSuccess: () => {
@@ -203,7 +203,7 @@ export default function TripDetailPage() {
   // Add to wishlist mutation
   const addToWishlist = useMutation({
     mutationFn: async (wishlistItem: any) => {
-      return apiRequest("POST", "/api/wishlist", wishlistItem);
+      return apiRequest("/api/wishlist", "POST", wishlistItem);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["/api/wishlist"] });
