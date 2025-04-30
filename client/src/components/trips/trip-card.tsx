@@ -67,27 +67,44 @@ export default function TripCard({ trip }: TripCardProps) {
     setShowDeleteDialog(false);
   };
 
-  const getRandomBgImage = () => {
-    const images = [
-      "https://images.unsplash.com/photo-1501785888041-af3ef285b470?auto=format&fit=crop&w=600&q=80",
-      "https://images.unsplash.com/photo-1530521954074-e64f6810b32d?auto=format&fit=crop&w=600&q=80",
-      "https://images.unsplash.com/photo-1476514525535-07fb3b4ae5f1?auto=format&fit=crop&w=600&q=80",
-      "https://images.unsplash.com/photo-1493246507139-91e8fad9978e?auto=format&fit=crop&w=600&q=80",
-      "https://images.unsplash.com/photo-1494783367193-149034c05e8f?auto=format&fit=crop&w=600&q=80"
-    ];
-    return images[Math.floor(Math.random() * images.length)];
+  const getDestinationImage = (destination: string) => {
+    // Map of destinations to specific image files
+    const destinationImages: Record<string, string> = {
+      'spain': '/images/destinations/spain-plaza.jpg',
+      'barcelona': '/images/destinations/spain.jpg',
+      'madrid': '/images/destinations/spain-plaza.jpg',
+      'seville': '/images/destinations/spain-plaza.jpg',
+      'paris': 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=600&q=80',
+      'rome': 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?auto=format&fit=crop&w=600&q=80',
+      'london': 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=600&q=80',
+      'new york': 'https://images.unsplash.com/photo-1496442226666-8d4d0e62e6e9?auto=format&fit=crop&w=600&q=80',
+      'tokyo': 'https://images.unsplash.com/photo-1536098561742-ca998e48cbcc?auto=format&fit=crop&w=600&q=80'
+    };
+    
+    // Normalize the destination to lowercase for case-insensitive matching
+    const normalizedDestination = destination.toLowerCase();
+    
+    // Check if we have a specific image for this destination
+    for (const [key, image] of Object.entries(destinationImages)) {
+      if (normalizedDestination.includes(key)) {
+        return image;
+      }
+    }
+    
+    // Default images for destinations we don't have specific images for
+    return '/images/destinations/spain.jpg';
   };
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'completed':
-        return 'bg-green-100 text-green-800';
+        return 'bg-green-500 text-white font-medium';
       case 'planned':
-        return 'bg-blue-100 text-blue-800';
+        return 'bg-blue-500 text-white font-medium';
       case 'draft':
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-600 text-white font-medium';
       default:
-        return 'bg-gray-100 text-gray-800';
+        return 'bg-gray-600 text-white font-medium';
     }
   };
 
@@ -99,17 +116,17 @@ export default function TripCard({ trip }: TripCardProps) {
 
   return (
     <>
-      <Card className="overflow-hidden transition-shadow hover:shadow-lg cursor-pointer h-full flex flex-col group relative">
+      <Card className="overflow-hidden transition-all duration-300 hover:shadow-xl cursor-pointer h-full flex flex-col group relative border border-gray-100 hover:border-transparent hover:translate-y-[-4px]">
         <Link href={`/trips/${trip.id}`}>
           <div className="h-48 w-full relative overflow-hidden">
             <img 
-              src={getRandomBgImage()} 
+              src={getDestinationImage(trip.destination)} 
               alt={trip.destination} 
               className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black opacity-60"></div>
             <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-              <Badge className={`${getStatusColor(trip.status)}`}>
+              <Badge className={`${getStatusColor(trip.status)} px-3 py-1 rounded-full shadow-sm`}>
                 {trip.status.charAt(0).toUpperCase() + trip.status.slice(1)}
               </Badge>
               <h3 className="text-xl font-bold mt-2">{trip.title}</h3>
