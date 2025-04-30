@@ -1232,6 +1232,29 @@ export class DatabaseStorage implements IStorage {
     await query(SQL, [id]);
   }
   
+  // Utility function to convert snake_case to camelCase for field names
+  private toCamelCase(data: any): any {
+    if (Array.isArray(data)) {
+      return data.map(item => this.toCamelCase(item));
+    }
+    
+    if (data === null || data === undefined || typeof data !== 'object') {
+      return data;
+    }
+    
+    const result: Record<string, any> = {};
+    
+    for (const [key, value] of Object.entries(data)) {
+      // Convert snake_case to camelCase
+      const camelKey = key.replace(/_([a-z])/g, (_, letter) => letter.toUpperCase());
+      
+      // Recursively convert nested objects
+      result[camelKey] = this.toCamelCase(value);
+    }
+    
+    return result;
+  }
+
   // Wishlist methods
   async getWishlistItemsByUserId(userId: number): Promise<WishlistItem[]> {
     const SQL = `
@@ -1241,7 +1264,7 @@ export class DatabaseStorage implements IStorage {
     `;
     
     const result = await query(SQL, [userId]);
-    return result.rows;
+    return this.toCamelCase(result.rows);
   }
   
   async getWishlistItemById(id: number): Promise<WishlistItem | undefined> {
@@ -1251,7 +1274,7 @@ export class DatabaseStorage implements IStorage {
     `;
     
     const result = await query(SQL, [id]);
-    return result.rows[0];
+    return result.rows[0] ? this.toCamelCase(result.rows[0]) : undefined;
   }
   
   async createWishlistItem(item: InsertWishlistItem): Promise<WishlistItem> {
@@ -1276,7 +1299,7 @@ export class DatabaseStorage implements IStorage {
     `;
     
     const result = await query(SQL, values);
-    return result.rows[0];
+    return this.toCamelCase(result.rows[0]);
   }
   
   async deleteWishlistItem(id: number): Promise<void> {
@@ -1295,7 +1318,7 @@ export class DatabaseStorage implements IStorage {
     `;
     
     const result = await query(SQL, [userId, itemType, itemId]);
-    return result.rows[0];
+    return result.rows[0] ? this.toCamelCase(result.rows[0]) : undefined;
   }
   
   // Flight booking methods
