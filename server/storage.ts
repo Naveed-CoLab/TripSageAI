@@ -833,15 +833,23 @@ export class DatabaseStorage implements IStorage {
     return trip;
   }
 
+  async getTrip(id: number): Promise<Trip | undefined> {
+    const [trip] = await db.select().from(myTrips).where(eq(myTrips.id, id));
+    return trip;
+  }
+
   async createTrip(trip: InsertTrip): Promise<Trip> {
     const [newTrip] = await db.insert(myTrips).values(trip).returning();
     return newTrip;
   }
 
-  async updateTrip(id: number, trip: InsertTrip): Promise<Trip> {
+  async updateTrip(id: number, trip: Partial<Trip>): Promise<Trip> {
     const [updatedTrip] = await db
       .update(myTrips)
-      .set({ ...trip, updatedAt: new Date() })
+      .set({ 
+        ...trip, 
+        updatedAt: new Date() 
+      })
       .where(eq(myTrips.id, id))
       .returning();
     return updatedTrip;

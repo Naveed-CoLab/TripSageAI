@@ -898,7 +898,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Update the trip with the estimated budget if not already set
       if (!trip.budget) {
         await storage.updateTrip(tripId, { 
-          ...trip,
           budget: estimatedBudget,
           budgetIsEstimated: true
         });
