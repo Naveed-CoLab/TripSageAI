@@ -197,50 +197,106 @@ export class DatabaseStorage implements IStorage {
   }
 
   async updateUser(id: number, userData: Partial<User>): Promise<User> {
-    const [updatedUser] = await db
-      .update(users)
-      .set({ ...userData, updatedAt: new Date() })
-      .where(eq(users.id, id))
-      .returning();
-    return updatedUser;
+    // Convert camelCase keys to snake_case for PostgreSQL
+    const processedData: Record<string, any> = {};
+    
+    for (const [key, value] of Object.entries(userData)) {
+      // Convert camelCase to snake_case
+      const snakeCaseKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+      processedData[snakeCaseKey] = value;
+    }
+    
+    // Add updated_at field
+    processedData.updated_at = new Date();
+    
+    // Build SET clause
+    const setClause = Object.keys(processedData)
+      .map((key, index) => `${key} = $${index + 2}`)
+      .join(', ');
+    
+    const values = [id, ...Object.values(processedData)];
+    
+    const SQL = `
+      UPDATE users
+      SET ${setClause}
+      WHERE id = $1
+      RETURNING *
+    `;
+    
+    const result = await query(SQL, values);
+    return result.rows[0];
   }
 
   async updateUserPassword(id: number, newPassword: string): Promise<User> {
-    const [updatedUser] = await db
-      .update(users)
-      .set({ password: newPassword, updatedAt: new Date() })
-      .where(eq(users.id, id))
-      .returning();
-    return updatedUser;
+    const SQL = `
+      UPDATE users
+      SET password = $2, updated_at = NOW()
+      WHERE id = $1
+      RETURNING *
+    `;
+    
+    const result = await query(SQL, [id, newPassword]);
+    return result.rows[0];
   }
 
   async updateUserEmail(id: number, newEmail: string): Promise<User> {
-    const [updatedUser] = await db
-      .update(users)
-      .set({ email: newEmail, updatedAt: new Date() })
-      .where(eq(users.id, id))
-      .returning();
-    return updatedUser;
+    const SQL = `
+      UPDATE users
+      SET email = $2, updated_at = NOW()
+      WHERE id = $1
+      RETURNING *
+    `;
+    
+    const result = await query(SQL, [id, newEmail]);
+    return result.rows[0];
   }
 
   async updateUserProfileImage(id: number, imageUrl: string): Promise<User> {
-    const [updatedUser] = await db
-      .update(users)
-      .set({ profileImage: imageUrl, updatedAt: new Date() })
-      .where(eq(users.id, id))
-      .returning();
-    return updatedUser;
+    const SQL = `
+      UPDATE users
+      SET profile_image = $2, updated_at = NOW()
+      WHERE id = $1
+      RETURNING *
+    `;
+    
+    const result = await query(SQL, [id, imageUrl]);
+    return result.rows[0];
   }
   
   // User settings methods
   async getUserSettings(userId: number): Promise<UserSettings | undefined> {
-    const [settings] = await db.select().from(userSettings).where(eq(userSettings.userId, userId));
-    return settings;
+    const SQL = `
+      SELECT * FROM user_settings
+      WHERE user_id = $1
+    `;
+    
+    const result = await query(SQL, [userId]);
+    return result.rows[0];
   }
 
   async createUserSettings(settings: InsertUserSettings): Promise<UserSettings> {
-    const [newSettings] = await db.insert(userSettings).values(settings).returning();
-    return newSettings;
+    // Convert camelCase keys to snake_case for PostgreSQL
+    const processedData: Record<string, any> = {};
+    
+    for (const [key, value] of Object.entries(settings)) {
+      // Convert camelCase to snake_case
+      const snakeCaseKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+      processedData[snakeCaseKey] = value;
+    }
+    
+    const keys = Object.keys(processedData);
+    const values = Object.values(processedData);
+    const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
+    const columnNames = keys.join(', ');
+    
+    const SQL = `
+      INSERT INTO user_settings (${columnNames})
+      VALUES (${placeholders})
+      RETURNING *
+    `;
+    
+    const result = await query(SQL, values);
+    return result.rows[0];
   }
 
   async updateUserSettings(userId: number, settingsData: Partial<UserSettings>): Promise<UserSettings> {
@@ -251,47 +307,78 @@ export class DatabaseStorage implements IStorage {
       return this.createUserSettings({ userId, ...settingsData } as InsertUserSettings);
     }
     
-    // Otherwise update existing settings
-    const [updatedSettings] = await db
-      .update(userSettings)
-      .set({ ...settingsData, updatedAt: new Date() })
-      .where(eq(userSettings.userId, userId))
-      .returning();
-    return updatedSettings;
+    // Convert camelCase keys to snake_case for PostgreSQL
+    const processedData: Record<string, any> = {};
+    
+    for (const [key, value] of Object.entries(settingsData)) {
+      // Convert camelCase to snake_case
+      const snakeCaseKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+      processedData[snakeCaseKey] = value;
+    }
+    
+    // Add updated_at field
+    processedData.updated_at = new Date();
+    
+    // Build SET clause
+    const setClause = Object.keys(processedData)
+      .map((key, index) => `${key} = $${index + 2}`)
+      .join(', ');
+    
+    const values = [userId, ...Object.values(processedData)];
+    
+    const SQL = `
+      UPDATE user_settings
+      SET ${setClause}
+      WHERE user_id = $1
+      RETURNING *
+    `;
+    
+    const result = await query(SQL, values);
+    return result.rows[0];
   }
   
   async getUserCount(): Promise<number> {
-    const result = await db.select({ count: count() }).from(users);
-    return result[0].count;
+    const SQL = `
+      SELECT COUNT(*) as count FROM users
+    `;
+    
+    const result = await query(SQL);
+    return parseInt(result.rows[0].count);
   }
   
   async getNewUserCountToday(): Promise<number> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    const result = await db
-      .select({ count: count() })
-      .from(users)
-      .where(gte(users.createdAt, today));
+    const SQL = `
+      SELECT COUNT(*) as count FROM users
+      WHERE created_at >= $1
+    `;
     
-    return result[0].count;
+    const result = await query(SQL, [today]);
+    return parseInt(result.rows[0].count);
   }
   
   async getTripCount(): Promise<number> {
-    const result = await db.select({ count: count() }).from(myTrips);
-    return result[0].count;
+    const SQL = `
+      SELECT COUNT(*) as count FROM my_trips
+    `;
+    
+    const result = await query(SQL);
+    return parseInt(result.rows[0].count);
   }
   
   async getNewTripCountToday(): Promise<number> {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     
-    const result = await db
-      .select({ count: count() })
-      .from(myTrips)
-      .where(gte(myTrips.createdAt, today));
+    const SQL = `
+      SELECT COUNT(*) as count FROM my_trips
+      WHERE created_at >= $1
+    `;
     
-    return result[0].count;
+    const result = await query(SQL, [today]);
+    return parseInt(result.rows[0].count);
   }
   
   // Admin logs methods
