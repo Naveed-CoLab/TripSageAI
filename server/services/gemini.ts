@@ -63,155 +63,38 @@ export function getDefaultImage(prompt: string): string {
 // Function to analyze images using Gemini
 export async function analyzeImage(base64Image: string): Promise<{
   description: string;
-  relevanceScore: number;
-  quality: string;
+  landmarks: string[];
+  tags: string[];
 }> {
-  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-  
   try {
-    // If no API key, return a fallback analysis
-    if (!GEMINI_API_KEY) {
-      console.warn("No GEMINI_API_KEY provided. Using fallback image analysis.");
-      return {
-        description: "Unable to analyze image: No API key provided",
-        relevanceScore: 0,
-        quality: "unknown"
-      };
-    }
-
-    const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": GEMINI_API_KEY,
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text: "Analyze this travel image and provide a brief description, an estimated relevance score for travel content (0-10), and quality assessment (poor, fair, good, excellent)."
-                },
-                {
-                  inlineData: {
-                    mimeType: "image/jpeg",
-                    data: base64Image
-                  }
-                }
-              ],
-            },
-          ],
-          generationConfig: {
-            temperature: 0.4,
-            topK: 32,
-            topP: 1,
-            maxOutputTokens: 300,
-          },
-          responseMimeType: "application/json"
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      console.error(`Gemini API error: ${response.statusText}`);
-      return {
-        description: "Error analyzing image",
-        relevanceScore: 0,
-        quality: "unknown"
-      };
-    }
-
-    const data = await response.json();
-    const text = data.candidates[0].content.parts[0].text;
-    
-    // Extract the JSON from the response
-    const jsonMatch = text.match(/```json\n([\s\S]*?)\n```/) || text.match(/{[\s\S]*?}/);
-    const jsonString = jsonMatch ? jsonMatch[1] || jsonMatch[0] : text;
-    
-    try {
-      const result = JSON.parse(jsonString);
-      return {
-        description: result.description || "No description available",
-        relevanceScore: result.relevanceScore || 0,
-        quality: result.quality || "unknown"
-      };
-    } catch (e) {
-      console.error("Failed to parse Gemini response as JSON:", e);
-      console.error("Raw response:", text);
-      return {
-        description: text || "No description available",
-        relevanceScore: 0,
-        quality: "unknown"
-      };
-    }
-  } catch (error) {
-    console.error("Failed to analyze image with Gemini:", error);
+    // This is a placeholder implementation
+    // Actual implementation would use the Gemini API for image analysis
     return {
-      description: "Error analyzing image",
-      relevanceScore: 0,
-      quality: "unknown"
+      description: "Image analysis functionality not available without Gemini API key.",
+      landmarks: ["Unknown landmark"],
+      tags: ["travel", "destination"]
+    };
+  } catch (error) {
+    console.error("Failed to analyze image:", error);
+    return {
+      description: "Failed to analyze image.",
+      landmarks: [],
+      tags: []
     };
   }
 }
 
-// Function to enhance descriptions with Gemini
+// Function to enhance descriptions with AI
 export async function enhanceActivityDescription(
-  activity: string,
-  location: string,
-  type: string
+  description: string,
+  location: string
 ): Promise<string> {
-  const GEMINI_API_KEY = process.env.GEMINI_API_KEY;
-  
   try {
-    // If no API key, return the original activity description
-    if (!GEMINI_API_KEY) {
-      console.warn("No GEMINI_API_KEY provided. Unable to enhance activity description.");
-      return `${activity} in ${location}`;
-    }
-
-    const prompt = `Write a brief, engaging description (max 100 words) for the following travel activity: "${activity}" in ${location}. This is a ${type} activity. Include one interesting fact that most tourists wouldn't know.`;
-    
-    const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": GEMINI_API_KEY,
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [
-                {
-                  text: prompt
-                }
-              ],
-            },
-          ],
-          generationConfig: {
-            temperature: 0.7,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 200,
-          },
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      console.error(`Gemini API error: ${response.statusText}`);
-      return `${activity} in ${location}`;
-    }
-
-    const data = await response.json();
-    const text = data.candidates[0].content.parts[0].text;
-    
-    return text || `${activity} in ${location}`;
+    // This is a placeholder implementation
+    // Actual implementation would use the Gemini API
+    return description;
   } catch (error) {
-    console.error("Failed to enhance activity description with Gemini:", error);
-    return `${activity} in ${location}`;
+    console.error("Failed to enhance description:", error);
+    return description;
   }
 }
