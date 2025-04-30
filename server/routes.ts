@@ -5,6 +5,7 @@ import { setupAuth } from "./auth";
 import { generateTripIdea, generateItinerary } from "./gemini";
 import { searchFlights, searchAirports, getAirlineInfo } from "./services/amadeus";
 import { hotelService } from "./services/hotels";
+import { mapsService } from "./services/maps";
 import { pool, query, transaction } from "./db";
 import { 
   myTrips, 
