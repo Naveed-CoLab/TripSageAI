@@ -908,7 +908,7 @@ export class DatabaseStorage implements IStorage {
     `;
     
     const result = await query(SQL, [userId]);
-    return result.rows;
+    return this.toCamelCase(result.rows);
   }
 
   async getTripById(id: number): Promise<Trip | undefined> {
@@ -918,7 +918,7 @@ export class DatabaseStorage implements IStorage {
     `;
     
     const result = await query(SQL, [id]);
-    return result.rows[0];
+    return result.rows[0] ? this.toCamelCase(result.rows[0]) : undefined;
   }
 
   async getTrip(id: number): Promise<Trip | undefined> {
@@ -928,7 +928,7 @@ export class DatabaseStorage implements IStorage {
     `;
     
     const result = await query(SQL, [id]);
-    return result.rows[0];
+    return result.rows[0] ? this.toCamelCase(result.rows[0]) : undefined;
   }
 
   async createTrip(trip: InsertTrip): Promise<Trip> {
@@ -953,7 +953,7 @@ export class DatabaseStorage implements IStorage {
     `;
     
     const result = await query(SQL, values);
-    return result.rows[0];
+    return this.toCamelCase(result.rows[0]);
   }
 
   async updateTrip(id: number, trip: Partial<Trip>): Promise<Trip> {
@@ -984,7 +984,7 @@ export class DatabaseStorage implements IStorage {
     `;
     
     const result = await query(SQL, values);
-    return result.rows[0];
+    return this.toCamelCase(result.rows[0]);
   }
 
   async deleteTrip(id: number): Promise<void> {

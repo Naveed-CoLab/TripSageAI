@@ -126,8 +126,8 @@ export default function TripCard({ trip }: TripCardProps) {
             />
             <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
             <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
-              <Badge className={`${getStatusColor(trip.status)} px-3 py-1 rounded-full shadow-sm`}>
-                {trip.status.charAt(0).toUpperCase() + trip.status.slice(1)}
+              <Badge className={`${getStatusColor(trip.status || 'draft')} px-3 py-1 rounded-full shadow-sm`}>
+                {trip.status ? trip.status.charAt(0).toUpperCase() + trip.status.slice(1) : 'Draft'}
               </Badge>
               <h3 className="text-xl font-bold mt-2 text-white drop-shadow-sm">{trip.title}</h3>
               <div className="flex items-center mt-1">
@@ -142,7 +142,7 @@ export default function TripCard({ trip }: TripCardProps) {
               <div className="flex items-center text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-md shadow-sm">
                 <Calendar className="h-4 w-4 mr-2 text-primary" />
                 <span className="font-medium">
-                  {format(parseISO(trip.startDate), "MMM d, yyyy")} - {format(parseISO(trip.endDate), "MMM d, yyyy")}
+                  {trip.startDate ? format(parseISO(trip.startDate), "MMM d, yyyy") : "No start date"} - {trip.endDate ? format(parseISO(trip.endDate), "MMM d, yyyy") : "No end date"}
                 </span>
               </div>
             ) : (
