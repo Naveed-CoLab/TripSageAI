@@ -61,117 +61,6 @@ if (!GEMINI_API_KEY) {
   console.warn("GEMINI_API_KEY is not set! AI features will not work properly.");
 }
 
-// Function to generate images with Gemini 2.5 Pro
-export async function generateImageWithGemini(prompt: string): Promise<string | undefined> {
-  try {
-    if (!GEMINI_API_KEY) {
-      console.warn("No GEMINI_API_KEY provided. Cannot generate image.");
-      return getDefaultImage(prompt);
-    }
-
-    const enhancedPrompt = `High-quality travel photograph of ${prompt}. Clear lighting, detailed, professional travel photography style. 4K resolution.`;
-    
-    const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent",
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": GEMINI_API_KEY,
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [{ text: enhancedPrompt }],
-            },
-          ],
-          generationConfig: {
-            temperature: 0.4,
-            topK: 32,
-            topP: 1,
-            maxOutputTokens: 2048,
-          },
-          // Request image generation
-          mediaOutputConfig: {
-            genAllowed: true,
-            genImgType: "photo",
-            genImgCount: 1,
-            genImgSize: "1024x1024",
-          },
-        }),
-      }
-    );
-
-    if (!response.ok) {
-      console.error(`Gemini image generation API error: ${response.statusText}`);
-      return getDefaultImage(prompt);
-    }
-
-    const data = await response.json();
-    
-    // Extract image data from response
-    if (data.candidates && 
-        data.candidates[0] && 
-        data.candidates[0].content && 
-        data.candidates[0].content.parts) {
-      
-      for (const part of data.candidates[0].content.parts) {
-        if (part.inlineData && part.inlineData.data) {
-          // Return the base64 image data
-          return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
-        }
-      }
-    }
-    
-    console.error("No image found in Gemini response");
-    return getDefaultImage(prompt);
-  } catch (error) {
-    console.error("Error generating image with Gemini:", error);
-    return getDefaultImage(prompt);
-  }
-}
-
-// Function to get default images based on content type
-function getDefaultImage(prompt: string): string {
-  const lowercasePrompt = prompt.toLowerCase();
-  
-  // Detect if it's a specific location type and return a relevant image
-  if (lowercasePrompt.includes("beach") || lowercasePrompt.includes("ocean") || lowercasePrompt.includes("sea")) {
-    return "https://images.unsplash.com/photo-1507525428034-b723cf961d3e?q=80&w=1000&auto=format&fit=crop";
-  }
-  
-  if (lowercasePrompt.includes("mountain") || lowercasePrompt.includes("hiking") || lowercasePrompt.includes("trek")) {
-    return "https://images.unsplash.com/photo-1464822759023-fed622ff2c3b?q=80&w=1000&auto=format&fit=crop";
-  }
-  
-  if (lowercasePrompt.includes("city") || lowercasePrompt.includes("skyline") || lowercasePrompt.includes("urban")) {
-    return "https://images.unsplash.com/photo-1477959858617-67f85cf4f1df?q=80&w=1000&auto=format&fit=crop";
-  }
-  
-  if (lowercasePrompt.includes("food") || lowercasePrompt.includes("restaurant") || lowercasePrompt.includes("dining")) {
-    return "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?q=80&w=1000&auto=format&fit=crop";
-  }
-  
-  if (lowercasePrompt.includes("hotel") || lowercasePrompt.includes("resort") || lowercasePrompt.includes("accommodation")) {
-    return "https://images.unsplash.com/photo-1551882547-ff40c63fe5fa?q=80&w=1000&auto=format&fit=crop";
-  }
-  
-  if (lowercasePrompt.includes("museum") || lowercasePrompt.includes("art") || lowercasePrompt.includes("gallery")) {
-    return "https://images.unsplash.com/photo-1566054757965-8c4085344d96?q=80&w=1000&auto=format&fit=crop";
-  }
-  
-  if (lowercasePrompt.includes("park") || lowercasePrompt.includes("garden") || lowercasePrompt.includes("nature")) {
-    return "https://images.unsplash.com/photo-1500964757637-c85e8a162699?q=80&w=1000&auto=format&fit=crop";
-  }
-  
-  if (lowercasePrompt.includes("landmark") || lowercasePrompt.includes("monument") || lowercasePrompt.includes("historic")) {
-    return "https://images.unsplash.com/photo-1552832230-c0197dd311b5?q=80&w=1000&auto=format&fit=crop";
-  }
-  
-  // Default travel image
-  return "https://images.unsplash.com/photo-1488646953014-85cb44e25828?q=80&w=1000&auto=format&fit=crop";
-}
-
 export async function generateTripIdea(
   destination: string,
   preferences?: string[],
@@ -378,8 +267,6 @@ export async function generateItinerary(trip: Trip): Promise<GeneratedItinerary>
       6. Mention any seasonal events, festivals, or local markets happening during the travel dates.
       7. Include at least one off-the-beaten-path or hidden gem location per day.
       
-      IMPORTANT: Do NOT include any image URLs in your response. Leave the "image" fields empty or null, and we'll generate them separately.
-      
       Format your response as a JSON object with the following structure:
       {
         "days": [
@@ -387,7 +274,7 @@ export async function generateItinerary(trip: Trip): Promise<GeneratedItinerary>
             "dayNumber": 1,
             "title": "Day 1: Arrival & Orientation",
             "city": "Main city being visited that day",
-            "image": null,
+            "image": "URL of an image representing this day's city or location (optional)",
             "activities": [
               {
                 "title": "Activity name",
@@ -398,7 +285,7 @@ export async function generateItinerary(trip: Trip): Promise<GeneratedItinerary>
                 "rating": "Numeric rating between 1-5, can include decimals (e.g., 4.5)",
                 "reviewCount": "Number of reviews this place has (e.g., 423)",
                 "city": "Specific city or neighborhood where this activity takes place",
-                "image": null
+                "image": "URL of an image representing this activity (optional)"
               }
             ]
           }
@@ -411,7 +298,7 @@ export async function generateItinerary(trip: Trip): Promise<GeneratedItinerary>
             "price": "Estimated price range in USD or local currency",
             "rating": "Numeric rating between 1-5, can include decimals (e.g., 4.5)",
             "reviewCount": "Number of reviews this place has (e.g., 423)",
-            "image": null,
+            "image": "URL of an image representing this booking (optional)",
             "details": { 
               "address": "Full address",
               "website": "Official website if available",
@@ -479,53 +366,6 @@ export async function generateItinerary(trip: Trip): Promise<GeneratedItinerary>
         dayDate.setDate(startDateObj.getDate() + index);
         day.date = dayDate;
       });
-    }
-    
-    // Generate images for each day and activity using Gemini
-    try {
-      console.log("Generating images with Gemini for a more relevant visual experience...");
-      
-      // Generate city images for each day - in parallel
-      const dayImagePromises = result.days.map(day => {
-        const prompt = `${day.city || day.title.split(':')[1] || trip.destination}, travel destination, landscape photography`;
-        return generateImageWithGemini(prompt);
-      });
-      
-      // Wait for all day images and update the itinerary
-      const dayImages = await Promise.all(dayImagePromises);
-      result.days.forEach((day, index) => {
-        day.image = dayImages[index];
-      });
-      
-      // Generate images for activities in batches to avoid rate limiting
-      for (const day of result.days) {
-        const activityImagePromises = day.activities.map(activity => {
-          const location = activity.location || activity.city || day.city || trip.destination;
-          const prompt = `${activity.title} in ${location}, ${activity.type || 'travel'} photography`;
-          return generateImageWithGemini(prompt);
-        });
-        
-        // Update activities with generated images
-        const activityImages = await Promise.all(activityImagePromises);
-        day.activities.forEach((activity, index) => {
-          activity.image = activityImages[index] || getDefaultImage(`${activity.type} ${activity.title}`);
-        });
-      }
-      
-      // Generate images for bookings
-      const bookingImagePromises = result.bookings.map(booking => {
-        const prompt = `${booking.title}, ${booking.type} in ${trip.destination}, professional photography`;
-        return generateImageWithGemini(prompt);
-      });
-      
-      // Update bookings with generated images
-      const bookingImages = await Promise.all(bookingImagePromises);
-      result.bookings.forEach((booking, index) => {
-        booking.image = bookingImages[index] || getDefaultImage(`${booking.type} ${booking.title}`);
-      });
-    } catch (imageError) {
-      console.error("Error generating images with Gemini:", imageError);
-      // Continue with the itinerary even if image generation fails
     }
     
     return result;
@@ -650,7 +490,7 @@ function generateFallbackItinerary(trip: Trip): GeneratedItinerary {
       rating: 4 + Math.random(), // Generate a rating between 4.0 and 5.0
       reviewCount: Math.floor(100 + Math.random() * 500), // Generate between 100-600 reviews
       city: city,
-      image: "" // Will be populated with images later
+      image: undefined // Will use default images based on type
     }));
     
     days.push({
@@ -658,7 +498,6 @@ function generateFallbackItinerary(trip: Trip): GeneratedItinerary {
       title: `Day ${i + 1}: ${i === 0 ? "Arrival & Orientation" : i === numDays - 1 ? "Departure" : `Exploring ${trip.destination}`}`,
       date: dayDate,
       city: city,
-      image: "", // Will be populated with images later
       activities: enhancedActivities
     });
   }
@@ -672,7 +511,6 @@ function generateFallbackItinerary(trip: Trip): GeneratedItinerary {
       price: "$120-250 per night",
       rating: 4.7,
       reviewCount: 432,
-      image: "", // Will be populated with images later
       details: {
         checkIn: "After 2:00 PM",
         checkOut: "Before 12:00 PM",
@@ -687,7 +525,6 @@ function generateFallbackItinerary(trip: Trip): GeneratedItinerary {
       price: "$60-120 per night",
       rating: 4.3,
       reviewCount: 287,
-      image: "", // Will be populated with images later
       details: {
         checkIn: "After 3:00 PM",
         checkOut: "Before 11:00 AM",
@@ -702,7 +539,6 @@ function generateFallbackItinerary(trip: Trip): GeneratedItinerary {
       price: "$25-45",
       rating: 4.5,
       reviewCount: 189,
-      image: "", // Will be populated with images later
       details: {
         type: "Shared Shuttle/Private Taxi",
         duration: "30-45 minutes",
@@ -716,7 +552,6 @@ function generateFallbackItinerary(trip: Trip): GeneratedItinerary {
       price: "$30-55 per person",
       rating: 4.8,
       reviewCount: 356,
-      image: "", // Will be populated with images later
       details: {
         duration: "3 hours",
         includes: ["Professional guide", "Small group", "Historical insights"],
@@ -731,7 +566,6 @@ function generateFallbackItinerary(trip: Trip): GeneratedItinerary {
       price: "$45-70 per person",
       rating: 4.9,
       reviewCount: 214,
-      image: "", // Will be populated with images later
       details: {
         duration: "4 hours",
         includes: ["5-7 food tastings", "Local guide", "Drink pairings"],
@@ -741,27 +575,10 @@ function generateFallbackItinerary(trip: Trip): GeneratedItinerary {
     }
   ];
   
-  // Create the itinerary result without images initially
-  const result = {
+  return {
     days,
     bookings
   };
-  
-  // Add default images for all activities and bookings
-  // We'll use basic categorization to select relevant default images
-  for (const day of result.days) {
-    day.image = getDefaultImage(`${day.city || trip.destination} city`);
-    
-    for (const activity of day.activities) {
-      activity.image = getDefaultImage(`${activity.type} ${activity.title}`);
-    }
-  }
-  
-  for (const booking of result.bookings) {
-    booking.image = getDefaultImage(`${booking.type} ${booking.title}`);
-  }
-  
-  return result;
 }
 
 // AI-powered chatbot function
