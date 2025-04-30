@@ -15,7 +15,7 @@ import { format, parseISO } from "date-fns";
 import { 
   User, Pencil, Calendar, DollarSign, Share2, Loader2, PlusCircle, Map, 
   Heart, Info, ExternalLink, MoreHorizontal, MapPin, Star, Clock, Coffee,
-  Utensils, Hotel, Camera, Landmark, Plane, Plus, Building, Edit
+  Utensils, Hotel, Camera, Landmark, Plane, Plus, Building, Edit, Ticket
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -35,11 +35,12 @@ import {
 import { Input } from "@/components/ui/input";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
-import ItineraryDay from "@/components/trips/itinerary-day";
-import BookingCard from "@/components/trips/booking-card";
+// Import our static image helper
+import { getDestinationImage } from "@/lib/destination-images";
 
 // Activity type definition
 type Activity = {
+  id?: string | number;
   title: string;
   description?: string;
   time?: string;
@@ -147,9 +148,6 @@ const getActivityIcon = (type: string | null) => {
       return <Clock className="h-4 w-4 text-gray-600" />;
   }
 };
-
-// Import our static image helper
-import { getDestinationImage } from "@/lib/destination-images";
 
 export default function TripDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -381,7 +379,7 @@ export default function TripDetailPage() {
                 {trip.preferences && trip.preferences.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {trip.preferences.map((preference, index) => (
-                      <Badge key={index} variant="outline" className="bg-white">
+                      <Badge key={`pref-${index}`} variant="outline" className="bg-white">
                         {preference}
                       </Badge>
                     ))}
@@ -434,7 +432,7 @@ export default function TripDetailPage() {
               {/* Map & Trip Info */}
               <div className="lg:col-span-1 space-y-6">
                 {/* Map Card */}
-                <Card className="overflow-hidden">
+                <Card className="overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200">
                   <div className="h-48 relative bg-gray-100">
                     {showMap ? (
                       <iframe 
@@ -450,8 +448,10 @@ export default function TripDetailPage() {
                         className="w-full h-full flex items-center justify-center cursor-pointer"
                         onClick={() => setShowMap(true)}
                       >
-                        <Map className="h-10 w-10 text-gray-400" />
-                        <span className="ml-2 text-gray-500">Click to load map</span>
+                        <div className="text-center">
+                          <Map className="h-12 w-12 text-gray-400 mx-auto mb-2" />
+                          <span className="text-gray-500 text-sm font-medium">Click to load map</span>
+                        </div>
                       </div>
                     )}
                   </div>
@@ -473,7 +473,7 @@ export default function TripDetailPage() {
                 </Card>
                 
                 {/* Saved Activities */}
-                <Card>
+                <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-lg flex items-center">
                       <Heart className="h-4 w-4 mr-2 text-red-500" />
@@ -491,10 +491,12 @@ export default function TripDetailPage() {
                           .map(([activityId]) => {
                             // Find the activity in the trip
                             let activity: any = null;
+                            let matchDay = null;
                             for (const day of trip.days) {
                               const found = day.activities.find(a => `${a.id}` === activityId);
                               if (found) {
-                                activity = { ...found, day };
+                                activity = found;
+                                matchDay = day;
                                 break;
                               }
                             }
@@ -509,7 +511,7 @@ export default function TripDetailPage() {
                                 <div className="flex-1 min-w-0">
                                   <p className="text-sm font-medium truncate">{activity.title}</p>
                                   <p className="text-xs text-gray-500">
-                                    Day {activity.day.dayNumber}: {activity.day.title}
+                                    Day {matchDay?.dayNumber}: {matchDay?.title}
                                   </p>
                                 </div>
                               </li>
@@ -527,7 +529,7 @@ export default function TripDetailPage() {
                 </Card>
                 
                 {/* Trip Stats */}
-                <Card>
+                <Card className="shadow-sm hover:shadow-md transition-shadow duration-200">
                   <CardHeader className="pb-2">
                     <CardTitle className="text-lg flex items-center">
                       <Info className="h-4 w-4 mr-2 text-blue-500" />
@@ -574,566 +576,261 @@ export default function TripDetailPage() {
               
               {/* Main Trip Content */}
               <div className="lg:col-span-2">
-                <Tabs defaultValue="itinerary" value={selectedTab} onValueChange={setSelectedTab}>
-                  <TabsList className="mb-6">
-                    <TabsTrigger value="itinerary">Itinerary</TabsTrigger>
-                    <TabsTrigger value="saves">For you</TabsTrigger>
-                    <TabsTrigger value="bookings">Bookings</TabsTrigger>
+                <Tabs defaultValue="itinerary" className="w-full">
+                  <TabsList className="grid w-full grid-cols-3 mb-8">
+                    <TabsTrigger value="itinerary" className="text-sm md:text-base">
+                      <Calendar className="h-4 w-4 mr-2 inline-block" />
+                      Itinerary
+                    </TabsTrigger>
+                    <TabsTrigger value="for-you" className="text-sm md:text-base">
+                      <User className="h-4 w-4 mr-2 inline-block" />
+                      For you
+                    </TabsTrigger>
+                    <TabsTrigger value="bookings" className="text-sm md:text-base">
+                      <Ticket className="h-4 w-4 mr-2 inline-block" />
+                      Bookings
+                    </TabsTrigger>
                   </TabsList>
                   
                   <TabsContent value="itinerary" className="mt-0">
                     {hasItinerary ? (
-                      <div className="space-y-6">
-                        {/* Itinerary Timeline */}
-                        <div className="bg-white rounded-xl border border-gray-200 p-4">
-                          <h2 className="text-lg font-semibold mb-4">
-                            {trip.days.length} days itinerary
-                          </h2>
-                          
-                          {/* Timeline View */}
-                          <div className="relative">
-                            {Object.entries(groupedDays).map(([month, days], monthIndex) => (
-                              <div key={month} className="mb-8">
-                                {month !== 'Unscheduled' && (
-                                  <h3 className="text-sm font-medium text-gray-600 mb-4">{month}</h3>
-                                )}
-                                
-                                {days.map((day) => (
-                                  <div key={day.id} className="mb-2">
-                                    <div 
-                                      className="flex items-start cursor-pointer"
-                                      onClick={() => toggleDayExpansion(day.dayNumber)}
-                                    >
-                                      {/* Day Number */}
-                                      <div className="w-8 h-8 bg-gray-100 rounded-full flex-shrink-0 flex items-center justify-center z-10 mr-3 mt-0.5">
-                                        <span className="text-sm font-medium text-gray-700">{day.dayNumber}</span>
+                      <div className="space-y-8">
+                        {Object.entries(groupedDays).map(([month, days]) => (
+                          <div key={month} className="space-y-6">
+                            <h3 className="text-xl font-semibold text-gray-800 pb-2 border-b border-gray-200 flex items-center">
+                              <Calendar className="h-5 w-5 mr-2 text-primary-500" />
+                              {month}
+                            </h3>
+                            <div className="grid grid-cols-1 gap-6">
+                              {days.map((day) => (
+                                <div 
+                                  key={day.dayNumber}
+                                  className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow duration-200"
+                                >
+                                  <div 
+                                    className="p-4 flex items-center justify-between cursor-pointer bg-gradient-to-r from-gray-50 to-white"
+                                    onClick={() => toggleDayExpansion(day.dayNumber)}
+                                  >
+                                    <div className="flex items-center">
+                                      <div className="w-10 h-10 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center font-bold mr-3">
+                                        {day.dayNumber}
                                       </div>
-                                      
-                                      {/* Day Header */}
-                                      <div className="flex-1">
-                                        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between mb-2">
-                                          <h4 className="font-medium">
-                                            {expandedDay === day.dayNumber ? (
-                                              <span className="text-primary-700">{day.title}</span>
-                                            ) : (
-                                              day.title
-                                            )}
-                                          </h4>
-                                          {day.date && (
-                                            <span className="text-sm text-gray-500">
-                                              {format(parseISO(day.date), "EEE, MMM d")}
-                                            </span>
-                                          )}
-                                        </div>
-                                        
-                                        {/* Preview of activities (when collapsed) */}
-                                        {expandedDay !== day.dayNumber && day.activities.length > 0 && (
-                                          <div className="flex flex-wrap gap-2 mb-2">
-                                            {day.activities.slice(0, 3).map((activity) => (
-                                              <Badge 
-                                                key={activity.id} 
-                                                variant="outline" 
-                                                className="bg-white"
-                                              >
-                                                {activity.title}
-                                              </Badge>
-                                            ))}
-                                            {day.activities.length > 3 && (
-                                              <Badge variant="outline" className="bg-white">
-                                                +{day.activities.length - 3} more
-                                              </Badge>
-                                            )}
-                                          </div>
+                                      <div>
+                                        <h4 className="font-medium text-gray-900">{day.title}</h4>
+                                        {day.date && (
+                                          <p className="text-sm text-gray-500">
+                                            {format(new Date(day.date), 'EEEE, MMMM d, yyyy')}
+                                          </p>
                                         )}
                                       </div>
                                     </div>
-                                    
-                                    {/* Expanded Day View */}
-                                    {expandedDay === day.dayNumber && (
-                                      <div className="ml-11 mt-3 border-l-2 border-gray-200 pl-4">
-                                        {day.activities.length > 0 ? (
-                                          <div className="space-y-4">
-                                            {day.activities.map((activity, activityIndex) => (
-                                              <div 
-                                                key={activity.id}
-                                                className="relative flex gap-4 pb-6"
-                                              >
-                                                {/* Time Line */}
-                                                <div className="absolute -left-6 h-full w-0.5 bg-gray-200">
-                                                  <div className="absolute top-2 -left-1 w-2 h-2 rounded-full bg-gray-300"></div>
-                                                </div>
-                                                
-                                                {/* Activity Card */}
-                                                <div className="flex-1 bg-white rounded-lg border border-gray-200 overflow-hidden shadow-sm hover:shadow-md transition-shadow">
-                                                  {/* Activity Content */}
-                                                  <div className="p-4">
-                                                    {/* Time & Title */}
-                                                    <div className="flex justify-between items-start mb-2">
-                                                      <div>
-                                                        {activity.time && (
-                                                          <div className="text-sm text-gray-500 mb-1">
-                                                            {formatTimeString(activity.time)}
-                                                          </div>
-                                                        )}
-                                                        <h5 className="font-medium">{activity.title}</h5>
-                                                      </div>
-                                                      
-                                                      {/* Action Buttons */}
-                                                      <div className="flex gap-1">
-                                                        <TooltipProvider>
-                                                          <Tooltip>
-                                                            <TooltipTrigger asChild>
-                                                              <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="h-7 w-7 rounded-full"
-                                                                onClick={(e) => {
-                                                                  e.stopPropagation();
-                                                                  toggleSaved(`${activity.id}`);
-                                                                }}
-                                                              >
-                                                                <Heart 
-                                                                  className={`h-4 w-4 ${savedStates[activity.id] ? 'fill-red-500 text-red-500' : 'text-gray-400'}`} 
-                                                                />
-                                                              </Button>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent>
-                                                              <p>{savedStates[activity.id] ? 'Remove from saved' : 'Save activity'}</p>
-                                                            </TooltipContent>
-                                                          </Tooltip>
-                                                        </TooltipProvider>
-                                                        
-                                                        <TooltipProvider>
-                                                          <Tooltip>
-                                                            <TooltipTrigger asChild>
-                                                              <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="h-7 w-7 rounded-full"
-                                                                onClick={(e) => {
-                                                                  e.stopPropagation();
-                                                                  if (activity.location) {
-                                                                    window.open(getGoogleMapsUrl(activity.location), '_blank');
-                                                                  } else {
-                                                                    window.open(getGoogleMapsUrl(`${activity.title} ${trip.destination}`), '_blank');
-                                                                  }
-                                                                }}
-                                                              >
-                                                                <MapPin className="h-4 w-4 text-gray-400" />
-                                                              </Button>
-                                                            </TooltipTrigger>
-                                                            <TooltipContent>
-                                                              <p>View on map</p>
-                                                            </TooltipContent>
-                                                          </Tooltip>
-                                                        </TooltipProvider>
-                                                        
-                                                        <DropdownMenu>
-                                                          <DropdownMenuTrigger asChild>
-                                                            <Button
-                                                              variant="ghost"
-                                                              size="icon"
-                                                              className="h-7 w-7 rounded-full"
-                                                            >
-                                                              <MoreHorizontal className="h-4 w-4 text-gray-400" />
-                                                            </Button>
-                                                          </DropdownMenuTrigger>
-                                                          <DropdownMenuContent align="end">
-                                                            <DropdownMenuItem className="cursor-pointer flex items-center">
-                                                              <Edit className="mr-2 h-4 w-4" />
-                                                              <span>Edit details</span>
-                                                            </DropdownMenuItem>
-                                                            <DropdownMenuItem
-                                                              className="cursor-pointer flex items-center text-red-600"
-                                                              onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                // Implement delete
-                                                                toast({
-                                                                  title: "Delete activity",
-                                                                  description: "This feature is coming soon!",
-                                                                });
-                                                              }}
-                                                            >
-                                                              <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="mr-2 h-4 w-4">
-                                                                <path d="M3 6h18"></path>
-                                                                <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"></path>
-                                                                <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"></path>
-                                                              </svg>
-                                                              <span>Delete</span>
-                                                            </DropdownMenuItem>
-                                                          </DropdownMenuContent>
-                                                        </DropdownMenu>
-                                                      </div>
-                                                    </div>
+                                    <div className="flex flex-col md:flex-row items-center gap-2">
+                                      <Badge variant="outline" className="bg-primary-50 text-primary-700 border-primary-200 font-normal">
+                                        {day.activities.length} activities
+                                      </Badge>
+                                      <Button variant="ghost" size="sm">
+                                        {expandedDay === day.dayNumber ? (
+                                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-up">
+                                            <path d="m18 15-6-6-6 6"/>
+                                          </svg>
+                                        ) : (
+                                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="lucide lucide-chevron-down">
+                                            <path d="m6 9 6 6 6-6"/>
+                                          </svg>
+                                        )}
+                                      </Button>
+                                    </div>
+                                  </div>
+                                  
+                                  {expandedDay === day.dayNumber && (
+                                    <div className="p-4 pt-0 border-t border-gray-100 mt-2">
+                                      <div className="mt-4 space-y-6 relative before:absolute before:left-3 before:top-2 before:w-0.5 before:h-[calc(100%-24px)] before:bg-gray-200">
+                                        {day.activities.map((activity, idx) => {
+                                          const activityId = `${activity.id || idx}`;
+                                          const isSaved = savedStates[activityId];
+                                          
+                                          return (
+                                            <div key={idx} className="pl-8 relative pb-1">
+                                              <div className="absolute left-0 top-1 w-6 h-6 rounded-full bg-white flex items-center justify-center z-10 border border-gray-200">
+                                                {getActivityIcon(activity.type)}
+                                              </div>
+                                              
+                                              <div className="bg-gray-50 p-4 rounded-lg">
+                                                <div className="flex items-start justify-between">
+                                                  <div>
+                                                    <h4 className="font-medium text-gray-900">{activity.title}</h4>
                                                     
-                                                    {/* Location & Type */}
-                                                    <div className="flex flex-wrap gap-2 mb-2">
-                                                      {activity.location && (
-                                                        <div className="flex items-center text-sm text-gray-500">
-                                                          <MapPin className="h-3.5 w-3.5 mr-1" />
-                                                          {activity.location}
-                                                        </div>
+                                                    <div className="flex flex-wrap gap-y-1 gap-x-4 mt-1">
+                                                      {activity.time && (
+                                                        <span className="text-xs text-gray-500 flex items-center">
+                                                          <Clock className="h-3 w-3 mr-1" />
+                                                          {formatTimeString(activity.time)}
+                                                        </span>
                                                       )}
+                                                      
+                                                      {activity.location && (
+                                                        <span className="text-xs text-gray-500 flex items-center">
+                                                          <MapPin className="h-3 w-3 mr-1" />
+                                                          {activity.location}
+                                                        </span>
+                                                      )}
+                                                      
                                                       {activity.type && (
-                                                        <Badge variant="outline" className="text-xs">
-                                                          {activity.type.charAt(0).toUpperCase() + activity.type.slice(1)}
+                                                        <Badge variant="outline" className="text-xs py-0 h-5">
+                                                          {activity.type}
                                                         </Badge>
                                                       )}
                                                     </div>
-                                                    
-                                                    {/* Description */}
-                                                    {activity.description && (
-                                                      <p className="text-sm text-gray-600 mt-2">
-                                                        {activity.description}
-                                                      </p>
+                                                  </div>
+                                                  
+                                                  <Button 
+                                                    variant="ghost" 
+                                                    size="icon" 
+                                                    className="h-8 w-8 text-gray-400 hover:text-red-500"
+                                                    onClick={() => toggleSaved(activityId)}
+                                                  >
+                                                    <Heart className={`h-4 w-4 ${isSaved ? 'fill-red-500 text-red-500' : ''}`} />
+                                                    <span className="sr-only">Save</span>
+                                                  </Button>
+                                                </div>
+                                                
+                                                {activity.description && (
+                                                  <p className="text-sm text-gray-600 mt-2">{activity.description}</p>
+                                                )}
+                                                
+                                                {activity.rating && (
+                                                  <div className="flex items-center mt-2">
+                                                    <div className="flex">
+                                                      {[...Array(5)].map((_, i) => (
+                                                        <Star 
+                                                          key={i} 
+                                                          className={`h-3.5 w-3.5 ${i < Math.round(activity.rating) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} 
+                                                        />
+                                                      ))}
+                                                    </div>
+                                                    {activity.reviewCount && (
+                                                      <span className="text-xs text-gray-500 ml-1">
+                                                        ({activity.reviewCount} reviews)
+                                                      </span>
                                                     )}
                                                   </div>
-                                                </div>
+                                                )}
+                                                
+                                                {activity.location && (
+                                                  <Button 
+                                                    variant="ghost" 
+                                                    size="sm" 
+                                                    className="mt-2 h-8 text-primary-600 px-2" 
+                                                    onClick={() => window.open(getGoogleMapsUrl(activity.location), '_blank')}
+                                                  >
+                                                    <Map className="h-3.5 w-3.5 mr-1.5" />
+                                                    View on Map
+                                                  </Button>
+                                                )}
                                               </div>
-                                            ))}
-                                            
-                                            {/* Add Activity Button */}
-                                            <div className="flex justify-center">
-                                              <Button 
-                                                variant="outline" 
-                                                size="sm"
-                                                className="border-dashed"
-                                                onClick={() => {
-                                                  // Implement add activity
-                                                  toast({
-                                                    title: "Add activity",
-                                                    description: "This feature is coming soon!",
-                                                  });
-                                                }}
-                                              >
-                                                <Plus className="h-4 w-4 mr-1" />
-                                                Add Activity
-                                              </Button>
                                             </div>
-                                          </div>
-                                        ) : (
-                                          <div className="text-center py-8">
-                                            <p className="text-gray-500 mb-4">No activities for this day yet</p>
-                                            <Button 
-                                              variant="outline" 
-                                              size="sm"
-                                              onClick={() => handleAddPlaceToStay(day.id)}
-                                            >
-                                              <Plus className="h-4 w-4 mr-1" />
-                                              Add Place To Stay
-                                            </Button>
-                                          </div>
-                                        )}
+                                          );
+                                        })}
                                       </div>
-                                    )}
-                                  </div>
-                                ))}
-                              </div>
-                            ))}
+                                    </div>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
                           </div>
-                        </div>
+                        ))}
                       </div>
                     ) : (
-                      <Card>
-                        <CardContent className="pt-6 pb-8 text-center">
-                          <div className="mb-4">
-                            <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                              <Calendar className="w-8 h-8 text-primary-600" />
-                            </div>
-                            <h3 className="text-xl font-bold mb-2">No Itinerary Yet</h3>
-                            <p className="text-gray-500 max-w-md mx-auto mb-6">
-                              Let our AI create a personalized day-by-day itinerary for your trip to {trip.destination}.
-                            </p>
-                          </div>
-                          
+                      <div className="text-center py-16 bg-gray-50 rounded-xl shadow-inner">
+                        <div className="max-w-md mx-auto">
+                          <h3 className="text-xl font-semibold text-gray-800 mb-2">No itinerary yet</h3>
+                          <p className="text-gray-500 mb-6">
+                            This trip doesn't have an itinerary yet. Generate an AI-powered itinerary or create one manually.
+                          </p>
                           <Button 
-                            className="mx-auto" 
-                            onClick={handleGenerateItinerary}
+                            onClick={handleGenerateItinerary} 
                             disabled={generateItineraryMutation.isPending}
+                            className="bg-gradient-to-r from-primary-600 to-primary-500 hover:from-primary-700 hover:to-primary-600"
+                            size="lg"
                           >
                             {generateItineraryMutation.isPending ? (
                               <>
-                                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                                Generating Itinerary...
+                                <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                                Generating...
                               </>
                             ) : (
                               <>
-                                <PlusCircle className="h-4 w-4 mr-2" />
-                                Generate AI Itinerary
+                                <PlusCircle className="mr-2 h-5 w-5" />
+                                Generate Itinerary
                               </>
                             )}
                           </Button>
-                        </CardContent>
-                      </Card>
+                        </div>
+                      </div>
                     )}
                   </TabsContent>
                   
-                  <TabsContent value="saves" className="mt-0">
-                    <Card>
-                      <CardContent className="pt-6 pb-8">
-                        <div className="flex items-center justify-between mb-4">
-                          <h3 className="text-lg font-medium">Recommended for you</h3>
-                          <Button variant="ghost" size="sm">View all</Button>
-                        </div>
-                        
-                        <div className="space-y-4">
-                          <p className="text-sm text-gray-500">
-                            Based on your trip to {trip.destination}, we think you might like these places:
-                          </p>
-                          
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            {/* Beach Location */}
-                            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
-                              <div className="h-40 bg-gray-100 relative">
-                                <img 
-                                  src={getPlaceholderImage(`${trip.destination} beach`)}
-                                  alt="Beach"
-                                  className="w-full h-full object-cover"
-                                />
-                              </div>
-                              <div className="p-4">
-                                <div className="flex justify-between items-start">
-                                  <h5 className="font-medium">Beautiful Beaches</h5>
-                                  <div className="flex items-center text-yellow-500">
-                                    <Star className="h-4 w-4 fill-current" />
-                                    <span className="ml-1 text-sm">4.8</span>
-                                  </div>
-                                </div>
-                                <p className="text-sm text-gray-600 mt-1">
-                                  Explore the stunning beaches around {trip.destination}.
-                                </p>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  className="w-full mt-3"
-                                  onClick={() => {
-                                    if (!user) {
-                                      toast({
-                                        title: "Sign in required",
-                                        description: "Please sign in to save items to your wishlist",
-                                        variant: "destructive",
-                                      });
-                                      return;
-                                    }
-                                    
-                                    const beachesId = `trip-${trip.id}-beaches`;
-                                    const isAlreadySaved = isInWishlist("attraction", beachesId);
-                                    
-                                    if (!isAlreadySaved) {
-                                      addToWishlist.mutate({
-                                        itemType: "attraction",
-                                        itemId: beachesId,
-                                        itemName: `Beaches in ${trip.destination}`,
-                                        itemImage: getPlaceholderImage(`${trip.destination} beach`),
-                                        additionalData: {
-                                          tripId: trip.id,
-                                          description: `Explore the stunning beaches around ${trip.destination}.`,
-                                          location: trip.destination
-                                        }
-                                      });
-                                    } else {
-                                      toast({
-                                        title: "Already in wishlist",
-                                        description: "This attraction is already in your wishlist",
-                                      });
-                                    }
-                                  }}
-                                >
-                                  <Heart className="h-4 w-4 mr-2" />
-                                  Save for later
-                                </Button>
-                              </div>
-                            </div>
-                            
-                            {/* Restaurant */}
-                            <div className="bg-white rounded-lg border border-gray-200 overflow-hidden hover:shadow-md transition-shadow">
-                              <div className="h-40 bg-gray-100 relative">
-                                <img 
-                                  src={getPlaceholderImage(`${trip.destination} restaurant`)}
-                                  alt="Restaurant"
-                                  className="w-full h-full object-cover"
-                                />
-                              </div>
-                              <div className="p-4">
-                                <div className="flex justify-between items-start">
-                                  <h5 className="font-medium">Local Cuisine</h5>
-                                  <div className="flex items-center text-yellow-500">
-                                    <Star className="h-4 w-4 fill-current" />
-                                    <span className="ml-1 text-sm">4.7</span>
-                                  </div>
-                                </div>
-                                <p className="text-sm text-gray-600 mt-1">
-                                  Try the authentic cuisine of {trip.destination}.
-                                </p>
-                                <Button 
-                                  variant="outline" 
-                                  size="sm" 
-                                  className="w-full mt-3"
-                                  onClick={() => {
-                                    if (!user) {
-                                      toast({
-                                        title: "Sign in required",
-                                        description: "Please sign in to save items to your wishlist",
-                                        variant: "destructive",
-                                      });
-                                      return;
-                                    }
-                                    
-                                    const cuisineId = `trip-${trip.id}-cuisine`;
-                                    const isAlreadySaved = isInWishlist("restaurant", cuisineId);
-                                    
-                                    if (!isAlreadySaved) {
-                                      addToWishlist.mutate({
-                                        itemType: "restaurant",
-                                        itemId: cuisineId,
-                                        itemName: `Local Cuisine in ${trip.destination}`,
-                                        itemImage: getPlaceholderImage(`${trip.destination} restaurant`),
-                                        additionalData: {
-                                          tripId: trip.id,
-                                          description: `Try the authentic cuisine of ${trip.destination}.`,
-                                          location: trip.destination
-                                        }
-                                      });
-                                    } else {
-                                      toast({
-                                        title: "Already in wishlist",
-                                        description: "This restaurant is already in your wishlist",
-                                      });
-                                    }
-                                  }}
-                                >
-                                  <Heart className="h-4 w-4 mr-2" />
-                                  Save for later
-                                </Button>
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </CardContent>
-                    </Card>
+                  <TabsContent value="for-you" className="mt-0">
+                    <div className="text-center py-16 bg-gray-50 rounded-xl shadow-inner">
+                      <div className="max-w-md mx-auto">
+                        <h3 className="text-xl font-semibold text-gray-800 mb-2">Personalized recommendations coming soon</h3>
+                        <p className="text-gray-500 mb-6">
+                          We're working on personalized recommendations based on your preferences and past trips.
+                        </p>
+                      </div>
+                    </div>
                   </TabsContent>
                   
                   <TabsContent value="bookings" className="mt-0">
                     {hasBookings ? (
-                      <div className="space-y-6">
-                        {/* Accommodations */}
-                        <div>
-                          <h3 className="text-lg font-medium mb-4">Accommodations</h3>
-                          <div className="grid grid-cols-1 gap-4">
-                            {trip.bookings
-                              .filter(b => b.type.toLowerCase() === 'hotel' || b.type.toLowerCase() === 'accommodation')
-                              .map((booking) => (
-                                <BookingCard key={booking.id} booking={booking} />
-                              ))}
-                              
-                            {/* Add Hotel Button */}
-                            {trip.bookings.filter(b => b.type.toLowerCase() === 'hotel' || b.type.toLowerCase() === 'accommodation').length === 0 && (
-                              <Button 
-                                variant="outline" 
-                                className="border-dashed h-20"
-                                onClick={() => {
-                                  toast({
-                                    title: "Add accommodation",
-                                    description: "This feature is coming soon!",
-                                  });
-                                }}
-                              >
-                                <Plus className="h-4 w-4 mr-2" />
-                                Add Accommodation
-                              </Button>
-                            )}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        {trip.bookings.map((booking, index) => (
+                          <div 
+                            key={index}
+                            className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow duration-200 p-4"
+                          >
+                            <div className="flex items-start gap-4">
+                              <div className="w-12 h-12 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center flex-shrink-0">
+                                {booking.type === 'hotel' ? (
+                                  <Hotel className="h-6 w-6" />
+                                ) : booking.type === 'flight' ? (
+                                  <Plane className="h-6 w-6" />
+                                ) : (
+                                  <Ticket className="h-6 w-6" />
+                                )}
+                              </div>
+                              <div className="flex-1">
+                                <h4 className="font-medium text-gray-900">{booking.title}</h4>
+                                {booking.provider && (
+                                  <p className="text-sm text-gray-500">{booking.provider}</p>
+                                )}
+                                {booking.price && (
+                                  <div className="mt-2 px-2 py-1 bg-green-50 text-green-700 rounded-md inline-block text-sm font-medium">
+                                    {booking.price}
+                                  </div>
+                                )}
+                              </div>
+                            </div>
                           </div>
-                        </div>
-                        
-                        {/* Transportation */}
-                        <div>
-                          <h3 className="text-lg font-medium mb-4">Transportation</h3>
-                          <div className="grid grid-cols-1 gap-4">
-                            {trip.bookings
-                              .filter(b => b.type.toLowerCase() === 'flight' || b.type.toLowerCase() === 'transportation')
-                              .map((booking) => (
-                                <BookingCard key={booking.id} booking={booking} />
-                              ))}
-                              
-                            {/* Add Transportation Button */}
-                            {trip.bookings.filter(b => b.type.toLowerCase() === 'flight' || b.type.toLowerCase() === 'transportation').length === 0 && (
-                              <Button 
-                                variant="outline" 
-                                className="border-dashed h-20"
-                                onClick={() => navigate('/flights')}
-                              >
-                                <Plus className="h-4 w-4 mr-2" />
-                                Add Transportation
-                              </Button>
-                            )}
-                          </div>
-                        </div>
-                        
-                        {/* Activities & Tours */}
-                        <div>
-                          <h3 className="text-lg font-medium mb-4">Activities & Tours</h3>
-                          <div className="grid grid-cols-1 gap-4">
-                            {trip.bookings
-                              .filter(b => b.type.toLowerCase() === 'activity' || b.type.toLowerCase() === 'tour' || b.type.toLowerCase() === 'ticket')
-                              .map((booking) => (
-                                <BookingCard key={booking.id} booking={booking} />
-                              ))}
-                              
-                            {/* Add Activity Button */}
-                            {trip.bookings.filter(b => b.type.toLowerCase() === 'activity' || b.type.toLowerCase() === 'tour' || b.type.toLowerCase() === 'ticket').length === 0 && (
-                              <Button 
-                                variant="outline" 
-                                className="border-dashed h-20"
-                                onClick={() => {
-                                  toast({
-                                    title: "Add activity booking",
-                                    description: "This feature is coming soon!",
-                                  });
-                                }}
-                              >
-                                <Plus className="h-4 w-4 mr-2" />
-                                Add Activity Booking
-                              </Button>
-                            )}
-                          </div>
-                        </div>
+                        ))}
                       </div>
                     ) : (
-                      <Card>
-                        <CardContent className="pt-6 pb-8 text-center">
-                          <div className="mb-4">
-                            <div className="w-16 h-16 bg-primary-100 rounded-full flex items-center justify-center mx-auto mb-4">
-                              <DollarSign className="w-8 h-8 text-primary-600" />
-                            </div>
-                            <h3 className="text-xl font-bold mb-2">No Bookings Yet</h3>
-                            <p className="text-gray-500 max-w-md mx-auto mb-6">
-                              When you're ready to book your trip, you'll see your reservations here.
-                            </p>
-                          </div>
-                          
-                          <div className="flex flex-col sm:flex-row gap-3 justify-center">
-                            <Button 
-                              variant="outline"
-                              onClick={() => {
-                                toast({
-                                  title: "Find hotels",
-                                  description: "This feature is coming soon!",
-                                });
-                              }}
-                            >
-                              <Hotel className="h-4 w-4 mr-2" />
-                              Find Hotels
-                            </Button>
-                            <Button 
-                              variant="outline"
-                              onClick={() => navigate('/flights')}
-                            >
-                              <Plane className="h-4 w-4 mr-2" />
-                              Search Flights
-                            </Button>
-                          </div>
-                        </CardContent>
-                      </Card>
+                      <div className="text-center py-16 bg-gray-50 rounded-xl shadow-inner">
+                        <div className="max-w-md mx-auto">
+                          <h3 className="text-xl font-semibold text-gray-800 mb-2">No bookings yet</h3>
+                          <p className="text-gray-500 mb-6">
+                            You haven't made any bookings for this trip yet. Add bookings to keep track of your reservations.
+                          </p>
+                          <Button 
+                            variant="outline"
+                            size="lg"
+                            className="border-primary-300 text-primary-700 hover:bg-primary-50"
+                          >
+                            <PlusCircle className="mr-2 h-5 w-5" />
+                            Add Booking
+                          </Button>
+                        </div>
+                      </div>
                     )}
                   </TabsContent>
                 </Tabs>
