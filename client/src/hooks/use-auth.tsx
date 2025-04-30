@@ -13,6 +13,7 @@ type AuthContextType = {
   isLoading: boolean;
   error: Error | null;
   loginMutation: UseMutationResult<User, Error, LoginData>;
+  adminLoginMutation: UseMutationResult<User, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
   registerMutation: UseMutationResult<User, Error, RegistrationData>;
 };
@@ -110,6 +111,27 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
 
+  // Admin login mutation
+  const adminLoginMutation = useMutation({
+    mutationFn: async (credentials: LoginData) => {
+      return await apiRequest("/api/admin/login", "POST", credentials);
+    },
+    onSuccess: (user: User) => {
+      queryClient.setQueryData(["/api/user"], user);
+      toast({
+        title: "Admin login successful",
+        description: `Welcome back, ${user.username}!`,
+      });
+    },
+    onError: (error: Error) => {
+      toast({
+        title: "Admin login failed",
+        description: error.message,
+        variant: "destructive",
+      });
+    },
+  });
+
   return (
     <AuthContext.Provider
       value={{
@@ -117,6 +139,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         isLoading,
         error,
         loginMutation,
+        adminLoginMutation,
         logoutMutation,
         registerMutation,
       }}

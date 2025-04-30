@@ -19,7 +19,7 @@ type AdminLoginFormValues = z.infer<typeof adminLoginSchema>;
 
 export default function AdminLoginPage() {
   const [, navigate] = useLocation();
-  const { user, loginMutation, isLoading } = useAuth();
+  const { user, adminLoginMutation, isLoading } = useAuth();
   
   // Redirect if user is already logged in and is an admin
   useEffect(() => {
@@ -40,7 +40,7 @@ export default function AdminLoginPage() {
   });
 
   function onAdminLoginSubmit(data: AdminLoginFormValues) {
-    loginMutation.mutate(data);
+    adminLoginMutation.mutate(data);
   }
 
   if (isLoading) {
