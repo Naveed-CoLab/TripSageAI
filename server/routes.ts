@@ -134,8 +134,51 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Not authorized to view this trip" });
       }
       
-      res.json(trip);
+      // Check for itinerary_data field (from SQL query)
+      if (trip.itinerary_data) {
+        // Parse the itinerary data JSON and add days and bookings properties to trip
+        const itineraryData = typeof trip.itinerary_data === 'string' 
+          ? JSON.parse(trip.itinerary_data) 
+          : trip.itinerary_data;
+          
+        // Merge itinerary data with trip object 
+        const tripWithDetails = {
+          ...trip,
+          days: itineraryData.days || [],
+          bookings: itineraryData.bookings || [],
+        };
+        
+        // Remove the raw itinerary_data field to avoid duplication
+        delete tripWithDetails.itinerary_data;
+        
+        return res.json(tripWithDetails);
+      } else if (trip.itineraryData) {
+        // Handle case when using Drizzle property naming
+        const itineraryData = typeof trip.itineraryData === 'string'
+          ? JSON.parse(trip.itineraryData)
+          : trip.itineraryData;
+          
+        // Merge itinerary data with trip object
+        const tripWithDetails = {
+          ...trip,
+          days: itineraryData.days || [],
+          bookings: itineraryData.bookings || [],
+        };
+        
+        // Remove the raw itineraryData field to avoid duplication
+        delete tripWithDetails.itineraryData;
+        
+        return res.json(tripWithDetails);
+      }
+      
+      // If no itinerary data, return trip with empty arrays
+      res.json({
+        ...trip,
+        days: [],
+        bookings: []
+      });
     } catch (error) {
+      console.error("Error fetching trip details:", error);
       res.status(500).json({ message: "Failed to fetch trip details" });
     }
   });

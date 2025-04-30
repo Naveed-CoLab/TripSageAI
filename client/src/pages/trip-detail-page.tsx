@@ -38,6 +38,41 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/comp
 import ItineraryDay from "@/components/trips/itinerary-day";
 import BookingCard from "@/components/trips/booking-card";
 
+// Activity type definition
+type Activity = {
+  title: string;
+  description?: string;
+  time?: string;
+  location?: string;
+  type?: string;
+  rating?: number;
+  reviewCount?: number;
+  image?: string;
+  city?: string;
+};
+
+// Day type definition
+type Day = {
+  dayNumber: number;
+  title: string;
+  date?: string | Date;
+  activities: Activity[];
+  image?: string;
+  city?: string;
+};
+
+// Booking type definition
+type Booking = {
+  type: string;
+  title: string;
+  provider?: string;
+  price?: string;
+  details?: any;
+  image?: string;
+  rating?: number;
+  reviewCount?: number;
+};
+
 type TripWithDetails = {
   id: number;
   userId: number;
@@ -48,6 +83,10 @@ type TripWithDetails = {
   budget: string | null;
   preferences: string[] | null;
   status: string;
+  createdAt: string;
+  updatedAt: string;
+  days: Day[]; // Itinerary days
+  bookings: Booking[]; // Trip bookings
   createdAt: string;
   updatedAt: string;
   days: {

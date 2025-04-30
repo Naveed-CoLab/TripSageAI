@@ -54,6 +54,7 @@ export const myTrips = pgTable("my_trips", {
   budget: text("budget"),
   preferences: text("preferences").array(),
   status: text("status").default("draft").notNull(),
+  itineraryData: jsonb("itinerary_data"),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
