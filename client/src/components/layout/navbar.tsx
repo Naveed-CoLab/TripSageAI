@@ -131,6 +131,15 @@ export default function Navbar() {
                         </Link>
                       </DropdownMenuItem>
                       <DropdownMenuItem asChild>
+                        <Link href="/ai-trip-generator" className="cursor-pointer flex items-center">
+                          <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4 mr-2 text-gray-500">
+                            <path d="M12 2.5a7.5 7.5 0 0 0-7.5 7.5c0 7.5 7.5 11.25 7.5 13.5 0-2.25 7.5-6 7.5-13.5a7.5 7.5 0 0 0-7.5-7.5z"></path>
+                            <circle cx="12" cy="10" r="2.5"></circle>
+                          </svg>
+                          AI Trip Creator
+                        </Link>
+                      </DropdownMenuItem>
+                      <DropdownMenuItem asChild>
                         <Link href="/bookings" className="cursor-pointer flex items-center">
                           <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-2 text-gray-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 4v12l-4-2-4 2V4M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
@@ -294,6 +303,17 @@ export default function Navbar() {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2" />
                             </svg>
                             My Trips
+                          </Link>
+                          <Link 
+                            href="/ai-trip-generator" 
+                            className={`${isActive('/ai-trip-generator') ? 'bg-primary-50 text-primary-700 border-primary-500' : 'border-transparent text-gray-700 hover:bg-gray-50'} flex items-center px-3 py-2 text-sm font-medium rounded-md border-l-[3px] transition-colors duration-200`}
+                            onClick={() => setIsOpen(false)}
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-5 w-5 mr-3 text-gray-400">
+                              <path d="M12 2.5a7.5 7.5 0 0 0-7.5 7.5c0 7.5 7.5 11.25 7.5 13.5 0-2.25 7.5-6 7.5-13.5a7.5 7.5 0 0 0-7.5-7.5z"></path>
+                              <circle cx="12" cy="10" r="2.5"></circle>
+                            </svg>
+                            AI Trip Creator
                           </Link>
                           <Link 
                             href="/bookings" 
