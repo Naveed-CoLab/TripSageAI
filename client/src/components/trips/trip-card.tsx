@@ -73,9 +73,6 @@ export default function TripCard({ trip }: TripCardProps) {
     if (dateValue === null || dateValue === undefined) return "No date";
     
     try {
-      // Log the date for debugging
-      console.log('Formatting date:', dateValue, 'Type:', typeof dateValue);
-      
       // If it's a string in ISO format
       if (typeof dateValue === 'string') {
         // For date-only strings like "2025-04-30"
@@ -84,14 +81,14 @@ export default function TripCard({ trip }: TripCardProps) {
           return format(new Date(year, month - 1, day), "MMM d, yyyy");
         }
         
-        // For ISO date strings
+        // For ISO date strings like "2025-04-30T12:34:56"
         const date = parseISO(dateValue);
         if (isValid(date)) {
           return format(date, "MMM d, yyyy");
         }
       } 
       
-      // Handle PostgreSQL date/timestamp objects (they come back as JS objects)
+      // Handle PostgreSQL date/timestamp objects (if somehow they come back as JS objects)
       if (typeof dateValue === 'object') {
         // If it's a plain object from PostgreSQL
         if (dateValue.hasOwnProperty('year') && dateValue.hasOwnProperty('month') && dateValue.hasOwnProperty('day')) {
@@ -102,13 +99,10 @@ export default function TripCard({ trip }: TripCardProps) {
         if (dateValue instanceof Date && isValid(dateValue)) {
           return format(dateValue, "MMM d, yyyy");
         }
-        
-        // For JSON date objects that may have different formats
-        return "Date set";
       }
       
       // Fallback for any other type
-      return "Invalid date";
+      return "Invalid date format";
     } catch (error) {
       console.error("Failed to format date:", error, "Value:", dateValue);
       return "Date error";

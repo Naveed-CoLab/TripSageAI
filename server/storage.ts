@@ -1238,7 +1238,37 @@ export class DatabaseStorage implements IStorage {
       return data.map(item => this.toCamelCase(item));
     }
     
-    if (data === null || data === undefined || typeof data !== 'object') {
+    if (data === null || data === undefined) {
+      return data;
+    }
+    
+    // Check if this is a PostgreSQL date/timestamp object
+    if (typeof data === 'object' && 
+        (data.hasOwnProperty('year') || data.hasOwnProperty('hours')) &&
+        !data.hasOwnProperty('length')) {
+      
+      // Handle date objects from PostgreSQL
+      if (data.hasOwnProperty('year') && data.hasOwnProperty('month') && data.hasOwnProperty('day')) {
+        // For date columns (like start_date, end_date)
+        const year = data.year;
+        const month = String(data.month).padStart(2, '0');
+        const day = String(data.day).padStart(2, '0');
+        return `${year}-${month}-${day}`;
+      } 
+      
+      // Handle timestamp objects from PostgreSQL
+      if (data.hasOwnProperty('hours')) {
+        const year = data.year;
+        const month = String(data.month).padStart(2, '0');
+        const day = String(data.day).padStart(2, '0');
+        const hours = String(data.hours).padStart(2, '0');
+        const minutes = String(data.minutes).padStart(2, '0');
+        const seconds = String(data.seconds).padStart(2, '0');
+        return `${year}-${month}-${day}T${hours}:${minutes}:${seconds}`;
+      }
+    }
+    
+    if (typeof data !== 'object') {
       return data;
     }
     
