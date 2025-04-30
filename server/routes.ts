@@ -2743,7 +2743,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           u.username as user_username, 
           sa.search_type, 
           sa.search_term as query, 
-          sa.search_params,
           sa.result_count, 
           sa.created_at
         FROM search_analytics sa
@@ -2773,7 +2772,6 @@ export async function registerRoutes(app: Express): Promise<Server> {
           u.username as user_username, 
           sa.search_type, 
           sa.search_term as query, 
-          sa.search_params,
           sa.result_count, 
           sa.created_at
         FROM search_analytics sa

@@ -64,6 +64,15 @@ export default function Navbar() {
                   <Link href="/trips" className={`${isActive('/trips') ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'} inline-flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200`}>
                     My Trips
                   </Link>
+                  <Link href="/ai-trip-generator" className={`${isActive('/ai-trip-generator') ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'} inline-flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200`}>
+                    <span className="flex items-center gap-1.5">
+                      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="h-4 w-4">
+                        <path d="M12 2.5a7.5 7.5 0 0 0-7.5 7.5c0 7.5 7.5 11.25 7.5 13.5 0-2.25 7.5-6 7.5-13.5a7.5 7.5 0 0 0-7.5-7.5z"></path>
+                        <circle cx="12" cy="10" r="2.5"></circle>
+                      </svg>
+                      AI Trip Creator
+                    </span>
+                  </Link>
                   <Link href="/bookings" className={`${isActive('/bookings') ? 'bg-blue-50 text-blue-700' : 'text-gray-600 hover:bg-gray-50'} inline-flex items-center px-3 py-2 rounded-md text-sm font-medium transition-colors duration-200`}>
                     My Bookings
                   </Link>
