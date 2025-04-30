@@ -234,8 +234,7 @@ export default function DashboardPage() {
   // Add user mutation
   const addUserMutation = useMutation({
     mutationFn: async (userData: typeof newUser) => {
-      const res = await apiRequest("/api/admin/users", "POST", userData);
-      return await res.json();
+      return await apiRequest("/api/admin/users", "POST", userData);
     },
     onSuccess: () => {
       toast({
@@ -274,12 +273,11 @@ export default function DashboardPage() {
       bookingType: string; 
       status: 'approved' | 'rejected' 
     }) => {
-      const res = await apiRequest(
+      return await apiRequest(
         `/api/admin/bookings/${bookingType}/${bookingId}/status`, 
         "PUT", 
         { status }
       );
-      return await res.json();
     },
     onSuccess: () => {
       toast({
@@ -301,8 +299,7 @@ export default function DashboardPage() {
   
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: number) => {
-      const res = await apiRequest(`/api/admin/users/${userId}`, "DELETE");
-      return await res.json();
+      return await apiRequest(`/api/admin/users/${userId}`, "DELETE");
     },
     onSuccess: () => {
       toast({
