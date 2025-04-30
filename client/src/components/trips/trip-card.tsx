@@ -68,12 +68,12 @@ export default function TripCard({ trip }: TripCardProps) {
   };
 
   const getDestinationImage = (destination: string) => {
-    // Map of destinations to specific image files
+    // Map of destinations to specific Unsplash image URLs
     const destinationImages: Record<string, string> = {
-      'spain': '/images/destinations/spain-plaza.jpg',
-      'barcelona': '/images/destinations/spain.jpg',
-      'madrid': '/images/destinations/spain-plaza.jpg',
-      'seville': '/images/destinations/spain-plaza.jpg',
+      'spain': 'https://images.unsplash.com/photo-1543783207-ec64e4d95325?auto=format&fit=crop&w=800&q=80',
+      'barcelona': 'https://images.unsplash.com/photo-1504019347908-b45f9b0b8dd5?auto=format&fit=crop&w=800&q=80',
+      'madrid': 'https://images.unsplash.com/photo-1539037116277-4db20889f2d4?auto=format&fit=crop&w=800&q=80',
+      'seville': 'https://images.unsplash.com/photo-1559636425-638f8bf8ef2c?auto=format&fit=crop&w=800&q=80',
       'paris': 'https://images.unsplash.com/photo-1502602898657-3e91760cbb34?auto=format&fit=crop&w=600&q=80',
       'rome': 'https://images.unsplash.com/photo-1552832230-c0197dd311b5?auto=format&fit=crop&w=600&q=80',
       'london': 'https://images.unsplash.com/photo-1513635269975-59663e0ac1ad?auto=format&fit=crop&w=600&q=80',
@@ -91,8 +91,8 @@ export default function TripCard({ trip }: TripCardProps) {
       }
     }
     
-    // Default images for destinations we don't have specific images for
-    return '/images/destinations/spain.jpg';
+    // Default image for destinations we don't have specific images for
+    return 'https://images.unsplash.com/photo-1504019347908-b45f9b0b8dd5?auto=format&fit=crop&w=800&q=80';
   };
 
   const getStatusColor = (status: string) => {
@@ -124,38 +124,38 @@ export default function TripCard({ trip }: TripCardProps) {
               alt={trip.destination} 
               className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
             />
-            <div className="absolute inset-0 bg-gradient-to-t from-black opacity-60"></div>
+            <div className="absolute inset-0 bg-gradient-to-t from-black via-black/50 to-transparent"></div>
             <div className="absolute bottom-0 left-0 right-0 p-4 text-white">
               <Badge className={`${getStatusColor(trip.status)} px-3 py-1 rounded-full shadow-sm`}>
                 {trip.status.charAt(0).toUpperCase() + trip.status.slice(1)}
               </Badge>
-              <h3 className="text-xl font-bold mt-2">{trip.title}</h3>
+              <h3 className="text-xl font-bold mt-2 text-white drop-shadow-sm">{trip.title}</h3>
               <div className="flex items-center mt-1">
                 <MapPin className="h-4 w-4 mr-1" />
-                <span className="text-sm">{trip.destination}</span>
+                <span className="text-sm font-medium tracking-wide">{trip.destination}</span>
               </div>
             </div>
           </div>
           
-          <CardContent className="pt-4 pb-2 flex-grow">
+          <CardContent className="pt-4 pb-2 flex-grow bg-gradient-to-b from-white to-gray-50">
             {trip.startDate && trip.endDate ? (
-              <div className="flex items-center text-sm text-gray-500">
-                <Calendar className="h-4 w-4 mr-1" />
-                <span>
+              <div className="flex items-center text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-md shadow-sm">
+                <Calendar className="h-4 w-4 mr-2 text-primary" />
+                <span className="font-medium">
                   {format(parseISO(trip.startDate), "MMM d, yyyy")} - {format(parseISO(trip.endDate), "MMM d, yyyy")}
                 </span>
               </div>
             ) : (
-              <div className="flex items-center text-sm text-gray-500">
-                <Calendar className="h-4 w-4 mr-1" />
-                <span>Dates not set</span>
+              <div className="flex items-center text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-md shadow-sm">
+                <Calendar className="h-4 w-4 mr-2 text-primary" />
+                <span className="font-medium">Dates not set</span>
               </div>
             )}
           </CardContent>
           
-          <CardFooter className="pt-0 pb-4">
-            <div className="flex items-center text-xs text-gray-400">
-              <Clock className="h-3 w-3 mr-1" />
+          <CardFooter className="pt-0 pb-4 bg-gradient-to-b from-gray-50 to-gray-100 border-t border-gray-100">
+            <div className="flex items-center text-xs font-medium text-gray-500 bg-white/80 px-2 py-1 rounded-full shadow-sm">
+              <Clock className="h-3 w-3 mr-1 text-primary/70" />
               <span>Created {format(parseISO(trip.createdAt), "MMM d, yyyy")}</span>
             </div>
           </CardFooter>
