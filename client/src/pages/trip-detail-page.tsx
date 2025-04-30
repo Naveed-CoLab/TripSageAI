@@ -15,7 +15,8 @@ import { format, parseISO } from "date-fns";
 import { 
   User, Pencil, Calendar, DollarSign, Share2, Loader2, PlusCircle, Map, 
   Heart, Info, ExternalLink, MoreHorizontal, MapPin, Star, Clock, Coffee,
-  Utensils, Hotel, Camera, Landmark, Plane, Plus, Building, Edit, Ticket
+  Utensils, Hotel, Camera, Landmark, Plane, Plus, Building, Edit, Ticket,
+  Calculator
 } from "lucide-react";
 import {
   DropdownMenu,
@@ -599,7 +600,17 @@ export default function TripDetailPage() {
                               <span className="text-xs">Estimating...</span>
                             </div>
                           ) : (
-                            <span className="text-gray-400 text-sm">Not specified</span>
+                            <div className="flex flex-col items-end">
+                              <span className="text-gray-400 text-sm">Not specified</span>
+                              <Button 
+                                variant="link" 
+                                className="text-xs p-0 h-auto text-primary-600" 
+                                onClick={() => estimateBudgetMutation.mutate()}
+                              >
+                                <Calculator className="h-3 w-3 mr-1 inline" />
+                                Estimate with AI
+                              </Button>
+                            </div>
                           )}
                         </div>
                       </li>
