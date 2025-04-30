@@ -1283,21 +1283,55 @@ export default function DashboardPage() {
                       <CardTitle>All Flight Bookings</CardTitle>
                     </CardHeader>
                     <CardContent>
-                      <div className="border rounded-lg">
-                        <div className="grid grid-cols-8 gap-2 p-3 border-b bg-slate-50 font-medium text-sm">
-                          <div>ID</div>
-                          <div>User</div>
-                          <div>Airline</div>
-                          <div>Flight</div>
-                          <div>Date</div>
-                          <div>Price</div>
-                          <div>Status</div>
-                          <div>Actions</div>
+                      {isLoadingFlightBookings ? (
+                        <div className="flex justify-center py-10">
+                          <Loader2 className="h-8 w-8 animate-spin text-primary" />
                         </div>
+                      ) : allFlightBookings && allFlightBookings.length > 0 ? (
+                        <div className="border rounded-lg overflow-x-auto">
+                          <div className="min-w-[900px]">
+                            <div className="grid grid-cols-8 gap-2 p-3 border-b bg-slate-50 font-medium text-sm">
+                              <div>ID</div>
+                              <div>User</div>
+                              <div>Airline</div>
+                              <div>Flight</div>
+                              <div>Date</div>
+                              <div>Price</div>
+                              <div>Status</div>
+                              <div>Actions</div>
+                            </div>
+                            <div className="divide-y">
+                              {allFlightBookings.map((booking) => (
+                                <div key={booking.id} className="grid grid-cols-8 gap-2 p-3 items-center text-sm">
+                                  <div>{booking.id}</div>
+                                  <div className="truncate">{booking.user_username}</div>
+                                  <div className="truncate">{booking.airline}</div>
+                                  <div>{booking.flight_number}</div>
+                                  <div>{new Date(booking.departure_time).toLocaleDateString()}</div>
+                                  <div>${formatPrice(booking.price)}</div>
+                                  <div>
+                                    <span className={`px-2 py-1 rounded-full text-xs whitespace-nowrap ${
+                                      booking.status === 'CONFIRMED' ? 'bg-green-100 text-green-800' :
+                                      booking.status === 'PENDING' ? 'bg-yellow-100 text-yellow-800' :
+                                      booking.status === 'CANCELLED' ? 'bg-red-100 text-red-800' :
+                                      'bg-gray-100 text-gray-800'
+                                    }`}>
+                                      {booking.status}
+                                    </span>
+                                  </div>
+                                  <div>
+                                    <Button variant="outline" size="sm">View Details</Button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        </div>
+                      ) : (
                         <div className="text-center py-10 text-muted-foreground">
                           No flight bookings found
                         </div>
-                      </div>
+                      )}
                     </CardContent>
                   </Card>
                 </TabsContent>

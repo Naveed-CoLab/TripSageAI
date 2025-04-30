@@ -3153,6 +3153,64 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to get dashboard summary" });
     }
   });
+  
+  // Get all flight bookings (admin)
+  app.get("/api/admin/flight-bookings", isAdmin, async (req: Request, res: Response) => {
+    try {
+      // Get all flight bookings with user details using raw SQL query
+      const flightBookingsQuery = `
+        SELECT fb.*, 
+               u.username as user_username,
+               u.email as user_email,
+               COALESCE(ba.status, 'pending') as approval_status,
+               ba.admin_notes as approval_notes,
+               ba.updated_at as approval_updated_at
+        FROM flight_bookings fb
+        JOIN users u ON fb.user_id = u.id
+        LEFT JOIN booking_approvals ba ON ba.booking_id = fb.id AND ba.booking_type = 'flight'
+        ORDER BY fb.created_at DESC
+      `;
+      
+      const result = await query(flightBookingsQuery);
+      
+      return res.status(200).json(result.rows.map(booking => ({
+        ...booking,
+        bookingType: 'flight'
+      })));
+    } catch (error) {
+      console.error("Error fetching all flight bookings:", error);
+      return res.status(500).json({ error: "Failed to fetch flight bookings" });
+    }
+  });
+  
+  // Get all hotel bookings (admin)
+  app.get("/api/admin/hotel-bookings", isAdmin, async (req: Request, res: Response) => {
+    try {
+      // Get all hotel bookings with user details using raw SQL query
+      const hotelBookingsQuery = `
+        SELECT hb.*, 
+               u.username as user_username,
+               u.email as user_email,
+               COALESCE(ba.status, 'pending') as approval_status,
+               ba.admin_notes as approval_notes,
+               ba.updated_at as approval_updated_at
+        FROM hotel_bookings hb
+        JOIN users u ON hb.user_id = u.id
+        LEFT JOIN booking_approvals ba ON ba.booking_id = hb.id AND ba.booking_type = 'hotel'
+        ORDER BY hb.created_at DESC
+      `;
+      
+      const result = await query(hotelBookingsQuery);
+      
+      return res.status(200).json(result.rows.map(booking => ({
+        ...booking,
+        bookingType: 'hotel'
+      })));
+    } catch (error) {
+      console.error("Error fetching all hotel bookings:", error);
+      return res.status(500).json({ error: "Failed to fetch hotel bookings" });
+    }
+  });
 
   const httpServer = createServer(app);
 
