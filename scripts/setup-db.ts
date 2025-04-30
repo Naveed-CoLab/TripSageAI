@@ -1,5 +1,5 @@
-import { db } from "../server/db";
-import { users, myTrips, destinations, analytics, adminLogs, aiTripGenerations, reviews, flightSearches, userSettings, wishlistItems, flightBookings, hotelSearches, hotelBookings, notifications, bookingApprovals } from "../shared/schema";
+import { pool, query } from "../server/db";
+// No need to import schema models since we're using raw SQL
 
 async function main() {
   try {
@@ -9,7 +9,7 @@ async function main() {
     console.log("Creating database tables...");
     
     // Create users table
-    await db.execute(`
+    await query(`
       CREATE TABLE IF NOT EXISTS users (
         id SERIAL PRIMARY KEY,
         username TEXT NOT NULL UNIQUE,
@@ -30,7 +30,7 @@ async function main() {
     console.log("✓ Created users table");
     
     // Create user_settings table
-    await db.execute(`
+    await query(`
       CREATE TABLE IF NOT EXISTS user_settings (
         id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL UNIQUE REFERENCES users(id),
@@ -46,7 +46,7 @@ async function main() {
     console.log("✓ Created user_settings table");
     
     // Create my_trips table
-    await db.execute(`
+    await query(`
       CREATE TABLE IF NOT EXISTS my_trips (
         id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL REFERENCES users(id),
@@ -66,7 +66,7 @@ async function main() {
     console.log("✓ Created my_trips table");
     
     // Create destinations table
-    await db.execute(`
+    await query(`
       CREATE TABLE IF NOT EXISTS destinations (
         id SERIAL PRIMARY KEY,
         name TEXT NOT NULL,
@@ -82,7 +82,7 @@ async function main() {
     console.log("✓ Created destinations table");
     
     // Create analytics table
-    await db.execute(`
+    await query(`
       CREATE TABLE IF NOT EXISTS analytics (
         id SERIAL PRIMARY KEY,
         event_type TEXT NOT NULL,
@@ -94,7 +94,7 @@ async function main() {
     console.log("✓ Created analytics table");
     
     // Create admin_logs table
-    await db.execute(`
+    await query(`
       CREATE TABLE IF NOT EXISTS admin_logs (
         id SERIAL PRIMARY KEY,
         admin_id INTEGER NOT NULL REFERENCES users(id),
@@ -108,7 +108,7 @@ async function main() {
     console.log("✓ Created admin_logs table");
     
     // Create ai_trip_generations table
-    await db.execute(`
+    await query(`
       CREATE TABLE IF NOT EXISTS ai_trip_generations (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id),
@@ -129,7 +129,7 @@ async function main() {
     console.log("✓ Created ai_trip_generations table");
     
     // Create reviews table
-    await db.execute(`
+    await query(`
       CREATE TABLE IF NOT EXISTS reviews (
         id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL REFERENCES users(id),
@@ -149,7 +149,7 @@ async function main() {
     console.log("✓ Created reviews table");
     
     // Create flight_searches table
-    await db.execute(`
+    await query(`
       CREATE TABLE IF NOT EXISTS flight_searches (
         id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL REFERENCES users(id),
@@ -170,7 +170,7 @@ async function main() {
     console.log("✓ Created flight_searches table");
     
     // Create wishlist_items table
-    await db.execute(`
+    await query(`
       CREATE TABLE IF NOT EXISTS wishlist_items (
         id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL REFERENCES users(id),
@@ -185,7 +185,7 @@ async function main() {
     console.log("✓ Created wishlist_items table");
     
     // Create flight_bookings table
-    await db.execute(`
+    await query(`
       CREATE TABLE IF NOT EXISTS flight_bookings (
         id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL REFERENCES users(id),
@@ -218,7 +218,7 @@ async function main() {
     console.log("✓ Created flight_bookings table");
     
     // Create hotel_searches table
-    await db.execute(`
+    await query(`
       CREATE TABLE IF NOT EXISTS hotel_searches (
         id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL REFERENCES users(id),
@@ -234,7 +234,7 @@ async function main() {
     console.log("✓ Created hotel_searches table");
     
     // Create hotel_bookings table
-    await db.execute(`
+    await query(`
       CREATE TABLE IF NOT EXISTS hotel_bookings (
         id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL REFERENCES users(id),
@@ -265,7 +265,7 @@ async function main() {
     console.log("✓ Created hotel_bookings table");
     
     // Create notifications table
-    await db.execute(`
+    await query(`
       CREATE TABLE IF NOT EXISTS notifications (
         id SERIAL PRIMARY KEY,
         user_id INTEGER REFERENCES users(id),
@@ -282,7 +282,7 @@ async function main() {
     console.log("✓ Created notifications table");
     
     // Create booking_approvals table
-    await db.execute(`
+    await query(`
       CREATE TABLE IF NOT EXISTS booking_approvals (
         id SERIAL PRIMARY KEY,
         booking_type TEXT NOT NULL,

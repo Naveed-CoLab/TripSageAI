@@ -12,9 +12,9 @@ if (!process.env.DATABASE_URL) {
 // Create a pool of connections to PostgreSQL for better performance
 export const pool = new Pool({ 
   connectionString: process.env.DATABASE_URL,
-  max: 20, // Maximum number of clients in the pool
+  max: 10, // Maximum number of clients in the pool (reduced from 20)
   idleTimeoutMillis: 30000, // How long a client is allowed to remain idle before being closed
-  connectionTimeoutMillis: 2000, // How long to wait to establish a connection
+  connectionTimeoutMillis: 5000, // Increased from 2000 to give more time for connection
 });
 
 // Helper function to run parameterized queries safely (prevents SQL injection)
