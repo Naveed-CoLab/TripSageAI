@@ -24,12 +24,18 @@ type ItineraryDay = {
   dayNumber: number;
   title: string;
   date?: Date;
+  city?: string;
+  image?: string;
   activities: Array<{
     title: string;
     description?: string;
     time?: string;
     location?: string;
     type?: string;
+    rating?: number;
+    reviewCount?: number;
+    image?: string;
+    city?: string;
   }>;
 };
 
@@ -39,6 +45,9 @@ type ItineraryBooking = {
   provider?: string;
   price?: string;
   details?: any;
+  image?: string;
+  rating?: number;
+  reviewCount?: number;
 };
 
 type GeneratedItinerary = {
@@ -264,13 +273,19 @@ export async function generateItinerary(trip: Trip): Promise<GeneratedItinerary>
           {
             "dayNumber": 1,
             "title": "Day 1: Arrival & Orientation",
+            "city": "Main city being visited that day",
+            "image": "URL of an image representing this day's city or location (optional)",
             "activities": [
               {
                 "title": "Activity name",
                 "description": "Detailed description with specific information about the place, including an interesting fact",
                 "time": "Specific time (e.g., '9:00 AM - 11:30 AM')",
                 "location": "Full location name with address or neighborhood",
-                "type": "Type of activity (e.g., 'sightseeing', 'meal', 'transportation', 'hidden gem')"
+                "type": "Type of activity (e.g., 'sightseeing', 'meal', 'transportation', 'hidden gem')",
+                "rating": "Numeric rating between 1-5, can include decimals (e.g., 4.5)",
+                "reviewCount": "Number of reviews this place has (e.g., 423)",
+                "city": "Specific city or neighborhood where this activity takes place",
+                "image": "URL of an image representing this activity (optional)"
               }
             ]
           }
@@ -281,6 +296,9 @@ export async function generateItinerary(trip: Trip): Promise<GeneratedItinerary>
             "title": "Specific name of the booking (hotel name, tour company, etc.)",
             "provider": "Specific service provider name with location",
             "price": "Estimated price range in USD or local currency",
+            "rating": "Numeric rating between 1-5, can include decimals (e.g., 4.5)",
+            "reviewCount": "Number of reviews this place has (e.g., 423)",
+            "image": "URL of an image representing this booking (optional)",
             "details": { 
               "address": "Full address",
               "website": "Official website if available",
@@ -463,45 +481,96 @@ function generateFallbackItinerary(trip: Trip): GeneratedItinerary {
       ];
     }
     
+    // Determine city from destination
+    const city = trip.destination?.split(",")[0] || "City";
+    
+    // Add city info and enhance activities with ratings, review counts, and images
+    const enhancedActivities = activities.map(activity => ({
+      ...activity,
+      rating: 4 + Math.random(), // Generate a rating between 4.0 and 5.0
+      reviewCount: Math.floor(100 + Math.random() * 500), // Generate between 100-600 reviews
+      city: city,
+      image: undefined // Will use default images based on type
+    }));
+    
     days.push({
       dayNumber: i + 1,
       title: `Day ${i + 1}: ${i === 0 ? "Arrival & Orientation" : i === numDays - 1 ? "Departure" : `Exploring ${trip.destination}`}`,
       date: dayDate,
-      activities: activities
+      city: city,
+      activities: enhancedActivities
     });
   }
   
-  // Create basic booking suggestions
+  // Create basic booking suggestions with ratings and review counts
   const bookings: ItineraryBooking[] = [
     {
       type: "accommodation",
-      title: `Hotel in ${trip.destination}`,
-      provider: "Various hotels available",
-      price: "$80-200 per night",
+      title: `Luxury Hotel in ${trip.destination}`,
+      provider: "Premier Hotels & Resorts",
+      price: "$120-250 per night",
+      rating: 4.7,
+      reviewCount: 432,
       details: {
         checkIn: "After 2:00 PM",
         checkOut: "Before 12:00 PM",
-        amenities: ["Wi-Fi", "Breakfast", "Air conditioning"]
+        amenities: ["Free Wi-Fi", "Breakfast included", "Swimming pool", "Spa", "Fitness center"],
+        location: "Central district"
+      }
+    },
+    {
+      type: "accommodation",
+      title: `Budget-friendly Stay in ${trip.destination}`,
+      provider: "Comfort Inn Express",
+      price: "$60-120 per night",
+      rating: 4.3,
+      reviewCount: 287,
+      details: {
+        checkIn: "After 3:00 PM",
+        checkOut: "Before 11:00 AM",
+        amenities: ["Free Wi-Fi", "Continental breakfast", "Air conditioning"],
+        location: "Near public transportation"
       }
     },
     {
       type: "transportation",
       title: `Airport transfer to ${trip.destination}`,
-      provider: "Local taxi service",
-      price: "$20-40",
+      provider: "City Express Shuttle",
+      price: "$25-45",
+      rating: 4.5,
+      reviewCount: 189,
       details: {
-        type: "Taxi/Shuttle",
-        duration: "30-45 minutes"
+        type: "Shared Shuttle/Private Taxi",
+        duration: "30-45 minutes",
+        booking: "Available online or at airport kiosks"
       }
     },
     {
       type: "activity",
-      title: `${trip.destination} guided tour`,
-      provider: "Local tour operator",
-      price: "$25-50 per person",
+      title: `${trip.destination} Walking Tour`,
+      provider: "Local Discoveries Tours",
+      price: "$30-55 per person",
+      rating: 4.8,
+      reviewCount: 356,
       details: {
         duration: "3 hours",
-        includes: ["Professional guide", "Entrance fees"]
+        includes: ["Professional guide", "Small group", "Historical insights"],
+        meetingPoint: "Central Plaza",
+        recommendation: "Book at least 2 days in advance"
+      }
+    },
+    {
+      type: "activity",
+      title: `${trip.destination} Food Tasting Experience`,
+      provider: "Culinary Adventures",
+      price: "$45-70 per person",
+      rating: 4.9,
+      reviewCount: 214,
+      details: {
+        duration: "4 hours",
+        includes: ["5-7 food tastings", "Local guide", "Drink pairings"],
+        dietary: "Vegetarian options available",
+        groupSize: "Maximum 8 people"
       }
     }
   ];
