@@ -522,3 +522,65 @@ export type SearchAnalytic = typeof searchAnalytics.$inferSelect;
 export type InsertSearchAnalytic = z.infer<typeof insertSearchAnalyticsSchema>;
 export type AiTripGeneration = typeof aiTripGenerations.$inferSelect;
 export type InsertAiTripGeneration = z.infer<typeof insertAiTripGenerationSchema>;
+
+// Database triggers and stored procedures metadata
+export const databaseMetadata = {
+  // Triggers
+  triggers: {
+    updateTimestamp: {
+      name: "update_timestamp",
+      description: "Automatically updates the updated_at timestamp column whenever a record is updated",
+      appliedTo: ["users", "my_trips", "user_settings", "flight_bookings", "hotel_bookings", "reviews"]
+    },
+    logTableActivity: {
+      name: "log_activity",
+      description: "Logs changes to important tables in the analytics and admin_logs tables",
+      appliedTo: ["users", "my_trips", "destinations", "flight_bookings", "hotel_bookings", "notifications", "reviews", "booking_approvals"]
+    }
+  },
+  
+  // Stored procedures
+  storedProcedures: {
+    createTrip: {
+      name: "create_trip",
+      description: "Creates a new trip with initial data and logs the activity",
+      params: ["user_id", "title", "destination", "start_date", "end_date", "budget", "budget_is_estimated", "preferences", "status", "itinerary_data"]
+    },
+    registerUser: {
+      name: "register_user",
+      description: "Registers a new user with default settings and logs the activity",
+      params: ["username", "email", "password", "first_name", "last_name", "profile_image", "bio", "phone"]
+    },
+    processBookingApproval: {
+      name: "process_booking_approval",
+      description: "Processes a booking approval workflow and sends notifications",
+      params: ["booking_type", "booking_id", "admin_id", "approval_status", "admin_notes"]
+    }
+  },
+  
+  // Database functions
+  functions: {
+    getTripStatistics: {
+      name: "get_trip_statistics",
+      description: "Generates statistics about trips in the system",
+      params: ["user_id", "date_from", "date_to"],
+      returns: "Statistical data about trips, bookings, and destinations"
+    }
+  },
+
+  // Transaction isolation levels supported
+  transactionIsolationLevels: [
+    {
+      name: "READ COMMITTED",
+      description: "Default level. Prevents dirty reads but allows non-repeatable reads and phantom reads."
+    },
+    {
+      name: "REPEATABLE READ",
+      description: "Prevents dirty reads and non-repeatable reads, but allows phantom reads."
+    },
+    {
+      name: "SERIALIZABLE",
+      description: "Highest isolation level. Prevents dirty reads, non-repeatable reads, and phantom reads."
+    }
+  ]
+};

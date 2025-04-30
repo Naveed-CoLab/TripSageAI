@@ -27,16 +27,61 @@ export async function query(text: string, params: any[] = []) {
   }
 }
 
-// Helper function to run transactions
-export async function transaction<T>(callback: (client: pg.PoolClient) => Promise<T>): Promise<T> {
+// Helper function to run transactions with improved logging and error handling
+export async function transaction<T>(
+  callback: (client: pg.PoolClient) => Promise<T>,
+  options: { name?: string; isolation?: 'READ COMMITTED' | 'REPEATABLE READ' | 'SERIALIZABLE' } = {}
+): Promise<T> {
+  const transactionName = options.name || `tx_${Date.now()}`;
+  const isolationLevel = options.isolation || 'READ COMMITTED';
   const client = await pool.connect();
+  const startTime = Date.now();
+  
   try {
+    console.log(`Starting transaction '${transactionName}' with isolation level ${isolationLevel}`);
     await client.query('BEGIN');
+    
+    // Set the isolation level
+    await client.query(`SET TRANSACTION ISOLATION LEVEL ${isolationLevel}`);
+    
     const result = await callback(client);
+    
     await client.query('COMMIT');
+    const duration = Date.now() - startTime;
+    console.log(`Transaction '${transactionName}' committed successfully in ${duration}ms`);
     return result;
   } catch (error) {
-    await client.query('ROLLBACK');
+    const duration = Date.now() - startTime;
+    console.error(`Transaction '${transactionName}' failed after ${duration}ms with error:`, error);
+    
+    try {
+      await client.query('ROLLBACK');
+      console.log(`Transaction '${transactionName}' rolled back successfully`);
+    } catch (rollbackError) {
+      console.error(`Failed to rollback transaction '${transactionName}':`, rollbackError);
+    }
+    
+    // If this is a database constraint error, provide a more user-friendly message
+    if (error instanceof Error) {
+      const pgError = error as any;
+      if (pgError.code) {
+        // Map common PostgreSQL error codes to user-friendly messages
+        const errorMessages: Record<string, string> = {
+          '23505': 'A record with this information already exists.',
+          '23503': 'This action references a record that does not exist.',
+          '23502': 'A required field is missing.',
+          '23514': 'The provided data does not meet the validation requirements.'
+        };
+        
+        if (errorMessages[pgError.code]) {
+          const enhancedError = new Error(
+            `${errorMessages[pgError.code]} (Detail: ${pgError.detail || 'No additional details'})`
+          );
+          throw enhancedError;
+        }
+      }
+    }
+    
     throw error;
   } finally {
     client.release();
