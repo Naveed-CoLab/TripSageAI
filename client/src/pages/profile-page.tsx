@@ -403,6 +403,74 @@ export default function ProfilePage() {
                 </CardContent>
               </Card>
               
+              {/* Hotel Search History Card */}
+              <Card className="overflow-hidden mt-6">
+                <CardHeader className="bg-gradient-to-r from-green-50 to-teal-50 border-b">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <svg 
+                        className="h-5 w-5 text-teal-600" 
+                        xmlns="http://www.w3.org/2000/svg" 
+                        viewBox="0 0 24 24" 
+                        fill="none" 
+                        stroke="currentColor" 
+                        strokeWidth="2" 
+                        strokeLinecap="round" 
+                        strokeLinejoin="round"
+                      >
+                        <path d="M19 21V5a2 2 0 0 0-2-2H7a2 2 0 0 0-2 2v16"></path>
+                        <path d="M1 21h22"></path>
+                        <path d="M7 14h.01"></path>
+                        <path d="M11 14h.01"></path>
+                        <path d="M15 14h.01"></path>
+                        <path d="M7 10h.01"></path>
+                        <path d="M11 10h.01"></path>
+                        <path d="M15 10h.01"></path>
+                      </svg>
+                      <CardTitle className="text-lg">Hotel Search History</CardTitle>
+                    </div>
+                    <Button 
+                      variant="ghost" 
+                      size="sm" 
+                      className="text-teal-600 hover:bg-teal-50"
+                      onClick={() => navigate('/profile/hotels')}
+                    >
+                      View All
+                      <ChevronRight className="ml-1 h-4 w-4" />
+                    </Button>
+                  </div>
+                  <CardDescription>
+                    Your recent hotel searches and accommodation preferences
+                  </CardDescription>
+                </CardHeader>
+                <CardContent className="p-6">
+                  <div 
+                    className="flex flex-col gap-4 rounded-lg border border-teal-100 bg-teal-50 p-4 cursor-pointer hover:bg-teal-100 transition-colors"
+                    onClick={() => navigate('/profile/hotels')}
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="rounded-full bg-teal-100 p-2.5">
+                        <History className="h-5 w-5 text-teal-600" />
+                      </div>
+                      <div>
+                        <h3 className="font-medium">View Your Hotel History</h3>
+                        <p className="text-sm text-gray-500">See all your past hotel searches in one place</p>
+                      </div>
+                    </div>
+                    <Button 
+                      variant="outline" 
+                      className="mt-2 border-teal-200 text-teal-600 hover:bg-teal-100"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        navigate('/profile/hotels');
+                      }}
+                    >
+                      View Hotel History
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+              
               {/* Other activity cards can go here */}
             </div>
           </TabsContent>

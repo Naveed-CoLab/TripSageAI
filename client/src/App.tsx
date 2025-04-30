@@ -16,6 +16,7 @@ import FlightsPage from "@/pages/flights-page";
 import FlightSearchPage from "@/pages/flight-search-page";
 import FlightBookingPage from "@/pages/flight-booking-page";
 import ProfileFlightsPage from "@/pages/profile-flights-page";
+import ProfileHotelsPage from "@/pages/profile-hotels-page";
 import WishlistPage from "@/pages/wishlist-page";
 import BookingsPage from "@/pages/bookings-page";
 import HotelsPage from "@/pages/hotels-page";
@@ -39,6 +40,7 @@ function Router() {
       <ProtectedRoute path="/trips/:id" component={TripDetailPage} />
       <ProtectedRoute path="/profile" component={ProfilePage} />
       <ProtectedRoute path="/profile/flights" component={ProfileFlightsPage} />
+      <ProtectedRoute path="/profile/hotels" component={ProfileHotelsPage} />
       <ProtectedRoute path="/bookings" component={BookingsPage} />
       <ProtectedRoute path="/wishlist" component={WishlistPage} />
       <Route path="/explore" component={ExplorePage} />

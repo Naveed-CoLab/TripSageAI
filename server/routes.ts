@@ -1501,6 +1501,32 @@ export async function registerRoutes(app: Express): Promise<Server> {
       });
     }
   });
+  
+  // Delete hotel search history item
+  app.delete("/api/hotels/history/:id", async (req: Request, res: Response) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "You must be logged in to delete hotel search history" });
+      }
+      
+      const searchId = parseInt(req.params.id);
+      
+      if (isNaN(searchId)) {
+        return res.status(400).json({ message: "Invalid search ID" });
+      }
+      
+      // Delete the search record
+      await storage.deleteHotelSearch(searchId);
+      
+      res.status(200).json({ message: "Hotel search deleted successfully" });
+    } catch (error) {
+      console.error("Error deleting hotel search:", error);
+      res.status(500).json({ 
+        message: "Failed to delete hotel search", 
+        error: (error as Error).message 
+      });
+    }
+  });
 
   app.post("/api/hotels/search", async (req: Request, res: Response) => {
     if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
