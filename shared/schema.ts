@@ -52,6 +52,7 @@ export const myTrips = pgTable("my_trips", {
   startDate: date("start_date"),
   endDate: date("end_date"),
   budget: text("budget"),
+  budgetIsEstimated: boolean("budget_is_estimated").default(false),
   preferences: text("preferences").array(),
   status: text("status").default("draft").notNull(),
   itineraryData: jsonb("itinerary_data"),

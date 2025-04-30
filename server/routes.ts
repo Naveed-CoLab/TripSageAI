@@ -842,6 +842,84 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  app.post("/api/ai/estimate-budget", async (req: Request, res: Response) => {
+    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
+    
+    try {
+      const { tripId } = req.body;
+      
+      if (!tripId) {
+        return res.status(400).json({ message: "Trip ID is required" });
+      }
+      
+      // Fetch trip details
+      const trip = await storage.getTrip(tripId);
+      
+      if (!trip) {
+        return res.status(404).json({ message: "Trip not found" });
+      }
+      
+      // Calculate estimated budget based on destination, duration, and preferences
+      const destination = trip.destination;
+      const duration = trip.days?.length || 
+                      (trip.startDate && trip.endDate ? 
+                       Math.ceil((new Date(trip.endDate).getTime() - new Date(trip.startDate).getTime()) / (1000 * 60 * 60 * 24)) : 
+                       4);
+      
+      // Define budget ranges for different expense categories
+      const accommodationDaily = destination.toLowerCase().includes('spain') ? 
+        { min: 80, max: 150 } : { min: 70, max: 130 };
+      
+      const foodDaily = { min: 30, max: 60 };
+      const transportationDaily = { min: 15, max: 30 };
+      const attractionsDaily = { min: 20, max: 40 };
+      const miscDaily = { min: 10, max: 20 };
+      
+      // Calculate total estimated budget
+      const minBudget = Math.round(duration * (
+        accommodationDaily.min + 
+        foodDaily.min + 
+        transportationDaily.min + 
+        attractionsDaily.min + 
+        miscDaily.min
+      ));
+      
+      const maxBudget = Math.round(duration * (
+        accommodationDaily.max + 
+        foodDaily.max + 
+        transportationDaily.max + 
+        attractionsDaily.max + 
+        miscDaily.max
+      ));
+      
+      // Format the budget as a string
+      const estimatedBudget = `$${minBudget} - $${maxBudget}`;
+      
+      // Update the trip with the estimated budget if not already set
+      if (!trip.budget) {
+        await storage.updateTrip(tripId, { 
+          ...trip,
+          budget: estimatedBudget,
+          budgetIsEstimated: true
+        });
+      }
+      
+      res.json({ 
+        estimatedBudget,
+        breakdown: {
+          accommodation: `$${accommodationDaily.min * duration} - $${accommodationDaily.max * duration}`,
+          food: `$${foodDaily.min * duration} - $${foodDaily.max * duration}`,
+          transportation: `$${transportationDaily.min * duration} - $${transportationDaily.max * duration}`,
+          attractions: `$${attractionsDaily.min * duration} - $${attractionsDaily.max * duration}`,
+          misc: `$${miscDaily.min * duration} - $${miscDaily.max * duration}`
+        }
+      });
+    } catch (error) {
+      console.error("Error estimating trip budget:", error);
+      res.status(500).json({ message: "Failed to estimate trip budget" });
+    }
+  });
+
   app.post("/api/ai/generate-itinerary", async (req: Request, res: Response) => {
     if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
     

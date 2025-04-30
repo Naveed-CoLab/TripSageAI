@@ -82,6 +82,7 @@ type TripWithDetails = {
   startDate: string | null;
   endDate: string | null;
   budget: string | null;
+  budgetIsEstimated: boolean | null;
   preferences: string[] | null;
   status: string;
   createdAt: string;
@@ -179,6 +180,31 @@ export default function TripDetailPage() {
       setMapUrl(getGoogleMapsUrl(trip.destination));
     }
   }, [trip?.destination]);
+  
+  // Estimate budget if not already set
+  const estimateBudgetMutation = useMutation({
+    mutationFn: async () => {
+      const res = await apiRequest("/api/ai/estimate-budget", "POST", { tripId });
+      return res.json();
+    },
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: [`/api/trips/${tripId}`] });
+      toast({
+        title: "Budget Estimated",
+        description: "AI-powered budget estimation complete.",
+      });
+    },
+    onError: (error: Error) => {
+      console.error("Budget estimation error:", error);
+    },
+  });
+  
+  // Trigger budget estimation if needed
+  useEffect(() => {
+    if (trip && !trip.budget && !estimateBudgetMutation.isPending) {
+      estimateBudgetMutation.mutate();
+    }
+  }, [trip]);
 
   const generateItineraryMutation = useMutation({
     mutationFn: async () => {
@@ -434,26 +460,14 @@ export default function TripDetailPage() {
                 {/* Map Card */}
                 <Card className="overflow-hidden shadow-sm hover:shadow-md transition-shadow duration-200">
                   <div className="h-48 relative bg-gray-100">
-                    {showMap ? (
-                      <iframe 
-                        ref={mapRef}
-                        src={mapUrl}
-                        className="w-full h-full border-0"
-                        allowFullScreen
-                        loading="lazy"
-                        title="Google Maps"
-                      />
-                    ) : (
-                      <div 
-                        className="w-full h-full flex items-center justify-center cursor-pointer"
-                        onClick={() => setShowMap(true)}
-                      >
-                        <div className="text-center">
-                          <Map className="h-12 w-12 text-gray-400 mx-auto mb-2" />
-                          <span className="text-gray-500 text-sm font-medium">Click to load map</span>
-                        </div>
-                      </div>
-                    )}
+                    <iframe 
+                      ref={mapRef}
+                      src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyC2HIphoVK3t33hEs1ZW1vPf8WTLNXXm-U&q=${encodeURIComponent(trip.destination)}`}
+                      className="w-full h-full border-0"
+                      allowFullScreen
+                      loading="lazy"
+                      title="Google Maps"
+                    />
                   </div>
                   <CardContent className="p-4">
                     <h3 className="font-medium text-lg mb-2">{trip.destination}</h3>
@@ -567,7 +581,27 @@ export default function TripDetailPage() {
                       </li>
                       <li className="flex justify-between items-center py-1 border-t border-gray-100 pt-2">
                         <span className="text-sm text-gray-600">Budget</span>
-                        <span className="font-medium">{trip.budget || 'Not specified'}</span>
+                        <div className="text-right">
+                          {trip.budget ? (
+                            <div>
+                              <span className="font-medium">{trip.budget}</span>
+                              {trip.budgetIsEstimated && (
+                                <div className="flex items-center justify-end mt-1">
+                                  <Badge variant="outline" className="text-[10px] h-4 px-1 bg-primary-50 text-primary-700">
+                                    <span className="mr-1">✨</span> Estimated by TripSageAI
+                                  </Badge>
+                                </div>
+                              )}
+                            </div>
+                          ) : estimateBudgetMutation.isPending ? (
+                            <div className="flex items-center">
+                              <Loader2 className="h-3 w-3 animate-spin mr-1" />
+                              <span className="text-xs">Estimating...</span>
+                            </div>
+                          ) : (
+                            <span className="text-gray-400 text-sm">Not specified</span>
+                          )}
+                        </div>
                       </li>
                     </ul>
                   </CardContent>
@@ -784,35 +818,112 @@ export default function TripDetailPage() {
                   <TabsContent value="bookings" className="mt-0">
                     {hasBookings ? (
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        {trip.bookings.map((booking, index) => (
-                          <div 
-                            key={index}
-                            className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow duration-200 p-4"
-                          >
-                            <div className="flex items-start gap-4">
-                              <div className="w-12 h-12 rounded-full bg-primary-100 text-primary-700 flex items-center justify-center flex-shrink-0">
-                                {booking.type === 'hotel' ? (
-                                  <Hotel className="h-6 w-6" />
-                                ) : booking.type === 'flight' ? (
-                                  <Plane className="h-6 w-6" />
+                        {trip.bookings.map((booking, index) => {
+                          // Determine website URL based on provider
+                          let websiteUrl = '';
+                          if (booking.provider === 'Booking.com') {
+                            websiteUrl = 'https://www.booking.com';
+                          } else if (booking.provider === 'Expedia') {
+                            websiteUrl = 'https://www.expedia.com';
+                          } else if (booking.provider === 'Renfe') {
+                            websiteUrl = 'https://www.renfe.com';
+                          } else if (booking.provider && booking.provider.includes('Official')) {
+                            // For cases like "Sagrada Familia Official Website"
+                            websiteUrl = `https://www.${booking.title.toLowerCase().replace(/\s+/g, '')}.org`;
+                          }
+
+                          return (
+                            <div 
+                              key={index}
+                              className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow duration-200"
+                            >
+                              <div className="relative h-32 bg-gray-100">
+                                {booking.image ? (
+                                  <img
+                                    src={booking.image}
+                                    alt={booking.title}
+                                    className="w-full h-full object-cover"
+                                  />
                                 ) : (
-                                  <Ticket className="h-6 w-6" />
+                                  <div className="w-full h-full flex items-center justify-center bg-gradient-to-r from-primary-50 to-primary-100">
+                                    {booking.type === 'hotel' ? (
+                                      <Hotel className="h-12 w-12 text-primary-300" />
+                                    ) : booking.type === 'flight' ? (
+                                      <Plane className="h-12 w-12 text-primary-300" />
+                                    ) : (
+                                      <Ticket className="h-12 w-12 text-primary-300" />
+                                    )}
+                                  </div>
                                 )}
+                                <div className="absolute top-2 right-2">
+                                  <Badge variant="default" className="capitalize bg-primary-600">
+                                    {booking.type}
+                                  </Badge>
+                                </div>
                               </div>
-                              <div className="flex-1">
-                                <h4 className="font-medium text-gray-900">{booking.title}</h4>
-                                {booking.provider && (
-                                  <p className="text-sm text-gray-500">{booking.provider}</p>
-                                )}
+                              
+                              <div className="p-4">
+                                <h4 className="font-medium text-gray-900 text-lg mb-1">{booking.title}</h4>
+                                
+                                <div className="flex flex-wrap items-center gap-x-4 gap-y-2 mb-3">
+                                  {booking.provider && (
+                                    <span className="text-sm text-gray-500 flex items-center">
+                                      <Building className="h-3.5 w-3.5 mr-1.5" />
+                                      {booking.provider}
+                                    </span>
+                                  )}
+                                  
+                                  {booking.rating && (
+                                    <div className="flex items-center">
+                                      <div className="flex">
+                                        {[...Array(5)].map((_, i) => (
+                                          <Star 
+                                            key={i} 
+                                            className={`h-3.5 w-3.5 ${i < Math.round(booking.rating) ? 'text-yellow-400 fill-yellow-400' : 'text-gray-300'}`} 
+                                          />
+                                        ))}
+                                      </div>
+                                      {booking.reviewCount && (
+                                        <span className="text-xs text-gray-500 ml-1">
+                                          ({booking.reviewCount})
+                                        </span>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                                
                                 {booking.price && (
-                                  <div className="mt-2 px-2 py-1 bg-green-50 text-green-700 rounded-md inline-block text-sm font-medium">
+                                  <div className="px-2 py-1 bg-green-50 text-green-700 rounded-md inline-block text-sm font-medium mb-3">
                                     {booking.price}
                                   </div>
                                 )}
+                                
+                                <div className="flex flex-col sm:flex-row gap-2">
+                                  {websiteUrl && (
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm" 
+                                      className="text-xs flex-1"
+                                      onClick={() => window.open(websiteUrl, '_blank')}
+                                    >
+                                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                                      Visit Website
+                                    </Button>
+                                  )}
+                                  
+                                  <Button 
+                                    variant="outline" 
+                                    size="sm" 
+                                    className="text-xs flex-1"
+                                  >
+                                    <Pencil className="h-3.5 w-3.5 mr-1.5" />
+                                    Edit Details
+                                  </Button>
+                                </div>
                               </div>
                             </div>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
                     ) : (
                       <div className="text-center py-16 bg-gray-50 rounded-xl shadow-inner">
