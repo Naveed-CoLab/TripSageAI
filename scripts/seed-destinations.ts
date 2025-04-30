@@ -14,8 +14,6 @@ async function seedDestinations() {
       reviewCount: 12586,
       imageUrl: "https://images.unsplash.com/photo-1552832230-c0197dd311b5?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
       priceEstimate: "$150-300 per day",
-      coordinates: { lat: 41.9028, lng: 12.4964 },
-      bestTimeToVisit: "April-May, September-October"
     },
     {
       name: "Paris",
@@ -25,8 +23,6 @@ async function seedDestinations() {
       reviewCount: 18942,
       imageUrl: "https://images.unsplash.com/photo-1502602898657-3e91760cbb34?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
       priceEstimate: "$180-350 per day",
-      coordinates: { lat: 48.8566, lng: 2.3522 },
-      bestTimeToVisit: "June-August, September-October"
     },
     {
       name: "Las Vegas",
@@ -36,8 +32,6 @@ async function seedDestinations() {
       reviewCount: 15783,
       imageUrl: "https://images.unsplash.com/photo-1605833556294-ea5c7a74f57d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
       priceEstimate: "$200-400 per day",
-      coordinates: { lat: 36.1699, lng: -115.1398 },
-      bestTimeToVisit: "March-May, September-November"
     },
     {
       name: "Reykjavik",
@@ -47,8 +41,6 @@ async function seedDestinations() {
       reviewCount: 8673,
       imageUrl: "https://images.unsplash.com/photo-1504233529578-6d46baba6d34?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
       priceEstimate: "$250-450 per day",
-      coordinates: { lat: 64.1466, lng: -21.9426 },
-      bestTimeToVisit: "June-August for midnight sun, September-March for Northern Lights"
     },
     {
       name: "Tokyo",
@@ -58,8 +50,6 @@ async function seedDestinations() {
       reviewCount: 14567,
       imageUrl: "https://images.unsplash.com/photo-1540959733332-eab4deabeeaf?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
       priceEstimate: "$150-300 per day",
-      coordinates: { lat: 35.6762, lng: 139.6503 },
-      bestTimeToVisit: "March-April for cherry blossoms, October-November for autumn colors"
     },
     {
       name: "Bali",
@@ -69,8 +59,6 @@ async function seedDestinations() {
       reviewCount: 13298,
       imageUrl: "https://images.unsplash.com/photo-1537996194471-e657df975ab4?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
       priceEstimate: "$80-200 per day",
-      coordinates: { lat: -8.3405, lng: 115.0920 },
-      bestTimeToVisit: "April-October (dry season)"
     },
     {
       name: "Miami Beach",
@@ -80,8 +68,6 @@ async function seedDestinations() {
       reviewCount: 9875,
       imageUrl: "https://images.unsplash.com/photo-1535498730771-e735b998cd64?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
       priceEstimate: "$200-400 per day",
-      coordinates: { lat: 25.7907, lng: -80.1300 },
-      bestTimeToVisit: "November-April"
     },
     {
       name: "Barcelona",
@@ -91,8 +77,6 @@ async function seedDestinations() {
       reviewCount: 11764,
       imageUrl: "https://images.unsplash.com/photo-1583422409516-2895a77efded?ixlib=rb-1.2.1&auto=format&fit=crop&w=1350&q=80",
       priceEstimate: "$120-250 per day",
-      coordinates: { lat: 41.3851, lng: 2.1734 },
-      bestTimeToVisit: "May-June, September-October"
     }
   ];
 
