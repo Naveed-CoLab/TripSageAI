@@ -1482,6 +1482,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
   });
 
   // Hotel routes
+  // Get hotel search history
+  app.get("/api/hotels/history", async (req: Request, res: Response) => {
+    try {
+      if (!req.isAuthenticated()) {
+        return res.status(401).json({ message: "You must be logged in to view hotel search history" });
+      }
+      
+      const userId = req.user!.id;
+      const searchHistory = await storage.getHotelSearchesByUserId(userId);
+      
+      res.json(searchHistory);
+    } catch (error) {
+      console.error("Error fetching hotel search history:", error);
+      res.status(500).json({ 
+        message: "Failed to fetch hotel search history", 
+        error: (error as Error).message 
+      });
+    }
+  });
+
   app.post("/api/hotels/search", async (req: Request, res: Response) => {
     if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
     
