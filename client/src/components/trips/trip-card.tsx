@@ -68,30 +68,50 @@ export default function TripCard({ trip }: TripCardProps) {
   };
   
   // Helper function to safely format dates
-  const formatDate = (dateString: string | null | undefined) => {
-    if (!dateString) return "No date";
+  const formatDate = (dateValue: any) => {
+    // No value provided
+    if (dateValue === null || dateValue === undefined) return "No date";
     
     try {
-      // Log for debugging
-      console.log("Date string:", dateString, "Type:", typeof dateString);
+      // Log the date for debugging
+      console.log('Formatting date:', dateValue, 'Type:', typeof dateValue);
       
-      // Handle various date formats
-      let date;
-      if (typeof dateString === 'object') {
-        // If it's already a Date object
-        date = dateString as unknown as Date;
-      } else if (typeof dateString === 'string') {
-        // Attempt to parse ISO format
-        date = parseISO(dateString);
-      } else {
-        return "Invalid date format";
+      // If it's a string in ISO format
+      if (typeof dateValue === 'string') {
+        // For date-only strings like "2025-04-30"
+        if (dateValue.match(/^\d{4}-\d{2}-\d{2}$/)) {
+          const [year, month, day] = dateValue.split('-').map(Number);
+          return format(new Date(year, month - 1, day), "MMM d, yyyy");
+        }
+        
+        // For ISO date strings
+        const date = parseISO(dateValue);
+        if (isValid(date)) {
+          return format(date, "MMM d, yyyy");
+        }
+      } 
+      
+      // Handle PostgreSQL date/timestamp objects (they come back as JS objects)
+      if (typeof dateValue === 'object') {
+        // If it's a plain object from PostgreSQL
+        if (dateValue.hasOwnProperty('year') && dateValue.hasOwnProperty('month') && dateValue.hasOwnProperty('day')) {
+          return format(new Date(dateValue.year, dateValue.month - 1, dateValue.day), "MMM d, yyyy");
+        }
+        
+        // For native Date objects
+        if (dateValue instanceof Date && isValid(dateValue)) {
+          return format(dateValue, "MMM d, yyyy");
+        }
+        
+        // For JSON date objects that may have different formats
+        return "Date set";
       }
       
-      if (!isValid(date)) return "Invalid date";
-      return format(date, "MMM d, yyyy");
-    } catch (error) {
-      console.error("Error parsing date:", error, "for value:", dateString);
+      // Fallback for any other type
       return "Invalid date";
+    } catch (error) {
+      console.error("Failed to format date:", error, "Value:", dateValue);
+      return "Date error";
     }
   };
 
