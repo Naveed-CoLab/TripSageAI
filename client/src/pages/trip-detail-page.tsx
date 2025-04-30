@@ -85,36 +85,8 @@ type TripWithDetails = {
   status: string;
   createdAt: string;
   updatedAt: string;
-  days: Day[]; // Itinerary days
+  days: Day[]; // Itinerary days with activities
   bookings: Booking[]; // Trip bookings
-  createdAt: string;
-  updatedAt: string;
-  days: {
-    id: number;
-    tripId: number;
-    dayNumber: number;
-    date: string | null;
-    title: string;
-    activities: {
-      id: number;
-      tripDayId: number;
-      title: string;
-      description: string | null;
-      time: string | null;
-      location: string | null;
-      type: string | null;
-    }[];
-  }[];
-  bookings: {
-    id: number;
-    tripId: number;
-    type: string;
-    title: string;
-    provider: string | null;
-    price: string | null;
-    details: any;
-    confirmed: boolean;
-  }[];
 };
 
 // Helper function to get the URL for a place in Google Maps
