@@ -248,6 +248,15 @@ export async function generateItinerary(trip: Trip): Promise<GeneratedItinerary>
       The traveler's preferences include: ${preferencesString}.
       The trip title is: ${trip.title}.
       Budget range: ${trip.budget || "moderate"}.
+
+      IMPORTANT REQUIREMENTS:
+      1. Be VERY specific with actual place names, full addresses, and local attractions - avoid generic descriptions.
+      2. Include SPECIFIC hotel recommendations with approximate prices and detailed neighborhood information.
+      3. Include at least one local restaurant recommendation for each day with cuisine type and price range.
+      4. For each activity or location, include a short interesting fact that most tourists wouldn't know.
+      5. Recommend specific transportation options between major stops (exact bus/train numbers, transit options).
+      6. Mention any seasonal events, festivals, or local markets happening during the travel dates.
+      7. Include at least one off-the-beaten-path or hidden gem location per day.
       
       Format your response as a JSON object with the following structure:
       {
@@ -258,10 +267,10 @@ export async function generateItinerary(trip: Trip): Promise<GeneratedItinerary>
             "activities": [
               {
                 "title": "Activity name",
-                "description": "Brief description",
-                "time": "Approximate time (e.g., '9:00 AM')",
-                "location": "Location name",
-                "type": "Type of activity (e.g., 'sightseeing', 'meal', 'transportation')"
+                "description": "Detailed description with specific information about the place, including an interesting fact",
+                "time": "Specific time (e.g., '9:00 AM - 11:30 AM')",
+                "location": "Full location name with address or neighborhood",
+                "type": "Type of activity (e.g., 'sightseeing', 'meal', 'transportation', 'hidden gem')"
               }
             ]
           }
@@ -269,16 +278,21 @@ export async function generateItinerary(trip: Trip): Promise<GeneratedItinerary>
         "bookings": [
           {
             "type": "Type of booking (hotel, flight, activity)",
-            "title": "Name of the booking",
-            "provider": "Service provider name",
-            "price": "Estimated price",
-            "details": { "Additional details": "as needed" }
+            "title": "Specific name of the booking (hotel name, tour company, etc.)",
+            "provider": "Specific service provider name with location",
+            "price": "Estimated price range in USD or local currency",
+            "details": { 
+              "address": "Full address",
+              "website": "Official website if available",
+              "contactInfo": "Phone number or email if available",
+              "notes": "Special features, amenities, or considerations"
+            }
           }
         ]
       }
       
-      Include approximately 3-4 activities per day.
-      For bookings, include at least one accommodation option, transportation options if applicable, and key attractions that require booking.
+      Include exactly 4 activities per day, ensuring a mix of morning, afternoon, and evening activities.
+      For bookings, include at least two accommodation options at different price points, local transportation options with specific details, and at least three key attractions or tours that require advance booking.
     `;
     
     const response = await fetch(
