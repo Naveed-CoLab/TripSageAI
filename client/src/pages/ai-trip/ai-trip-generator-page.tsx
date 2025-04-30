@@ -394,16 +394,29 @@ export default function AITripGeneratorPage() {
                 
                 <div className="space-y-2">
                   <Label>Trip Type</Label>
-                  <div className="flex flex-wrap gap-2">
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3">
                     {tripTypeOptions.map(option => (
-                      <Badge
+                      <div
                         key={option.id}
-                        variant={tripType === option.id ? "default" : "outline"}
-                        className="cursor-pointer px-3 py-1"
+                        className={`flex flex-col items-center justify-center p-4 rounded-lg cursor-pointer border border-border transition-all hover:border-primary ${
+                          tripType === option.id 
+                            ? 'bg-primary/10 border-primary' 
+                            : 'bg-card hover:bg-muted/50'
+                        }`}
                         onClick={() => setTripType(option.id)}
                       >
-                        {option.label}
-                      </Badge>
+                        <div className={`mb-2 p-2 rounded-full ${
+                          tripType === option.id 
+                            ? 'bg-primary text-primary-foreground' 
+                            : 'bg-muted'
+                        }`}>
+                          {option.icon}
+                        </div>
+                        <span className="text-xs font-medium text-center">{option.label}</span>
+                        {tripType === option.id && (
+                          <Check className="h-4 w-4 text-primary mt-1" />
+                        )}
+                      </div>
                     ))}
                   </div>
                 </div>
@@ -437,13 +450,29 @@ export default function AITripGeneratorPage() {
                   </div>
                 </div>
                 
-                <div className="flex items-center space-x-2">
-                  <Checkbox
-                    id="withPets"
-                    checked={withPets}
-                    onCheckedChange={(checked) => setWithPets(checked === true)}
-                  />
-                  <Label htmlFor="withPets">I'm traveling with pets</Label>
+                <div className="space-y-2">
+                  <Label>Additional Options</Label>
+                  <div className="bg-card border border-border rounded-lg p-4">
+                    <div className="flex items-center space-x-3">
+                      <Checkbox
+                        id="withPets"
+                        checked={withPets}
+                        onCheckedChange={(checked) => setWithPets(checked === true)}
+                        className={withPets ? "bg-primary border-primary" : ""}
+                      />
+                      <div className="flex items-center space-x-2">
+                        <div className={`p-2 rounded-full ${withPets ? 'bg-primary/10' : 'bg-muted'}`}>
+                          <Palmtree className="h-4 w-4" />
+                        </div>
+                        <Label htmlFor="withPets" className="font-medium">I'm traveling with pets</Label>
+                      </div>
+                    </div>
+                    {withPets && (
+                      <div className="mt-2 ml-9 text-sm text-muted-foreground">
+                        We'll recommend pet-friendly accommodations and activities for your trip.
+                      </div>
+                    )}
+                  </div>
                 </div>
               </form>
             </CardContent>
