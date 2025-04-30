@@ -1,15 +1,5 @@
 import { 
-  users, 
-  myTrips,
-  destinations,
-  reviews,
-  flightSearches,
-  userSettings,
-  wishlistItems,
-  flightBookings,
-  hotelSearches,
-  hotelBookings,
-  adminLogs,
+  // The tables are no longer needed with raw SQL, keep only the types
   type User, 
   type InsertUser, 
   type Trip,  // Still using Trip type for backward compatibility
@@ -33,8 +23,7 @@ import {
   type AdminLog,
   type InsertAdminLog
 } from "@shared/schema";
-import { db, pool, query, transaction } from "./db";
-import { eq, and, desc, gte, count } from "drizzle-orm";
+import { pool, query, transaction } from "./db";
 import session from "express-session";
 import connectPg from "connect-pg-simple";
 
@@ -912,34 +901,90 @@ export class DatabaseStorage implements IStorage {
 
   // Trip methods
   async getTripsByUserId(userId: number): Promise<Trip[]> {
-    return db.select().from(myTrips).where(eq(myTrips.userId, userId)).orderBy(desc(myTrips.createdAt));
+    const SQL = `
+      SELECT * FROM my_trips
+      WHERE user_id = $1
+      ORDER BY created_at DESC
+    `;
+    
+    const result = await query(SQL, [userId]);
+    return result.rows;
   }
 
   async getTripById(id: number): Promise<Trip | undefined> {
-    const [trip] = await db.select().from(myTrips).where(eq(myTrips.id, id));
-    return trip;
+    const SQL = `
+      SELECT * FROM my_trips
+      WHERE id = $1
+    `;
+    
+    const result = await query(SQL, [id]);
+    return result.rows[0];
   }
 
   async getTrip(id: number): Promise<Trip | undefined> {
-    const [trip] = await db.select().from(myTrips).where(eq(myTrips.id, id));
-    return trip;
+    const SQL = `
+      SELECT * FROM my_trips
+      WHERE id = $1
+    `;
+    
+    const result = await query(SQL, [id]);
+    return result.rows[0];
   }
 
   async createTrip(trip: InsertTrip): Promise<Trip> {
-    const [newTrip] = await db.insert(myTrips).values(trip).returning();
-    return newTrip;
+    // Convert camelCase keys to snake_case for PostgreSQL
+    const processedData: Record<string, any> = {};
+    
+    for (const [key, value] of Object.entries(trip)) {
+      // Convert camelCase to snake_case
+      const snakeCaseKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+      processedData[snakeCaseKey] = value;
+    }
+    
+    const keys = Object.keys(processedData);
+    const values = Object.values(processedData);
+    const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
+    const columnNames = keys.join(', ');
+    
+    const SQL = `
+      INSERT INTO my_trips (${columnNames})
+      VALUES (${placeholders})
+      RETURNING *
+    `;
+    
+    const result = await query(SQL, values);
+    return result.rows[0];
   }
 
   async updateTrip(id: number, trip: Partial<Trip>): Promise<Trip> {
-    const [updatedTrip] = await db
-      .update(myTrips)
-      .set({ 
-        ...trip, 
-        updatedAt: new Date() 
-      })
-      .where(eq(myTrips.id, id))
-      .returning();
-    return updatedTrip;
+    // Convert camelCase keys to snake_case for PostgreSQL
+    const processedData: Record<string, any> = {};
+    
+    for (const [key, value] of Object.entries(trip)) {
+      // Convert camelCase to snake_case
+      const snakeCaseKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+      processedData[snakeCaseKey] = value;
+    }
+    
+    // Add updated_at field
+    processedData.updated_at = new Date();
+    
+    // Build SET clause
+    const setClause = Object.keys(processedData)
+      .map((key, index) => `${key} = $${index + 2}`)
+      .join(', ');
+    
+    const values = [id, ...Object.values(processedData)];
+    
+    const SQL = `
+      UPDATE my_trips
+      SET ${setClause}
+      WHERE id = $1
+      RETURNING *
+    `;
+    
+    const result = await query(SQL, values);
+    return result.rows[0];
   }
 
   async deleteTrip(id: number): Promise<void> {
@@ -965,59 +1010,146 @@ export class DatabaseStorage implements IStorage {
 
   // Destination methods
   async getAllDestinations(): Promise<Destination[]> {
-    return db.select().from(destinations);
+    const SQL = `
+      SELECT * FROM destinations
+      ORDER BY name ASC
+    `;
+    
+    const result = await query(SQL);
+    return result.rows;
   }
 
   async getDestinationById(id: number): Promise<Destination | undefined> {
-    const [destination] = await db.select().from(destinations).where(eq(destinations.id, id));
-    return destination;
+    const SQL = `
+      SELECT * FROM destinations
+      WHERE id = $1
+    `;
+    
+    const result = await query(SQL, [id]);
+    return result.rows[0];
   }
 
   async createDestination(destination: InsertDestination): Promise<Destination> {
-    const [newDestination] = await db.insert(destinations).values(destination).returning();
-    return newDestination;
+    // Convert camelCase keys to snake_case for PostgreSQL
+    const processedData: Record<string, any> = {};
+    
+    for (const [key, value] of Object.entries(destination)) {
+      // Convert camelCase to snake_case
+      const snakeCaseKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+      processedData[snakeCaseKey] = value;
+    }
+    
+    const keys = Object.keys(processedData);
+    const values = Object.values(processedData);
+    const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
+    const columnNames = keys.join(', ');
+    
+    const SQL = `
+      INSERT INTO destinations (${columnNames})
+      VALUES (${placeholders})
+      RETURNING *
+    `;
+    
+    const result = await query(SQL, values);
+    return result.rows[0];
   }
 
   // Review methods
   async getReviewsByTargetTypeAndId(targetType: string, targetId: string): Promise<Review[]> {
-    return db.select().from(reviews)
-      .where(and(
-        eq(reviews.targetType, targetType),
-        eq(reviews.targetId, targetId)
-      ))
-      .orderBy(desc(reviews.createdAt));
+    const SQL = `
+      SELECT * FROM reviews
+      WHERE target_type = $1 AND target_id = $2
+      ORDER BY created_at DESC
+    `;
+    
+    const result = await query(SQL, [targetType, targetId]);
+    return result.rows;
   }
   
   async getReviewsByUserId(userId: number): Promise<Review[]> {
-    return db.select().from(reviews)
-      .where(eq(reviews.userId, userId))
-      .orderBy(desc(reviews.createdAt));
+    const SQL = `
+      SELECT * FROM reviews
+      WHERE user_id = $1
+      ORDER BY created_at DESC
+    `;
+    
+    const result = await query(SQL, [userId]);
+    return result.rows;
   }
 
   async getReviewById(id: number): Promise<Review | undefined> {
-    const [review] = await db.select().from(reviews).where(eq(reviews.id, id));
-    return review;
+    const SQL = `
+      SELECT * FROM reviews
+      WHERE id = $1
+    `;
+    
+    const result = await query(SQL, [id]);
+    return result.rows[0];
   }
 
   async createReview(review: InsertReview): Promise<Review> {
-    const [newReview] = await db.insert(reviews).values(review).returning();
-    return newReview;
+    // Convert camelCase keys to snake_case for PostgreSQL
+    const processedData: Record<string, any> = {};
+    
+    for (const [key, value] of Object.entries(review)) {
+      // Convert camelCase to snake_case
+      const snakeCaseKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+      processedData[snakeCaseKey] = value;
+    }
+    
+    const keys = Object.keys(processedData);
+    const values = Object.values(processedData);
+    const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
+    const columnNames = keys.join(', ');
+    
+    const SQL = `
+      INSERT INTO reviews (${columnNames})
+      VALUES (${placeholders})
+      RETURNING *
+    `;
+    
+    const result = await query(SQL, values);
+    return result.rows[0];
   }
 
   async updateReview(id: number, reviewData: Partial<Review>): Promise<Review> {
-    const [updatedReview] = await db
-      .update(reviews)
-      .set({
-        ...reviewData,
-        updatedAt: new Date(),
-      })
-      .where(eq(reviews.id, id))
-      .returning();
-    return updatedReview;
+    // Convert camelCase keys to snake_case for PostgreSQL
+    const processedData: Record<string, any> = {};
+    
+    for (const [key, value] of Object.entries(reviewData)) {
+      // Convert camelCase to snake_case
+      const snakeCaseKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+      processedData[snakeCaseKey] = value;
+    }
+    
+    // Add updated_at field
+    processedData.updated_at = new Date();
+    
+    // Build SET clause
+    const setClause = Object.keys(processedData)
+      .map((key, index) => `${key} = $${index + 2}`)
+      .join(', ');
+    
+    const values = [id, ...Object.values(processedData)];
+    
+    const SQL = `
+      UPDATE reviews
+      SET ${setClause}
+      WHERE id = $1
+      RETURNING *
+    `;
+    
+    const result = await query(SQL, values);
+    return result.rows[0];
   }
 
   async deleteReview(id: number): Promise<void> {
-    await db.delete(reviews).where(eq(reviews.id, id));
+    const SQL = `
+      DELETE FROM reviews
+      WHERE id = $1
+    `;
+    
+    await query(SQL, [id]);
   }
 
   async markReviewHelpful(id: number): Promise<Review> {
@@ -1026,15 +1158,15 @@ export class DatabaseStorage implements IStorage {
       throw new Error("Review not found");
     }
     
-    const [updatedReview] = await db
-      .update(reviews)
-      .set({
-        helpfulCount: (review.helpfulCount || 0) + 1,
-      })
-      .where(eq(reviews.id, id))
-      .returning();
+    const SQL = `
+      UPDATE reviews
+      SET helpful_count = COALESCE(helpful_count, 0) + 1, updated_at = NOW()
+      WHERE id = $1
+      RETURNING *
+    `;
     
-    return updatedReview;
+    const result = await query(SQL, [id]);
+    return result.rows[0];
   }
 
   async reportReview(id: number): Promise<Review> {
@@ -1043,72 +1175,127 @@ export class DatabaseStorage implements IStorage {
       throw new Error("Review not found");
     }
     
-    const [updatedReview] = await db
-      .update(reviews)
-      .set({
-        reportCount: (review.reportCount || 0) + 1,
-      })
-      .where(eq(reviews.id, id))
-      .returning();
+    const SQL = `
+      UPDATE reviews
+      SET report_count = COALESCE(report_count, 0) + 1, updated_at = NOW()
+      WHERE id = $1
+      RETURNING *
+    `;
     
-    return updatedReview;
+    const result = await query(SQL, [id]);
+    return result.rows[0];
   }
   
   // Flight search methods
   async getFlightSearchesByUserId(userId: number): Promise<FlightSearch[]> {
-    return db.select()
-      .from(flightSearches)
-      .where(eq(flightSearches.userId, userId))
-      .orderBy(desc(flightSearches.createdAt));
+    const SQL = `
+      SELECT * FROM flight_searches
+      WHERE user_id = $1
+      ORDER BY created_at DESC
+    `;
+    
+    const result = await query(SQL, [userId]);
+    return result.rows;
   }
   
   async createFlightSearch(flightSearch: InsertFlightSearch): Promise<FlightSearch> {
-    const [newFlightSearch] = await db
-      .insert(flightSearches)
-      .values(flightSearch)
-      .returning();
-    return newFlightSearch;
+    // Convert camelCase keys to snake_case for PostgreSQL
+    const processedData: Record<string, any> = {};
+    
+    for (const [key, value] of Object.entries(flightSearch)) {
+      // Convert camelCase to snake_case
+      const snakeCaseKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+      processedData[snakeCaseKey] = value;
+    }
+    
+    const keys = Object.keys(processedData);
+    const values = Object.values(processedData);
+    const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
+    const columnNames = keys.join(', ');
+    
+    const SQL = `
+      INSERT INTO flight_searches (${columnNames})
+      VALUES (${placeholders})
+      RETURNING *
+    `;
+    
+    const result = await query(SQL, values);
+    return result.rows[0];
   }
   
   async deleteFlightSearch(id: number): Promise<void> {
-    await db.delete(flightSearches).where(eq(flightSearches.id, id));
+    const SQL = `
+      DELETE FROM flight_searches
+      WHERE id = $1
+    `;
+    
+    await query(SQL, [id]);
   }
   
   // Wishlist methods
   async getWishlistItemsByUserId(userId: number): Promise<WishlistItem[]> {
-    return db
-      .select()
-      .from(wishlistItems)
-      .where(eq(wishlistItems.userId, userId))
-      .orderBy(desc(wishlistItems.createdAt));
+    const SQL = `
+      SELECT * FROM wishlist_items
+      WHERE user_id = $1
+      ORDER BY created_at DESC
+    `;
+    
+    const result = await query(SQL, [userId]);
+    return result.rows;
   }
   
   async getWishlistItemById(id: number): Promise<WishlistItem | undefined> {
-    const [item] = await db.select().from(wishlistItems).where(eq(wishlistItems.id, id));
-    return item;
+    const SQL = `
+      SELECT * FROM wishlist_items
+      WHERE id = $1
+    `;
+    
+    const result = await query(SQL, [id]);
+    return result.rows[0];
   }
   
   async createWishlistItem(item: InsertWishlistItem): Promise<WishlistItem> {
-    const [newItem] = await db.insert(wishlistItems).values(item).returning();
-    return newItem;
+    // Convert camelCase keys to snake_case for PostgreSQL
+    const processedData: Record<string, any> = {};
+    
+    for (const [key, value] of Object.entries(item)) {
+      // Convert camelCase to snake_case
+      const snakeCaseKey = key.replace(/([A-Z])/g, '_$1').toLowerCase();
+      processedData[snakeCaseKey] = value;
+    }
+    
+    const keys = Object.keys(processedData);
+    const values = Object.values(processedData);
+    const placeholders = values.map((_, i) => `$${i + 1}`).join(', ');
+    const columnNames = keys.join(', ');
+    
+    const SQL = `
+      INSERT INTO wishlist_items (${columnNames})
+      VALUES (${placeholders})
+      RETURNING *
+    `;
+    
+    const result = await query(SQL, values);
+    return result.rows[0];
   }
   
   async deleteWishlistItem(id: number): Promise<void> {
-    await db.delete(wishlistItems).where(eq(wishlistItems.id, id));
+    const SQL = `
+      DELETE FROM wishlist_items
+      WHERE id = $1
+    `;
+    
+    await query(SQL, [id]);
   }
   
   async getWishlistItemByTypeAndId(userId: number, itemType: string, itemId: string): Promise<WishlistItem | undefined> {
-    const [item] = await db
-      .select()
-      .from(wishlistItems)
-      .where(
-        and(
-          eq(wishlistItems.userId, userId),
-          eq(wishlistItems.itemType, itemType),
-          eq(wishlistItems.itemId, itemId)
-        )
-      );
-    return item;
+    const SQL = `
+      SELECT * FROM wishlist_items
+      WHERE user_id = $1 AND item_type = $2 AND item_id = $3
+    `;
+    
+    const result = await query(SQL, [userId, itemType, itemId]);
+    return result.rows[0];
   }
   
   // Flight booking methods
