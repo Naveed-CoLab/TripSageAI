@@ -148,12 +148,8 @@ const getActivityIcon = (type: string | null) => {
   }
 };
 
-// Function to generate a placeholder image for a location
-const getPlaceholderImage = (location: string) => {
-  const baseUrl = "https://source.unsplash.com/featured/";
-  const keywords = encodeURIComponent(location);
-  return `${baseUrl}?${keywords},travel`;
-};
+// Import our static image helper
+import { getDestinationImage } from "@/lib/destination-images";
 
 export default function TripDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -325,29 +321,50 @@ export default function TripDetailPage() {
     <MainLayout>
       <div className="relative">
         {/* Hero Banner with Trip Title */}
-        <div className="relative h-64 bg-gradient-to-r from-primary-600 to-primary-800 overflow-hidden">
+        <div className="relative h-80 overflow-hidden">
           {trip.destination && (
             <img 
-              src={getPlaceholderImage(trip.destination)} 
+              src={getDestinationImage(trip.destination)}
               alt={trip.destination}
-              className="absolute inset-0 w-full h-full object-cover mix-blend-overlay opacity-40"
+              className="absolute inset-0 w-full h-full object-cover"
             />
           )}
-          <div className="absolute inset-0 bg-black bg-opacity-20"></div>
-          <div className="absolute inset-0 container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col justify-end pb-12">
-            <h1 className="text-4xl font-bold text-white mb-2">{trip.title} for {trip.days.length} days</h1>
-            <div className="flex items-center text-white/90 text-sm gap-4">
-              {trip.startDate && trip.endDate && (
+          <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-black/30"></div>
+          <div className="absolute inset-0 container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col justify-end pb-16">
+            <div className="animate-fade-in-up">
+              <h1 className="text-5xl font-bold text-white mb-4 drop-shadow-md">
+                {trip.title}
+              </h1>
+              <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 inline-flex space-x-6 shadow-lg border border-white/20">
                 <div className="flex items-center">
-                  <Calendar className="w-4 h-4 mr-1" />
-                  <span>
-                    {format(new Date(trip.startDate), "MMM d")} - {format(new Date(trip.endDate), "MMM d, yyyy")}
-                  </span>
+                  <Calendar className="w-5 h-5 mr-2 text-primary-200" />
+                  <div>
+                    <div className="text-xs uppercase tracking-wider text-white/70">Duration</div>
+                    <div className="text-white font-medium">
+                      {trip.days.length} days
+                    </div>
+                  </div>
                 </div>
-              )}
-              <div className="flex items-center">
-                <MapPin className="w-4 h-4 mr-1" />
-                <span>{trip.destination}</span>
+                
+                {trip.startDate && trip.endDate && (
+                  <div className="flex items-center">
+                    <Calendar className="w-5 h-5 mr-2 text-primary-200" />
+                    <div>
+                      <div className="text-xs uppercase tracking-wider text-white/70">Date</div>
+                      <div className="text-white font-medium">
+                        {format(new Date(trip.startDate), "MMM d")} - {format(new Date(trip.endDate), "MMM d, yyyy")}
+                      </div>
+                    </div>
+                  </div>
+                )}
+                
+                <div className="flex items-center">
+                  <MapPin className="w-5 h-5 mr-2 text-primary-200" />
+                  <div>
+                    <div className="text-xs uppercase tracking-wider text-white/70">Destination</div>
+                    <div className="text-white font-medium">{trip.destination}</div>
+                  </div>
+                </div>
               </div>
             </div>
           </div>
