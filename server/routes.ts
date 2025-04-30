@@ -2731,6 +2731,120 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
   
+  // Get flight search analytics
+  app.get("/api/admin/analytics/flight-searches", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      
+      const SQL = `
+        SELECT 
+          sa.id, 
+          sa.user_id, 
+          u.username as user_username, 
+          sa.search_type, 
+          sa.search_term as query, 
+          sa.search_params,
+          sa.result_count, 
+          sa.created_at
+        FROM search_analytics sa
+        JOIN users u ON sa.user_id = u.id
+        WHERE sa.search_type = 'flight'
+        ORDER BY sa.created_at DESC
+        LIMIT $1
+      `;
+      
+      const result = await query(SQL, [limit]);
+      res.json(result.rows);
+    } catch (error) {
+      console.error('Error getting flight search analytics:', error);
+      res.status(500).json({ error: "Failed to get flight search analytics" });
+    }
+  });
+  
+  // Get hotel search analytics
+  app.get("/api/admin/analytics/hotel-searches", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const limit = req.query.limit ? parseInt(req.query.limit as string) : 50;
+      
+      const SQL = `
+        SELECT 
+          sa.id, 
+          sa.user_id, 
+          u.username as user_username, 
+          sa.search_type, 
+          sa.search_term as query, 
+          sa.search_params,
+          sa.result_count, 
+          sa.created_at
+        FROM search_analytics sa
+        JOIN users u ON sa.user_id = u.id
+        WHERE sa.search_type = 'hotel'
+        ORDER BY sa.created_at DESC
+        LIMIT $1
+      `;
+      
+      const result = await query(SQL, [limit]);
+      res.json(result.rows);
+    } catch (error) {
+      console.error('Error getting hotel search analytics:', error);
+      res.status(500).json({ error: "Failed to get hotel search analytics" });
+    }
+  });
+  
+  // Get search analytics overview stats
+  app.get("/api/admin/analytics/search-stats", isAdmin, async (req: Request, res: Response) => {
+    try {
+      // Total searches by type
+      const searchesByTypeSQL = `
+        SELECT 
+          search_type, 
+          COUNT(*) as count
+        FROM search_analytics
+        GROUP BY search_type
+        ORDER BY count DESC
+      `;
+      
+      // Most popular search terms
+      const popularTermsSQL = `
+        SELECT 
+          search_term,
+          search_type, 
+          COUNT(*) as count
+        FROM search_analytics
+        GROUP BY search_term, search_type
+        ORDER BY count DESC
+        LIMIT 10
+      `;
+      
+      // Search volume over time (last 30 days)
+      const volumeOverTimeSQL = `
+        SELECT 
+          DATE(created_at) as date,
+          search_type,
+          COUNT(*) as count
+        FROM search_analytics
+        WHERE created_at >= CURRENT_DATE - INTERVAL '30 days'
+        GROUP BY DATE(created_at), search_type
+        ORDER BY date
+      `;
+      
+      const [typeResult, termsResult, volumeResult] = await Promise.all([
+        query(searchesByTypeSQL),
+        query(popularTermsSQL),
+        query(volumeOverTimeSQL)
+      ]);
+      
+      res.json({
+        byType: typeResult.rows,
+        popularTerms: termsResult.rows,
+        volumeOverTime: volumeResult.rows
+      });
+    } catch (error) {
+      console.error('Error getting search analytics stats:', error);
+      res.status(500).json({ error: "Failed to get search analytics stats" });
+    }
+  });
+  
   // Admin logs endpoints
   
   // Create an admin log entry
@@ -2792,9 +2906,17 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return;
       }
       
-      // Otherwise return admin logs
-      const adminLogs = await storage.getRecentAdminLogs(limit);
-      res.json(adminLogs);
+      // Otherwise return admin logs using raw SQL
+      const adminLogsSQL = `
+        SELECT al.*, u.username as admin_username
+        FROM admin_logs al
+        JOIN users u ON al.admin_id = u.id
+        ORDER BY al.created_at DESC
+        LIMIT $1
+      `;
+      
+      const result = await query(adminLogsSQL, [limit]);
+      res.json(result.rows);
     } catch (error) {
       console.error('Error getting logs:', error);
       res.status(500).json({ error: "Failed to get logs" });

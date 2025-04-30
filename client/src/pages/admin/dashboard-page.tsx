@@ -212,30 +212,23 @@ export default function DashboardPage() {
     enabled: !!user && user.role === "admin" && activeMenuItem === "bookings",
   });
   
-  // Add specific log type queries
+  // Use raw SQL endpoints for search analytics
   const { data: flightSearchLogs, isLoading: isLoadingFlightSearchLogs } = useQuery<SearchLog[]>({
-    queryKey: ["/api/admin/logs", "flight"],
-    queryFn: async () => {
-      const res = await fetch("/api/admin/logs?type=flight");
-      if (!res.ok) {
-        if (res.status === 401) throw new Error("Unauthorized");
-        throw new Error("Failed to fetch flight search logs");
-      }
-      return res.json();
-    },
+    queryKey: ["/api/admin/analytics/flight-searches"],
+    queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!user && user.role === "admin" && activeMenuItem === "searchLogs",
   });
   
   const { data: hotelSearchLogs, isLoading: isLoadingHotelSearchLogs } = useQuery<SearchLog[]>({
-    queryKey: ["/api/admin/logs", "hotel"],
-    queryFn: async () => {
-      const res = await fetch("/api/admin/logs?type=hotel");
-      if (!res.ok) {
-        if (res.status === 401) throw new Error("Unauthorized");
-        throw new Error("Failed to fetch hotel search logs");
-      }
-      return res.json();
-    },
+    queryKey: ["/api/admin/analytics/hotel-searches"],
+    queryFn: getQueryFn({ on401: "throw" }),
+    enabled: !!user && user.role === "admin" && activeMenuItem === "searchLogs",
+  });
+  
+  // Get search analytics statistics
+  const { data: searchStats, isLoading: isLoadingSearchStats } = useQuery({
+    queryKey: ["/api/admin/analytics/search-stats"],
+    queryFn: getQueryFn({ on401: "throw" }),
     enabled: !!user && user.role === "admin" && activeMenuItem === "searchLogs",
   });
   
@@ -1619,23 +1612,116 @@ export default function DashboardPage() {
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <div className="h-80 flex items-center justify-center border rounded-md">
-                          <p className="text-muted-foreground">Destination chart will appear here</p>
-                        </div>
+                        {isLoadingSearchStats ? (
+                          <div className="h-80 flex items-center justify-center">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                          </div>
+                        ) : searchStats?.popularTerms && searchStats.popularTerms.length > 0 ? (
+                          <div className="h-80 overflow-auto">
+                            <div className="space-y-2">
+                              {searchStats.popularTerms.map((term: any, index: number) => (
+                                <div key={index} className="flex items-center justify-between p-2 border rounded-lg">
+                                  <div className="flex items-center">
+                                    <span className="text-lg font-medium mr-3 text-gray-700">{index + 1}.</span>
+                                    <div>
+                                      <p className="font-medium text-gray-800">{term.search_term}</p>
+                                      <p className="text-xs text-gray-500">Type: {term.search_type}</p>
+                                    </div>
+                                  </div>
+                                  <div className="flex items-center">
+                                    <div className="mr-2 bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full text-xs font-medium">
+                                      {term.count} searches
+                                    </div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="h-80 flex items-center justify-center border rounded-md">
+                            <p className="text-muted-foreground">No search data available</p>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                     
                     <Card>
                       <CardHeader>
-                        <CardTitle>Search Volume Over Time</CardTitle>
+                        <CardTitle>Search Types Distribution</CardTitle>
                         <CardDescription>
-                          Search activity trends
+                          Breakdown of search categories
                         </CardDescription>
                       </CardHeader>
                       <CardContent>
-                        <div className="h-80 flex items-center justify-center border rounded-md">
-                          <p className="text-muted-foreground">Volume chart will appear here</p>
-                        </div>
+                        {isLoadingSearchStats ? (
+                          <div className="h-80 flex items-center justify-center">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                          </div>
+                        ) : searchStats?.byType && searchStats.byType.length > 0 ? (
+                          <div className="h-80 overflow-auto">
+                            <div className="space-y-4">
+                              {searchStats.byType.map((type: any, index: number) => (
+                                <div key={index} className="space-y-1">
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-sm font-medium capitalize">{type.search_type}</span>
+                                    <span className="text-sm text-gray-500">{type.count} searches</span>
+                                  </div>
+                                  <div className="w-full bg-gray-200 rounded-full h-3">
+                                    <div 
+                                      className="bg-blue-500 h-3 rounded-full"
+                                      style={{ 
+                                        width: `${Math.min(100, (type.count / Math.max(...searchStats.byType.map((t: any) => t.count))) * 100)}%` 
+                                      }}
+                                    ></div>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="h-80 flex items-center justify-center border rounded-md">
+                            <p className="text-muted-foreground">No search data available</p>
+                          </div>
+                        )}
+                      </CardContent>
+                    </Card>
+                    
+                    <Card className="md:col-span-2">
+                      <CardHeader>
+                        <CardTitle>Search Volume Over Time</CardTitle>
+                        <CardDescription>
+                          Search activity trends in the last 30 days
+                        </CardDescription>
+                      </CardHeader>
+                      <CardContent>
+                        {isLoadingSearchStats ? (
+                          <div className="h-80 flex items-center justify-center">
+                            <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                          </div>
+                        ) : searchStats?.volumeOverTime && searchStats.volumeOverTime.length > 0 ? (
+                          <div className="h-80 border rounded-lg p-4">
+                            <div className="text-center text-sm text-muted-foreground">
+                              Volume chart visualization would display here with the time series data from the backend
+                            </div>
+                            <div className="mt-4 grid grid-cols-3 gap-4">
+                              {Array.from(new Set(searchStats.volumeOverTime.map((v: any) => v.search_type))).map((type: string, index: number) => (
+                                <div key={index} className="bg-slate-50 p-3 rounded-lg">
+                                  <div className="text-sm font-medium mb-1 capitalize">{type}</div>
+                                  <div className="text-2xl font-bold text-blue-600">
+                                    {searchStats.volumeOverTime
+                                      .filter((v: any) => v.search_type === type)
+                                      .reduce((sum: number, v: any) => sum + parseInt(v.count), 0)}
+                                  </div>
+                                  <div className="text-xs text-gray-500">total searches</div>
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ) : (
+                          <div className="h-80 flex items-center justify-center border rounded-md">
+                            <p className="text-muted-foreground">No search volume data available</p>
+                          </div>
+                        )}
                       </CardContent>
                     </Card>
                   </div>
