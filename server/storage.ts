@@ -76,26 +76,7 @@ export interface IStorage {
   updateTrip(id: number, trip: InsertTrip): Promise<Trip>;
   deleteTrip(id: number): Promise<void>;
 
-  // Trip day methods
-  getTripDaysByTripId(tripId: number): Promise<TripDay[]>;
-  getTripDayById(id: number): Promise<TripDay | undefined>;
-  createTripDay(tripDay: InsertTripDay): Promise<TripDay>;
-  updateTripDay(id: number, tripDay: InsertTripDay): Promise<TripDay>;
-  deleteTripDay(id: number): Promise<void>;
-
-  // Activity methods
-  getActivitiesByTripDayId(tripDayId: number): Promise<Activity[]>;
-  getActivityById(id: number): Promise<Activity | undefined>;
-  createActivity(activity: InsertActivity): Promise<Activity>;
-  updateActivity(id: number, activity: InsertActivity): Promise<Activity>;
-  deleteActivity(id: number): Promise<void>;
-
-  // Booking methods
-  getBookingsByTripId(tripId: number): Promise<Booking[]>;
-  getBookingById(id: number): Promise<Booking | undefined>;
-  createBooking(booking: InsertBooking): Promise<Booking>;
-  updateBooking(id: number, booking: InsertBooking): Promise<Booking>;
-  deleteBooking(id: number): Promise<void>;
+  // Trip day, activity, and booking methods removed as these tables no longer exist
 
   // Flight Booking methods
   getFlightBookingsByUserId(userId: number): Promise<FlightBooking[]>;
@@ -868,28 +849,9 @@ export class DatabaseStorage implements IStorage {
 
   async deleteTrip(id: number): Promise<void> {
     try {
-      // Use our transaction helper for atomicity
       await transaction(async (client) => {
-        // First, get all trip days to find related activities
-        const tripDaysQuery = 'SELECT * FROM trip_days WHERE trip_id = $1';
-        const tripDaysResult = await client.query(tripDaysQuery, [id]);
-        
-        // Delete activities for each trip day
-        for (const day of tripDaysResult.rows) {
-          const deleteActivitiesQuery = 'DELETE FROM activities WHERE trip_day_id = $1';
-          await client.query(deleteActivitiesQuery, [day.id]);
-        }
-        
-        // Delete bookings that might be related to this trip
-        const deleteBookingsQuery = 'DELETE FROM bookings WHERE trip_id = $1';
-        await client.query(deleteBookingsQuery, [id]);
-        
-        // Delete the trip days after activities are removed
-        const deleteTripDaysQuery = 'DELETE FROM trip_days WHERE trip_id = $1';
-        await client.query(deleteTripDaysQuery, [id]);
-        
-        // Finally delete the trip itself
-        const deleteTripQuery = 'DELETE FROM trips WHERE id = $1 RETURNING id';
+        // Simply delete the trip from my_trips table
+        const deleteTripQuery = 'DELETE FROM my_trips WHERE id = $1 RETURNING id';
         const result = await client.query(deleteTripQuery, [id]);
         
         if (result.rowCount === 0) {
@@ -897,144 +859,14 @@ export class DatabaseStorage implements IStorage {
         }
       });
       
-      console.log(`Successfully deleted trip with ID ${id} and all related data`);
+      console.log(`Successfully deleted trip with ID ${id}`);
     } catch (error) {
       console.error(`Error deleting trip with ID ${id}:`, error);
       throw error;
     }
   }
 
-  // Trip day methods
-  async getTripDaysByTripId(tripId: number): Promise<TripDay[]> {
-    return db.select().from(tripDays).where(eq(tripDays.tripId, tripId)).orderBy(tripDays.dayNumber);
-  }
-
-  async getTripDayById(id: number): Promise<TripDay | undefined> {
-    const [day] = await db.select().from(tripDays).where(eq(tripDays.id, id));
-    return day;
-  }
-
-  async createTripDay(tripDay: InsertTripDay): Promise<TripDay> {
-    const [newDay] = await db.insert(tripDays).values(tripDay).returning();
-    return newDay;
-  }
-
-  async updateTripDay(id: number, tripDay: InsertTripDay): Promise<TripDay> {
-    const [updatedDay] = await db
-      .update(tripDays)
-      .set(tripDay)
-      .where(eq(tripDays.id, id))
-      .returning();
-    return updatedDay;
-  }
-
-  async deleteTripDay(id: number): Promise<void> {
-    try {
-      // Use raw SQL with transaction
-      await transaction(async (client) => {
-        // Delete associated activities first
-        const deleteActivitiesQuery = 'DELETE FROM activities WHERE trip_day_id = $1';
-        await client.query(deleteActivitiesQuery, [id]);
-        
-        // Then delete the trip day
-        const deleteTripDayQuery = 'DELETE FROM trip_days WHERE id = $1 RETURNING id';
-        const result = await client.query(deleteTripDayQuery, [id]);
-        
-        if (result.rowCount === 0) {
-          throw new Error(`Trip day with ID ${id} not found or could not be deleted`);
-        }
-      });
-      
-      console.log(`Successfully deleted trip day with ID ${id} and all related activities`);
-    } catch (error) {
-      console.error(`Error deleting trip day with ID ${id}:`, error);
-      throw error;
-    }
-  }
-
-  // Activity methods
-  async getActivitiesByTripDayId(tripDayId: number): Promise<Activity[]> {
-    return db.select().from(activities).where(eq(activities.tripDayId, tripDayId));
-  }
-
-  async getActivityById(id: number): Promise<Activity | undefined> {
-    const [activity] = await db.select().from(activities).where(eq(activities.id, id));
-    return activity;
-  }
-
-  async createActivity(activity: InsertActivity): Promise<Activity> {
-    const [newActivity] = await db.insert(activities).values(activity).returning();
-    return newActivity;
-  }
-
-  async updateActivity(id: number, activity: InsertActivity): Promise<Activity> {
-    const [updatedActivity] = await db
-      .update(activities)
-      .set(activity)
-      .where(eq(activities.id, id))
-      .returning();
-    return updatedActivity;
-  }
-
-  async deleteActivity(id: number): Promise<void> {
-    await db.delete(activities).where(eq(activities.id, id));
-  }
-
-  // Booking methods
-  async getBookingsByTripId(tripId: number): Promise<Booking[]> {
-    return db.select().from(bookings).where(eq(bookings.tripId, tripId));
-  }
-
-  async getBookingById(id: number): Promise<Booking | undefined> {
-    const [booking] = await db.select().from(bookings).where(eq(bookings.id, id));
-    return booking;
-  }
-
-  async createBooking(booking: InsertBooking): Promise<Booking> {
-    const [newBooking] = await db.insert(bookings).values(booking).returning();
-    return newBooking;
-  }
-
-  async updateBooking(id: number, booking: InsertBooking): Promise<Booking> {
-    const [updatedBooking] = await db
-      .update(bookings)
-      .set(booking)
-      .where(eq(bookings.id, id))
-      .returning();
-    return updatedBooking;
-  }
-
-  async deleteBooking(id: number): Promise<void> {
-    try {
-      // Use our transaction helper with raw SQL queries
-      await transaction(async (client) => {
-        // First, update any activities that reference this booking
-        const updateActivitiesQuery = `
-          UPDATE activities
-          SET booking_id = NULL
-          WHERE booking_id = $1
-        `;
-        await client.query(updateActivitiesQuery, [id]);
-        
-        // Then delete the booking
-        const deleteBookingQuery = `
-          DELETE FROM bookings
-          WHERE id = $1
-          RETURNING id
-        `;
-        const result = await client.query(deleteBookingQuery, [id]);
-        
-        if (result.rowCount === 0) {
-          throw new Error(`Booking with ID ${id} not found or could not be deleted`);
-        }
-      });
-      
-      console.log(`Successfully deleted booking with ID ${id}`);
-    } catch (error) {
-      console.error(`Error deleting booking with ID ${id}:`, error);
-      throw error;
-    }
-  }
+  // Trip day, Activity, and Booking methods were removed as these tables no longer exist
 
   // Destination methods
   async getAllDestinations(): Promise<Destination[]> {
