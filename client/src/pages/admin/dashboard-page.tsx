@@ -301,7 +301,7 @@ export default function DashboardPage() {
   
   const deleteUserMutation = useMutation({
     mutationFn: async (userId: number) => {
-      const res = await apiRequest("DELETE", `/api/admin/users/${userId}`);
+      const res = await apiRequest(`/api/admin/users/${userId}`, "DELETE");
       return await res.json();
     },
     onSuccess: () => {
