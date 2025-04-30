@@ -35,6 +35,7 @@ function Router() {
       </Route>
       <Route path="/auth" component={AuthPage} />
       <ProtectedRoute path="/trips" component={TripsPage} />
+      <Route path="/trips/create" component={NotFound} />
       <ProtectedRoute path="/trips/:id" component={TripDetailPage} />
       <ProtectedRoute path="/profile" component={ProfilePage} />
       <ProtectedRoute path="/profile/flights" component={ProfileFlightsPage} />
