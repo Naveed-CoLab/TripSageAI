@@ -39,12 +39,12 @@ export const userRelations = relations(users, ({ one, many }) => ({
     fields: [users.id],
     references: [userSettings.userId],
   }),
-  trips: many(trips),
+  myTrips: many(myTrips),
   reviews: many(reviews),
   flightSearches: many(flightSearches),
 }));
 
-export const trips = pgTable("trips", {
+export const myTrips = pgTable("my_trips", {
   id: serial("id").primaryKey(),
   userId: integer("user_id").notNull().references(() => users.id),
   title: text("title").notNull(),
@@ -58,94 +58,17 @@ export const trips = pgTable("trips", {
   updatedAt: timestamp("updated_at").defaultNow().notNull(),
 });
 
-export const insertTripSchema = createInsertSchema(trips).omit({
+export const insertTripSchema = createInsertSchema(myTrips).omit({
   id: true,
   createdAt: true,
   updatedAt: true,
 });
 
-export const tripRelations = relations(trips, ({ one, many }) => ({
+export const myTripRelations = relations(myTrips, ({ one }) => ({
   user: one(users, {
-    fields: [trips.userId],
+    fields: [myTrips.userId],
     references: [users.id],
   }),
-  days: many(tripDays),
-  bookings: many(bookings),
-}));
-
-export const tripDays = pgTable("trip_days", {
-  id: serial("id").primaryKey(),
-  tripId: integer("trip_id").notNull().references(() => trips.id),
-  dayNumber: integer("day_number").notNull(),
-  date: date("date"),
-  title: text("title").notNull(),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-export const insertTripDaySchema = createInsertSchema(tripDays).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const tripDayRelations = relations(tripDays, ({ one, many }) => ({
-  trip: one(trips, {
-    fields: [tripDays.tripId],
-    references: [trips.id],
-  }),
-  activities: many(activities),
-}));
-
-export const activities = pgTable("activities", {
-  id: serial("id").primaryKey(),
-  tripDayId: integer("trip_day_id").notNull().references(() => tripDays.id),
-  title: text("title").notNull(),
-  description: text("description"),
-  time: text("time"),
-  location: text("location"),
-  type: text("type"),
-  bookingId: integer("booking_id").references(() => bookings.id),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-export const insertActivitySchema = createInsertSchema(activities).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const activityRelations = relations(activities, ({ one }) => ({
-  tripDay: one(tripDays, {
-    fields: [activities.tripDayId],
-    references: [tripDays.id],
-  }),
-  booking: one(bookings, {
-    fields: [activities.bookingId],
-    references: [bookings.id],
-  }),
-}));
-
-export const bookings = pgTable("bookings", {
-  id: serial("id").primaryKey(),
-  tripId: integer("trip_id").notNull().references(() => trips.id),
-  type: text("type").notNull(), // "flight", "hotel", "activity"
-  title: text("title").notNull(),
-  provider: text("provider"),
-  price: text("price"),
-  details: json("details"),
-  confirmed: boolean("confirmed").default(false),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
-
-export const insertBookingSchema = createInsertSchema(bookings).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const bookingRelations = relations(bookings, ({ one, many }) => ({
-  trip: one(trips, {
-    fields: [bookings.tripId],
-    references: [trips.id],
-  }),
-  activities: many(activities),
 }));
 
 export const destinations = pgTable("destinations", {
@@ -195,24 +118,7 @@ export const insertAdminLogSchema = createInsertSchema(adminLogs).omit({
   createdAt: true,
 });
 
-// AI prompts for admins to customize
-export const aiPrompts = pgTable("ai_prompts", {
-  id: serial("id").primaryKey(),
-  name: text("name").notNull().unique(),
-  prompt: text("prompt").notNull(),
-  description: text("description"),
-  category: text("category").notNull(), // 'trip_planning', 'destination_info', etc.
-  isActive: boolean("is_active").default(true).notNull(),
-  createdBy: integer("created_by").references(() => users.id),
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  updatedAt: timestamp("updated_at").defaultNow().notNull(),
-});
-
-export const insertAiPromptSchema = createInsertSchema(aiPrompts).omit({
-  id: true,
-  createdAt: true,
-  updatedAt: true,
-});
+// (AI prompts table removed)
 
 // AI Trip Generation table to store user inputs and AI responses
 export const aiTripGenerations = pgTable("ai_trip_generations", {
@@ -228,7 +134,7 @@ export const aiTripGenerations = pgTable("ai_trip_generations", {
   aiResponse: text("ai_response").notNull(), // The raw response from Gemini
   generatedTrip: jsonb("generated_trip"), // Parsed JSON trip data
   saved: boolean("saved").default(false), // Whether user saved this trip
-  savedTripId: integer("saved_trip_id").references(() => trips.id), // Reference to saved trip in trips table
+  savedTripId: integer("saved_trip_id").references(() => myTrips.id), // Reference to saved trip in my_trips table
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
 
@@ -242,9 +148,9 @@ export const aiTripGenerationRelations = relations(aiTripGenerations, ({ one }) 
     fields: [aiTripGenerations.userId],
     references: [users.id],
   }),
-  savedTrip: one(trips, {
+  savedTrip: one(myTrips, {
     fields: [aiTripGenerations.savedTripId],
-    references: [trips.id],
+    references: [myTrips.id],
   }),
 }));
 
@@ -490,29 +396,7 @@ export const hotelBookingRelations = relations(hotelBookings, ({ one }) => ({
   }),
 }));
 
-// AI conversation logs for admin monitoring
-export const aiConversationLogs = pgTable("ai_conversation_logs", {
-  id: serial("id").primaryKey(),
-  userId: integer("user_id").references(() => users.id),
-  userQuery: text("user_query").notNull(),
-  aiResponse: text("ai_response"),
-  queryType: text("query_type"), // 'trip_planning', 'destination_info', 'general', etc.
-  sentimentScore: numeric("sentiment_score"), // Optional sentiment analysis score
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-  metadata: jsonb("metadata"), // Additional metadata about the conversation
-});
-
-export const insertAiConversationLogSchema = createInsertSchema(aiConversationLogs).omit({
-  id: true,
-  createdAt: true,
-});
-
-export const aiConversationLogRelations = relations(aiConversationLogs, ({ one }) => ({
-  user: one(users, {
-    fields: [aiConversationLogs.userId],
-    references: [users.id],
-  }),
-}));
+// AI conversation logs table removed
 
 // User notifications from admins
 export const notifications = pgTable("notifications", {
@@ -599,7 +483,6 @@ export const userWishlistRelation = relations(users, ({ many }) => ({
   flightBookings: many(flightBookings),
   hotelBookings: many(hotelBookings),
   notifications: many(notifications),
-  aiConversationLogs: many(aiConversationLogs),
   searchAnalytics: many(searchAnalytics),
   hotelSearches: many(hotelSearches),
 }));
@@ -607,22 +490,14 @@ export const userWishlistRelation = relations(users, ({ many }) => ({
 // Export type declarations for all tables
 export type User = typeof users.$inferSelect;
 export type InsertUser = z.infer<typeof insertUserSchema>;
-export type Trip = typeof trips.$inferSelect;
+export type Trip = typeof myTrips.$inferSelect;  // Keep Trip type name for backward compatibility
 export type InsertTrip = z.infer<typeof insertTripSchema>;
-export type TripDay = typeof tripDays.$inferSelect;
-export type InsertTripDay = z.infer<typeof insertTripDaySchema>;
-export type Activity = typeof activities.$inferSelect;
-export type InsertActivity = z.infer<typeof insertActivitySchema>;
-export type Booking = typeof bookings.$inferSelect;
-export type InsertBooking = z.infer<typeof insertBookingSchema>;
 export type Destination = typeof destinations.$inferSelect;
 export type InsertDestination = z.infer<typeof insertDestinationSchema>;
 export type Analytics = typeof analytics.$inferSelect;
 export type InsertAnalytics = z.infer<typeof insertAnalyticsSchema>;
 export type AdminLog = typeof adminLogs.$inferSelect;
 export type InsertAdminLog = z.infer<typeof insertAdminLogSchema>;
-export type AiPrompt = typeof aiPrompts.$inferSelect;
-export type InsertAiPrompt = z.infer<typeof insertAiPromptSchema>;
 export type Review = typeof reviews.$inferSelect;
 export type InsertReview = z.infer<typeof insertReviewSchema>;
 export type FlightSearch = typeof flightSearches.$inferSelect;
@@ -637,8 +512,6 @@ export type HotelSearch = typeof hotelSearches.$inferSelect;
 export type InsertHotelSearch = z.infer<typeof insertHotelSearchSchema>;
 export type HotelBooking = typeof hotelBookings.$inferSelect;
 export type InsertHotelBooking = z.infer<typeof insertHotelBookingSchema>;
-export type AiConversationLog = typeof aiConversationLogs.$inferSelect;
-export type InsertAiConversationLog = z.infer<typeof insertAiConversationLogSchema>;
 export type Notification = typeof notifications.$inferSelect;
 export type InsertNotification = z.infer<typeof insertNotificationSchema>;
 export type BookingApproval = typeof bookingApprovals.$inferSelect;

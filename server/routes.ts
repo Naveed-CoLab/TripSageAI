@@ -7,11 +7,8 @@ import { searchFlights, searchAirports, getAirlineInfo } from "./services/amadeu
 import { hotelService } from "./services/hotels";
 import { pool, query, transaction } from "./db";
 import { 
-  trips, 
+  myTrips, 
   insertTripSchema, 
-  insertTripDaySchema, 
-  insertActivitySchema, 
-  insertBookingSchema,
   insertReviewSchema,
   insertUserSettingsSchema
 } from "@shared/schema";
@@ -137,22 +134,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(403).json({ message: "Not authorized to view this trip" });
       }
       
-      const tripDays = await storage.getTripDaysByTripId(tripId);
-      const bookings = await storage.getBookingsByTripId(tripId);
-      
-      // Get activities for each day
-      const daysWithActivities = await Promise.all(
-        tripDays.map(async (day) => {
-          const activities = await storage.getActivitiesByTripDayId(day.id);
-          return { ...day, activities };
-        })
-      );
-      
-      res.json({
-        ...trip,
-        days: daysWithActivities,
-        bookings
-      });
+      res.json(trip);
     } catch (error) {
       res.status(500).json({ message: "Failed to fetch trip details" });
     }
@@ -229,104 +211,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Trip days routes
-  app.post("/api/trips/:tripId/days", async (req: Request, res: Response) => {
-    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
-    
-    try {
-      const tripId = parseInt(req.params.tripId);
-      const trip = await storage.getTripById(tripId);
-      
-      if (!trip) {
-        return res.status(404).json({ message: "Trip not found" });
-      }
-      
-      if (trip.userId !== req.user.id) {
-        return res.status(403).json({ message: "Not authorized to modify this trip" });
-      }
-      
-      const dayData = insertTripDaySchema.parse({
-        ...req.body,
-        tripId
-      });
-      
-      const newDay = await storage.createTripDay(dayData);
-      res.status(201).json(newDay);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid day data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to create trip day" });
-    }
-  });
-
-  // Activities routes
-  app.post("/api/days/:dayId/activities", async (req: Request, res: Response) => {
-    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
-    
-    try {
-      const dayId = parseInt(req.params.dayId);
-      const day = await storage.getTripDayById(dayId);
-      
-      if (!day) {
-        return res.status(404).json({ message: "Trip day not found" });
-      }
-      
-      const trip = await storage.getTripById(day.tripId);
-      
-      if (!trip) {
-        return res.status(404).json({ message: "Associated trip not found" });
-      }
-      
-      if (trip.userId !== req.user.id) {
-        return res.status(403).json({ message: "Not authorized to modify this trip" });
-      }
-      
-      const activityData = insertActivitySchema.parse({
-        ...req.body,
-        tripDayId: dayId
-      });
-      
-      const newActivity = await storage.createActivity(activityData);
-      res.status(201).json(newActivity);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid activity data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to create activity" });
-    }
-  });
-
-  // Bookings routes
-  app.post("/api/trips/:tripId/bookings", async (req: Request, res: Response) => {
-    if (!req.isAuthenticated()) return res.status(401).send("Unauthorized");
-    
-    try {
-      const tripId = parseInt(req.params.tripId);
-      const trip = await storage.getTripById(tripId);
-      
-      if (!trip) {
-        return res.status(404).json({ message: "Trip not found" });
-      }
-      
-      if (trip.userId !== req.user.id) {
-        return res.status(403).json({ message: "Not authorized to modify this trip" });
-      }
-      
-      const bookingData = insertBookingSchema.parse({
-        ...req.body,
-        tripId
-      });
-      
-      const newBooking = await storage.createBooking(bookingData);
-      res.status(201).json(newBooking);
-    } catch (error) {
-      if (error instanceof z.ZodError) {
-        return res.status(400).json({ message: "Invalid booking data", errors: error.errors });
-      }
-      res.status(500).json({ message: "Failed to create booking" });
-    }
-  });
+  // Trip days, activities, and bookings routes removed as these tables no longer exist
 
   // Destinations
   app.get("/api/destinations", async (req: Request, res: Response) => {
@@ -498,11 +383,11 @@ export async function registerRoutes(app: Express): Promise<Server> {
       // Begin transaction
       await query('BEGIN');
       
-      // Create the trip
+      // Create the trip in my_trips table with data from the AI generation
       const tripResult = await query(
-        `INSERT INTO trips
-         (user_id, title, destination, start_date, end_date, preferences, status)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `INSERT INTO my_trips
+         (user_id, title, destination, start_date, end_date, preferences, status, itinerary_data)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING id`,
         [
           userId,
@@ -511,69 +396,12 @@ export async function registerRoutes(app: Express): Promise<Server> {
           generation.start_date,
           generation.end_date,
           generation.interests,
-          'planned'
+          'planned',
+          JSON.stringify(generatedTrip) // Store the full itinerary as JSON
         ]
       );
       
       const tripId = tripResult.rows[0].id;
-      
-      // Create trip days and activities
-      if (generatedTrip.days && Array.isArray(generatedTrip.days)) {
-        for (const day of generatedTrip.days) {
-          const dayResult = await query(
-            `INSERT INTO trip_days
-             (trip_id, day_number, title, date)
-             VALUES ($1, $2, $3, $4)
-             RETURNING id`,
-            [
-              tripId,
-              day.dayNumber,
-              day.title,
-              day.date || null
-            ]
-          );
-          
-          const dayId = dayResult.rows[0].id;
-          
-          // Create activities for this day
-          if (day.activities && Array.isArray(day.activities)) {
-            for (const activity of day.activities) {
-              await query(
-                `INSERT INTO activities
-                 (trip_day_id, title, description, time, location, type)
-                 VALUES ($1, $2, $3, $4, $5, $6)`,
-                [
-                  dayId,
-                  activity.title,
-                  activity.description || null,
-                  activity.time || null,
-                  activity.location || null,
-                  activity.type || null
-                ]
-              );
-            }
-          }
-        }
-      }
-      
-      // Create bookings
-      if (generatedTrip.bookings && Array.isArray(generatedTrip.bookings)) {
-        for (const booking of generatedTrip.bookings) {
-          await query(
-            `INSERT INTO bookings
-             (trip_id, type, title, provider, price, details)
-             VALUES ($1, $2, $3, $4, $5, $6)`,
-            [
-              tripId,
-              booking.type,
-              booking.title,
-              booking.provider || null,
-              booking.price || null,
-              booking.details ? JSON.stringify(booking.details) : null
-            ]
-          );
-        }
-      }
       
       // Update the AI trip generation to mark it as saved
       await query(

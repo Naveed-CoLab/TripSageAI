@@ -1,9 +1,6 @@
 import { 
   users, 
-  trips, 
-  tripDays, 
-  activities, 
-  bookings,
+  myTrips,
   destinations,
   reviews,
   flightSearches,
@@ -15,14 +12,8 @@ import {
   adminLogs,
   type User, 
   type InsertUser, 
-  type Trip, 
+  type Trip,  // Still using Trip type for backward compatibility
   type InsertTrip,
-  type TripDay,
-  type InsertTripDay,
-  type Activity,
-  type InsertActivity,
-  type Booking,
-  type InsertBooking,
   type Destination,
   type InsertDestination,
   type Review,
@@ -306,7 +297,7 @@ export class DatabaseStorage implements IStorage {
   }
   
   async getTripCount(): Promise<number> {
-    const result = await db.select({ count: count() }).from(trips);
+    const result = await db.select({ count: count() }).from(myTrips);
     return result[0].count;
   }
   
@@ -316,8 +307,8 @@ export class DatabaseStorage implements IStorage {
     
     const result = await db
       .select({ count: count() })
-      .from(trips)
-      .where(gte(trips.createdAt, today));
+      .from(myTrips)
+      .where(gte(myTrips.createdAt, today));
     
     return result[0].count;
   }
@@ -425,7 +416,6 @@ export class DatabaseStorage implements IStorage {
       await transaction(async (client) => {
         // Delete user-related data first (respecting foreign key constraints)
         await client.query('DELETE FROM notifications WHERE user_id = $1', [userId]);
-        await client.query('DELETE FROM ai_conversation_logs WHERE user_id = $1', [userId]);
         await client.query('DELETE FROM search_analytics WHERE user_id = $1', [userId]);
         await client.query('DELETE FROM wishlist_items WHERE user_id = $1', [userId]);
         await client.query('DELETE FROM user_settings WHERE user_id = $1', [userId]);
@@ -434,22 +424,8 @@ export class DatabaseStorage implements IStorage {
         await client.query('DELETE FROM hotel_searches WHERE user_id = $1', [userId]);
         await client.query('DELETE FROM hotel_bookings WHERE user_id = $1', [userId]);
         
-        // Delete trips and related data
-        const tripResult = await client.query('SELECT id FROM trips WHERE user_id = $1', [userId]);
-        for (const trip of tripResult.rows) {
-          const tripId = trip.id;
-          
-          // Get all trip days to delete related activities
-          const tripDaysResult = await client.query('SELECT id FROM trip_days WHERE trip_id = $1', [tripId]);
-          for (const day of tripDaysResult.rows) {
-            await client.query('DELETE FROM activities WHERE trip_day_id = $1', [day.id]);
-          }
-          
-          await client.query('DELETE FROM trip_days WHERE trip_id = $1', [tripId]);
-          await client.query('DELETE FROM bookings WHERE trip_id = $1', [tripId]);
-        }
-        
-        await client.query('DELETE FROM trips WHERE user_id = $1', [userId]);
+        // Delete trips (now my_trips)
+        await client.query('DELETE FROM my_trips WHERE user_id = $1', [userId]);
         await client.query('DELETE FROM reviews WHERE user_id = $1', [userId]);
         
         // Finally delete the user
@@ -465,68 +441,7 @@ export class DatabaseStorage implements IStorage {
     }
   }
   
-  // AI Conversation Log Methods
-  async createAiConversationLog(log: any): Promise<any> {
-    try {
-      const SQL = `
-        INSERT INTO ai_conversation_logs 
-        (user_id, user_query, ai_response, query_type, sentiment_score, metadata)
-        VALUES ($1, $2, $3, $4, $5, $6)
-        RETURNING *
-      `;
-      
-      const values = [
-        log.userId || null,
-        log.userQuery,
-        log.aiResponse || null,
-        log.queryType || null,
-        log.sentimentScore || null,
-        log.metadata || null
-      ];
-      
-      const result = await query(SQL, values);
-      return result.rows[0];
-    } catch (error) {
-      console.error('Error creating AI conversation log:', error);
-      throw error;
-    }
-  }
-  
-  async getAiConversationLogs(limit: number = 100): Promise<any[]> {
-    try {
-      const SQL = `
-        SELECT acl.*, u.username
-        FROM ai_conversation_logs acl
-        LEFT JOIN users u ON acl.user_id = u.id
-        ORDER BY acl.created_at DESC
-        LIMIT $1
-      `;
-      
-      const result = await query(SQL, [limit]);
-      return result.rows;
-    } catch (error) {
-      console.error('Error getting AI conversation logs:', error);
-      throw error;
-    }
-  }
-  
-  async getPopularAiQueries(limit: number = 10): Promise<any[]> {
-    try {
-      const SQL = `
-        SELECT user_query, COUNT(*) as count, MAX(created_at) as last_asked
-        FROM ai_conversation_logs
-        GROUP BY user_query
-        ORDER BY count DESC
-        LIMIT $1
-      `;
-      
-      const result = await query(SQL, [limit]);
-      return result.rows;
-    } catch (error) {
-      console.error('Error getting popular AI queries:', error);
-      throw error;
-    }
-  }
+  // AI Conversation Log Methods removed
   
   // Notification Methods
   async createNotification(notification: any): Promise<any> {
@@ -929,24 +844,24 @@ export class DatabaseStorage implements IStorage {
 
   // Trip methods
   async getTripsByUserId(userId: number): Promise<Trip[]> {
-    return db.select().from(trips).where(eq(trips.userId, userId)).orderBy(desc(trips.createdAt));
+    return db.select().from(myTrips).where(eq(myTrips.userId, userId)).orderBy(desc(myTrips.createdAt));
   }
 
   async getTripById(id: number): Promise<Trip | undefined> {
-    const [trip] = await db.select().from(trips).where(eq(trips.id, id));
+    const [trip] = await db.select().from(myTrips).where(eq(myTrips.id, id));
     return trip;
   }
 
   async createTrip(trip: InsertTrip): Promise<Trip> {
-    const [newTrip] = await db.insert(trips).values(trip).returning();
+    const [newTrip] = await db.insert(myTrips).values(trip).returning();
     return newTrip;
   }
 
   async updateTrip(id: number, trip: InsertTrip): Promise<Trip> {
     const [updatedTrip] = await db
-      .update(trips)
+      .update(myTrips)
       .set({ ...trip, updatedAt: new Date() })
-      .where(eq(trips.id, id))
+      .where(eq(myTrips.id, id))
       .returning();
     return updatedTrip;
   }
