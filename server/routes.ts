@@ -3327,6 +3327,110 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // MAP SERVICES ENDPOINTS USING RAPIDAPI
+  app.get("/api/maps/geocode", async (req: Request, res: Response) => {
+    const { location } = req.query;
+    if (!location) {
+      return res.status(400).json({ error: "Location is required" });
+    }
+
+    try {
+      const coordinates = await mapsService.geocodeLocation(location as string);
+      
+      if (coordinates) {
+        res.json({ 
+          coordinates,
+          success: true
+        });
+      } else {
+        res.json({
+          mapUrl: mapsService.getEmbedMapUrl(location as string),
+          embedUrl: mapsService.getEmbedMapUrl(location as string),
+          success: false,
+          message: "Could not geocode location, falling back to basic map"
+        });
+      }
+    } catch (error) {
+      console.error("Error in geocode:", error);
+      res.status(500).json({ error: "Failed to geocode location" });
+    }
+  });
+  
+  app.get("/api/maps/static", async (req: Request, res: Response) => {
+    const { location, zoom, width, height } = req.query;
+    if (!location) {
+      return res.status(400).json({ error: "Location is required" });
+    }
+    
+    try {
+      const mapUrl = await mapsService.getStaticMapUrl(
+        location as string, 
+        zoom ? parseInt(zoom as string) : 13,
+        width ? parseInt(width as string) : 600,
+        height ? parseInt(height as string) : 400
+      );
+      
+      res.json({ mapUrl });
+    } catch (error) {
+      console.error("Error getting static map:", error);
+      res.status(500).json({ error: "Failed to generate static map" });
+    }
+  });
+  
+  app.get("/api/maps/directions", async (req: Request, res: Response) => {
+    const { origin, destination, mode } = req.query;
+    if (!origin || !destination) {
+      return res.status(400).json({ error: "Origin and destination are required" });
+    }
+    
+    try {
+      const directions = await mapsService.getDirections(
+        origin as string,
+        destination as string,
+        mode as string || 'driving'
+      );
+      
+      res.json({ directions });
+    } catch (error) {
+      console.error("Error getting directions:", error);
+      res.status(500).json({ error: "Failed to get directions" });
+    }
+  });
+  
+  app.get("/api/maps/nearby", async (req: Request, res: Response) => {
+    const { location, type, radius } = req.query;
+    if (!location || !type) {
+      return res.status(400).json({ error: "Location and type are required" });
+    }
+    
+    try {
+      const places = await mapsService.getNearbyPlaces(
+        location as string,
+        type as string,
+        radius ? parseInt(radius as string) : 5000
+      );
+      
+      res.json({ places });
+    } catch (error) {
+      console.error("Error getting nearby places:", error);
+      res.status(500).json({ error: "Failed to get nearby places" });
+    }
+  });
+  
+  app.get("/api/maps/embed", (req: Request, res: Response) => {
+    const { location, zoom } = req.query;
+    if (!location) {
+      return res.status(400).json({ error: "Location is required" });
+    }
+    
+    const embedUrl = mapsService.getEmbedMapUrl(
+      location as string,
+      zoom ? parseInt(zoom as string) : 13
+    );
+    
+    res.json({ embedUrl });
+  });
+
   const httpServer = createServer(app);
 
   return httpServer;

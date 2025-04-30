@@ -1,137 +1,188 @@
 import axios from 'axios';
 
-// Service for Google Maps API via RapidAPI
+/**
+ * Maps service using RapidAPI Google Maps APIs
+ * Provides geocoding, maps, and place data
+ */
 class MapsService {
   private rapidApiKey: string;
-  private baseUrl: string = 'https://google-maps28.p.rapidapi.com';
-
+  private geocodingHost = 'google-maps-geocoding.p.rapidapi.com';
+  private placesApiHost = 'maps-data-by-google.p.rapidapi.com';
+  private directionsApiHost = 'route-and-directions.p.rapidapi.com';
+  
   constructor() {
     this.rapidApiKey = process.env.RAPIDAPI_KEY || '';
     
     if (!this.rapidApiKey) {
-      console.warn('WARNING: RAPIDAPI_KEY is not set. Map features will be limited.');
+      console.warn('Warning: RAPIDAPI_KEY environment variable is not set. Maps functionality will be limited.');
     }
   }
-
-  // Generate a static map URL for a location
-  async getStaticMapUrl(location: string, zoom: number = 13, width: number = 600, height: number = 400): Promise<string> {
-    if (!this.rapidApiKey) {
-      // Fallback to a simple Google Maps embed URL if API key is not available
-      return `https://maps.google.com/maps?q=${encodeURIComponent(location)}&t=&z=${zoom}&ie=UTF8&iwloc=&output=embed`;
-    }
-
-    try {
-      // Get coordinates for the location using geocoding
-      const coordinates = await this.geocodeLocation(location);
-      if (!coordinates) {
-        throw new Error('Could not geocode location');
-      }
-
-      // Construct a static map URL using RapidAPI
-      return `${this.baseUrl}/staticmap?center=${coordinates.lat},${coordinates.lng}&zoom=${zoom}&size=${width}x${height}&key=${this.rapidApiKey}`;
-    } catch (error) {
-      console.error('Error generating static map URL:', error);
-      // Fallback to a simple Google Maps embed URL
-      return `https://maps.google.com/maps?q=${encodeURIComponent(location)}&t=&z=${zoom}&ie=UTF8&iwloc=&output=embed`;
-    }
-  }
-
-  // Geocode a location string to get coordinates
+  
+  /**
+   * Geocode a location string to coordinates
+   * @param location Location string to geocode
+   * @returns Location coordinates or null if geocoding fails
+   */
   async geocodeLocation(location: string): Promise<{ lat: number; lng: number } | null> {
     if (!this.rapidApiKey) {
+      console.warn('RAPIDAPI_KEY not set. Falling back to basic map URL.');
       return null;
     }
-
+    
     try {
-      const response = await axios.get(`${this.baseUrl}/geocode/json`, {
+      const options = {
+        method: 'GET',
+        url: 'https://google-maps-geocoding.p.rapidapi.com/geocode/json',
         params: {
           address: location,
           language: 'en'
         },
         headers: {
           'X-RapidAPI-Key': this.rapidApiKey,
-          'X-RapidAPI-Host': 'google-maps28.p.rapidapi.com'
+          'X-RapidAPI-Host': this.geocodingHost
         }
-      });
+      };
 
-      if (response.data.status === 'OK' && response.data.results && response.data.results.length > 0) {
-        const result = response.data.results[0];
-        return {
-          lat: result.geometry.location.lat,
-          lng: result.geometry.location.lng
-        };
+      const response = await axios.request(options);
+      
+      if (response.data && 
+          response.data.results && 
+          response.data.results.length > 0 && 
+          response.data.results[0].geometry &&
+          response.data.results[0].geometry.location) {
+        
+        return response.data.results[0].geometry.location;
       }
+      
       return null;
     } catch (error) {
       console.error('Error geocoding location:', error);
       return null;
     }
   }
-
-  // Get a Google Maps embed URL for a location
-  getEmbedMapUrl(location: string, zoom: number = 13): string {
-    // This creates a simple embed URL that doesn't require an API key
-    return `https://maps.google.com/maps?q=${encodeURIComponent(location)}&t=&z=${zoom}&ie=UTF8&iwloc=&output=embed`;
+  
+  /**
+   * Get a static map image URL
+   * @param location Location to show on the map
+   * @param zoom Zoom level (1-20)
+   * @param width Image width in pixels
+   * @param height Image height in pixels
+   * @returns URL to a static map image or fallback URL
+   */
+  async getStaticMapUrl(location: string, zoom = 13, width = 600, height = 400): Promise<string> {
+    try {
+      const coordinates = await this.geocodeLocation(location);
+      
+      if (coordinates) {
+        return `https://maps.googleapis.com/maps/api/staticmap?center=${coordinates.lat},${coordinates.lng}&zoom=${zoom}&size=${width}x${height}&key=YOUR_API_KEY`;
+      }
+      
+      // If geocoding fails, return a fallback URL
+      return this.getEmbedMapUrl(location);
+    } catch (error) {
+      console.error('Error getting static map:', error);
+      return this.getEmbedMapUrl(location);
+    }
   }
-
-  // Get directions between two locations
-  async getDirections(origin: string, destination: string, mode: string = 'driving'): Promise<any> {
+  
+  /**
+   * Get directions between two locations
+   * @param origin Starting location
+   * @param destination Ending location
+   * @param mode Travel mode (driving, walking, bicycling, transit)
+   * @returns Directions data or null if request fails
+   */
+  async getDirections(origin: string, destination: string, mode = 'driving'): Promise<any> {
     if (!this.rapidApiKey) {
+      console.warn('RAPIDAPI_KEY not set. Cannot get directions.');
       return null;
     }
-
+    
     try {
-      const response = await axios.get(`${this.baseUrl}/directions/json`, {
+      // First geocode origin and destination
+      const originCoords = await this.geocodeLocation(origin);
+      const destCoords = await this.geocodeLocation(destination);
+      
+      if (!originCoords || !destCoords) {
+        console.warn('Could not geocode one of the locations');
+        return null;
+      }
+      
+      const options = {
+        method: 'GET',
+        url: 'https://route-and-directions.p.rapidapi.com/v1/routing',
         params: {
-          origin,
-          destination,
-          mode,
-          language: 'en'
+          'waypoints': `${originCoords.lat},${originCoords.lng}|${destCoords.lat},${destCoords.lng}`,
+          'mode': mode
         },
         headers: {
           'X-RapidAPI-Key': this.rapidApiKey,
-          'X-RapidAPI-Host': 'google-maps28.p.rapidapi.com'
+          'X-RapidAPI-Host': this.directionsApiHost
         }
-      });
+      };
 
+      const response = await axios.request(options);
       return response.data;
     } catch (error) {
       console.error('Error getting directions:', error);
       return null;
     }
   }
-
-  // Get places near a location
-  async getNearbyPlaces(location: string, type: string, radius: number = 5000): Promise<any> {
+  
+  /**
+   * Get nearby places around a location
+   * @param location Center location
+   * @param type Type of place (restaurant, hotel, museum, etc)
+   * @param radius Search radius in meters
+   * @returns Array of nearby places or null if request fails
+   */
+  async getNearbyPlaces(location: string, type: string, radius = 5000): Promise<any> {
     if (!this.rapidApiKey) {
+      console.warn('RAPIDAPI_KEY not set. Cannot get nearby places.');
       return null;
     }
-
+    
     try {
-      // First geocode the location to get coordinates
+      // First geocode the location
       const coordinates = await this.geocodeLocation(location);
+      
       if (!coordinates) {
-        throw new Error('Could not geocode location');
+        console.warn('Could not geocode location');
+        return null;
       }
-
-      const response = await axios.get(`${this.baseUrl}/place/nearbysearch/json`, {
+      
+      const options = {
+        method: 'GET',
+        url: 'https://maps-data-by-google.p.rapidapi.com/places/textsearch',
         params: {
-          location: `${coordinates.lat},${coordinates.lng}`,
-          radius,
-          type,
-          language: 'en'
+          'query': type,
+          'location': `${coordinates.lat},${coordinates.lng}`,
+          'radius': radius.toString(),
+          'language': 'en'
         },
         headers: {
           'X-RapidAPI-Key': this.rapidApiKey,
-          'X-RapidAPI-Host': 'google-maps28.p.rapidapi.com'
+          'X-RapidAPI-Host': this.placesApiHost
         }
-      });
+      };
 
-      return response.data;
+      const response = await axios.request(options);
+      return response.data.results;
     } catch (error) {
       console.error('Error getting nearby places:', error);
       return null;
     }
+  }
+  
+  /**
+   * Get an embed map URL for a location
+   * This is a synchronous method used as a fallback
+   * @param location Location to display
+   * @param zoom Zoom level (1-20)
+   * @returns Google Maps embed URL
+   */
+  getEmbedMapUrl(location: string, zoom = 13): string {
+    return `https://maps.google.com/maps?q=${encodeURIComponent(location)}&t=&z=${zoom}&ie=UTF8&iwloc=&output=embed`;
   }
 }
 

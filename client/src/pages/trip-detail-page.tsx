@@ -175,10 +175,30 @@ export default function TripDetailPage() {
     enabled: !isNaN(tripId),
   });
 
-  // Initialize Google Maps for the trip destination
+  // Initialize Google Maps for the trip destination using our Maps API
   useEffect(() => {
     if (trip?.destination) {
-      setMapUrl(getGoogleMapsUrl(trip.destination));
+      // Use our new Maps API to get the map URL
+      const getMapUrl = async () => {
+        try {
+          // First try to use our map service to get an embed URL
+          const response = await fetch(`/api/maps/embed?location=${encodeURIComponent(trip.destination)}`);
+          const data = await response.json();
+          
+          if (data.embedUrl) {
+            setMapUrl(data.embedUrl);
+          } else {
+            // If our service fails, fall back to the basic URL
+            setMapUrl(getGoogleMapsUrl(trip.destination));
+          }
+        } catch (error) {
+          console.error("Error fetching map URL:", error);
+          // Fallback to basic URL in case of errors
+          setMapUrl(getGoogleMapsUrl(trip.destination));
+        }
+      };
+      
+      getMapUrl();
     }
   }, [trip?.destination]);
   
@@ -463,7 +483,7 @@ export default function TripDetailPage() {
                   <div className="h-48 relative bg-gray-100">
                     <iframe 
                       ref={mapRef}
-                      src={`https://www.google.com/maps/embed/v1/place?key=AIzaSyC2HIphoVK3t33hEs1ZW1vPf8WTLNXXm-U&q=${encodeURIComponent(trip.destination)}`}
+                      src={mapUrl || `https://maps.google.com/maps?q=${encodeURIComponent(trip.destination)}&t=&z=13&ie=UTF8&iwloc=&output=embed`}
                       className="w-full h-full border-0"
                       allowFullScreen
                       loading="lazy"
@@ -479,7 +499,22 @@ export default function TripDetailPage() {
                       variant="outline" 
                       size="sm" 
                       className="w-full text-sm"
-                      onClick={() => window.open(getGoogleMapsUrl(trip.destination), '_blank')}
+                      onClick={() => {
+                        // Get a Google Maps URL from our maps service
+                        fetch(`/api/maps/embed?location=${encodeURIComponent(trip.destination)}&zoom=14`)
+                          .then(res => res.json())
+                          .then(data => {
+                            if (data.embedUrl) {
+                              window.open(data.embedUrl, '_blank');
+                            } else {
+                              window.open(getGoogleMapsUrl(trip.destination), '_blank');
+                            }
+                          })
+                          .catch(() => {
+                            // Fallback to the basic URL
+                            window.open(getGoogleMapsUrl(trip.destination), '_blank');
+                          });
+                      }}
                     >
                       <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
                       Open in Google Maps
