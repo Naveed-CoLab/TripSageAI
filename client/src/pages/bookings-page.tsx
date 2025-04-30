@@ -1,23 +1,44 @@
-import { useState, useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/use-auth";
-import { format } from "date-fns";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription, CardFooter } from "@/components/ui/card";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Badge } from "@/components/ui/badge";
+import { Link, useLocation } from "wouter";
+import {
+  Tabs,
+  TabsContent,
+  TabsList,
+  TabsTrigger,
+} from "@/components/ui/tabs";
 import { Button } from "@/components/ui/button";
-import { 
-  Loader2, Plane, Calendar, Clock, MapPin, Users, CreditCard, CheckCircle, 
-  AlertCircle, HelpCircle, Building, Bookmark, BedDouble, Home,
-  Check, X
-} from "lucide-react";
-import { Link } from "wouter";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
+import { getQueryFn } from "@/lib/queryClient";
 import MainLayout from "@/components/layout/main-layout";
+import {
+  Plane,
+  BedDouble,
+  Calendar,
+  Clock,
+  MapPin,
+  Users,
+  CreditCard,
+  CheckCircle,
+  Bookmark,
+  HelpCircle,
+  Building,
+  Check,
+  X,
+  AlertCircle,
+  Clock8,
+} from "lucide-react";
 
-type FlightBooking = {
+interface FlightBooking {
   id: number;
-  userId: number;
   flightNumber: string;
   airline: string;
   departureAirport: string;
@@ -27,276 +48,167 @@ type FlightBooking = {
   arrivalCode: string;
   arrivalTime: string;
   tripType: string;
-  returnFlightNumber: string | null;
-  returnAirline: string | null;
-  returnDepartureTime: string | null;
-  returnArrivalTime: string | null;
+  returnFlightNumber?: string;
+  returnAirline?: string;
+  returnDepartureTime?: string;
+  returnArrivalTime?: string;
   bookingReference: string;
-  price: number;
+  price: string;
   currency: string;
   status: string;
   cabinClass: string;
   passengerName: string;
   passengerEmail: string;
-  passengerPhone: string;
-  flightDetails: any;
-  createdAt: string;
-};
+  passengerPhone?: string;
+  flightDetails?: any;
+}
 
-type HotelBooking = {
+interface HotelBooking {
   id: number;
-  userId: number;
   hotelName: string;
-  hotelAddress: string;
   hotelCity: string;
   hotelCountry: string;
-  hotelStars: number;
+  hotelAddress?: string;
+  hotelStars?: number;
   roomType: string;
   checkInDate: string;
   checkOutDate: string;
-  guestCount: number;
   nightsCount: number;
-  bookingReference: string;
-  price: number;
-  currency: string;
-  status: string;
+  guestCount: number;
   guestName: string;
   guestEmail: string;
-  guestPhone: string;
-  hotelDetails: any;
-  createdAt: string;
-};
+  guestPhone?: string;
+  bookingReference: string;
+  price: string;
+  currency: string;
+  status: string;
+  specialRequests?: string;
+}
 
 export default function BookingsPage() {
-  const { user } = useAuth();
   const { toast } = useToast();
-  const [tab, setTab] = useState("all");
+  const [tab, setTab] = useState<string>("all");
   const [bookingType, setBookingType] = useState<"all" | "flights" | "hotels">("all");
-  
-  const { data: flightBookings, isLoading: isLoadingFlights, error: flightError } = useQuery<FlightBooking[]>({
+  const [, navigate] = useLocation();
+
+  const { data: flightBookings, isLoading: isLoadingFlightBookings } = useQuery<FlightBooking[]>({
     queryKey: ["/api/flight-bookings"],
-    enabled: !!user
+    queryFn: getQueryFn({ baseURL: "" }),
   });
-  
-  // Extract API response and convert to proper format
-  const { data: hotelBookingsRaw, isLoading: isLoadingHotels, error: hotelError } = useQuery<any[]>({
+
+  const { data: hotelBookings, isLoading: isLoadingHotelBookings } = useQuery<HotelBooking[]>({
     queryKey: ["/api/hotel-bookings"],
-    enabled: !!user
+    queryFn: getQueryFn({ baseURL: "" }),
   });
+
+  const hasFlightBookings = flightBookings && flightBookings.length > 0;
+  const hasHotelBookings = hotelBookings && hotelBookings.length > 0;
+  const hasNoBookings = !isLoadingFlightBookings && !isLoadingHotelBookings && !hasFlightBookings && !hasHotelBookings;
+
+  const filteredFlightBookings = React.useMemo(() => {
+    if (!flightBookings) return [];
+    if (tab === "all") return flightBookings;
+    
+    return flightBookings.filter(booking => 
+      booking.status.toUpperCase() === tab.toUpperCase()
+    );
+  }, [flightBookings, tab]);
+
+  const filteredHotelBookings = React.useMemo(() => {
+    if (!hotelBookings) return [];
+    if (tab === "all") return hotelBookings;
+    
+    return hotelBookings.filter(booking => 
+      booking.status.toUpperCase() === tab.toUpperCase()
+    );
+  }, [hotelBookings, tab]);
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      weekday: 'short',
+      month: 'short', 
+      day: 'numeric', 
+      year: 'numeric' 
+    });
+  };
+
+  const formatTime = (dateString: string) => {
+    if (!dateString) return '';
+    const date = new Date(dateString);
+    return date.toLocaleTimeString('en-US', { 
+      hour: '2-digit', 
+      minute: '2-digit',
+      hour12: true 
+    });
+  };
+
+  const formatDuration = (departureTime: string, arrivalTime: string) => {
+    if (!departureTime || !arrivalTime) return '';
+    
+    const departure = new Date(departureTime);
+    const arrival = new Date(arrivalTime);
+    
+    const diffMs = Math.abs(arrival.getTime() - departure.getTime());
+    const diffHrs = Math.floor(diffMs / (1000 * 60 * 60));
+    const diffMins = Math.floor((diffMs % (1000 * 60 * 60)) / (1000 * 60));
+    
+    return `${diffHrs}h ${diffMins}m`;
+  };
   
-  // Map snake_case from API to camelCase for our component
-  const hotelBookings = useMemo(() => {
-    if (!hotelBookingsRaw) return undefined;
+  const nightsStay = (checkInDate: string, checkOutDate: string) => {
+    if (!checkInDate || !checkOutDate) return '';
     
-    return hotelBookingsRaw.map(booking => ({
-      id: booking.id,
-      userId: booking.user_id,
-      hotelName: booking.hotel_name,
-      hotelAddress: booking.hotel_address,
-      hotelCity: booking.hotel_city,
-      hotelCountry: booking.hotel_country,
-      hotelStars: booking.hotel_rating || 0,
-      roomType: booking.room_type,
-      checkInDate: booking.check_in_date,
-      checkOutDate: booking.check_out_date,
-      guestCount: booking.guests,
-      nightsCount: booking.rooms,
-      bookingReference: booking.booking_reference,
-      price: booking.price,
-      currency: booking.currency,
-      status: booking.status,
-      guestName: booking.guest_name,
-      guestEmail: booking.guest_email,
-      guestPhone: booking.guest_phone,
-      hotelDetails: booking.hotel_image ? { 
-        imageUrl: booking.hotel_image 
-      } : null,
-      createdAt: booking.created_at
-    }));
-  }, [hotelBookingsRaw]);
-
-  // Handle combined loading state
-  if (isLoadingFlights || isLoadingHotels) {
-    return (
-      <MainLayout>
-        <div className="flex items-center justify-center min-h-[calc(100vh-64px)]">
-          <Loader2 className="h-10 w-10 animate-spin text-primary-500" />
-        </div>
-      </MainLayout>
-    );
-  }
-
-  // Handle error states
-  if (flightError && hotelError) {
-    return (
-      <MainLayout>
-        <div className="flex flex-col items-center justify-center min-h-[calc(100vh-64px)] p-4">
-          <AlertCircle className="h-12 w-12 text-red-500 mb-4" />
-          <h2 className="text-xl font-bold text-gray-900 mb-2">Unable to load bookings</h2>
-          <p className="text-gray-600 mb-4 text-center max-w-md">
-            We encountered an error while loading your bookings. Please try again later.
-          </p>
-          <Button 
-            onClick={() => window.location.reload()}
-            className="bg-primary-600 hover:bg-primary-700"
-          >
-            Retry
-          </Button>
-        </div>
-      </MainLayout>
-    );
-  }
-
-  // Get all bookings or filter by status
-  const filteredFlightBookings = tab === "all" 
-    ? flightBookings 
-    : flightBookings?.filter(booking => booking.status.toLowerCase() === tab.toLowerCase());
+    const checkIn = new Date(checkInDate);
+    const checkOut = new Date(checkOutDate);
     
-  const filteredHotelBookings = tab === "all" 
-    ? hotelBookings 
-    : hotelBookings?.filter(booking => booking.status.toLowerCase() === tab.toLowerCase());
+    const diffTime = Math.abs(checkOut.getTime() - checkIn.getTime());
+    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     
-  // Combine all bookings when type is "all"
-  const hasFlightBookings = filteredFlightBookings && filteredFlightBookings.length > 0;
-  const hasHotelBookings = filteredHotelBookings && filteredHotelBookings.length > 0;
-  const hasNoBookings = (!hasFlightBookings && !hasHotelBookings);
+    return `${diffDays} ${diffDays === 1 ? 'night' : 'nights'}`;
+  };
 
   const getStatusBadge = (status: string) => {
-    switch (status.toUpperCase()) {
-      case "CONFIRMED":
-        return <Badge className="bg-green-100 text-green-800 hover:bg-green-200">Confirmed</Badge>;
-      case "PENDING":
-        return <Badge className="bg-yellow-100 text-yellow-800 hover:bg-yellow-200">Pending</Badge>;
-      case "CANCELLED":
-        return <Badge className="bg-red-100 text-red-800 hover:bg-red-200">Cancelled</Badge>;
-      default:
-        return <Badge className="bg-gray-100 text-gray-800 hover:bg-gray-200">{status}</Badge>;
+    const uppercaseStatus = status.toUpperCase();
+    
+    if (uppercaseStatus === "PENDING") {
+      return (
+        <Badge className="bg-yellow-500 text-white hover:bg-yellow-600 flex items-center gap-1">
+          <Clock8 className="h-3 w-3" />
+          Pending
+        </Badge>
+      );
+    } else if (uppercaseStatus === "PROCESSING") {
+      return (
+        <Badge className="bg-blue-500 text-white hover:bg-blue-600 flex items-center gap-1">
+          <AlertCircle className="h-3 w-3" />
+          Processing
+        </Badge>
+      );
+    } else if (uppercaseStatus === "CONFIRMED") {
+      return (
+        <Badge className="bg-[#15be53] text-white hover:bg-[#13a749] flex items-center gap-1">
+          <Check className="h-3 w-3" />
+          Confirmed
+        </Badge>
+      );
+    } else if (uppercaseStatus === "CANCELLED") {
+      return (
+        <Badge className="bg-gray-500 text-white hover:bg-gray-600 flex items-center gap-1">
+          <X className="h-3 w-3" />
+          Cancelled
+        </Badge>
+      );
+    } else {
+      return (
+        <Badge className="bg-gray-500 text-white hover:bg-gray-600 flex items-center gap-1">
+          {status}
+        </Badge>
+      );
     }
   };
 
-  const parseDate = (dateTimeStr: string | Date | number) => {
-    try {
-      if (!dateTimeStr) return null;
-      
-      // If it's already a Date object
-      if (dateTimeStr instanceof Date) return dateTimeStr;
-      
-      // If it's a number or numeric string
-      if (typeof dateTimeStr === 'number' || !isNaN(Number(dateTimeStr))) {
-        return new Date(Number(dateTimeStr));
-      }
-      
-      // If it's a string, handle different formats
-      if (typeof dateTimeStr === 'string') {
-        // Try parsing as ISO date first
-        if (dateTimeStr.includes('T') || dateTimeStr.includes('-')) {
-          return new Date(dateTimeStr);
-        }
-        
-        // Try direct date parsing
-        const parsedDate = new Date(dateTimeStr);
-        if (!isNaN(parsedDate.getTime())) {
-          return parsedDate;
-        }
-      }
-      
-      console.warn('Unparseable date format:', dateTimeStr);
-      return null;
-    } catch (e) {
-      console.error('Error parsing date:', e);
-      return null;
-    }
-  };
-
-  const formatDateTime = (dateTimeStr: string | Date | number) => {
-    try {
-      if (!dateTimeStr) return "N/A";
-      
-      const date = parseDate(dateTimeStr);
-      if (!date || isNaN(date.getTime())) {
-        return typeof dateTimeStr === 'string' ? dateTimeStr : "Invalid date";
-      }
-      return format(date, "MMM d, yyyy h:mm a");
-    } catch (e) {
-      console.error('Error formatting datetime:', e);
-      return typeof dateTimeStr === 'string' ? dateTimeStr : "Error";
-    }
-  };
-
-  const formatTime = (dateTimeStr: string | Date | number) => {
-    try {
-      if (!dateTimeStr) return "N/A";
-      
-      const date = parseDate(dateTimeStr);
-      if (!date || isNaN(date.getTime())) {
-        return typeof dateTimeStr === 'string' ? dateTimeStr : "Invalid time";
-      }
-      return format(date, "h:mm a");
-    } catch (e) {
-      console.error('Error formatting time:', e);
-      return typeof dateTimeStr === 'string' ? dateTimeStr : "Error";
-    }
-  };
-
-  const formatDate = (dateTimeStr: string | Date | number) => {
-    try {
-      if (!dateTimeStr) return "N/A";
-      
-      const date = parseDate(dateTimeStr);
-      if (!date || isNaN(date.getTime())) {
-        // If we have a string that looks like the booking reference format, don't try to format it
-        if (typeof dateTimeStr === 'string' && 
-            (dateTimeStr.startsWith('HOTEL-') || dateTimeStr.startsWith('FLIGHT-'))) {
-          return dateTimeStr;
-        }
-        return typeof dateTimeStr === 'string' ? dateTimeStr : "Invalid date";
-      }
-      return format(date, "MMM d, yyyy");
-    } catch (e) {
-      console.error('Error formatting date:', e);
-      return typeof dateTimeStr === 'string' ? dateTimeStr : "Error";
-    }
-  };
-
-  const formatDuration = (departureTime: string | Date | number, arrivalTime: string | Date | number) => {
-    try {
-      const departure = parseDate(departureTime);
-      const arrival = parseDate(arrivalTime);
-      
-      // Validate dates are valid before calculating
-      if (!departure || !arrival || isNaN(departure.getTime()) || isNaN(arrival.getTime())) {
-        console.log('Invalid date format:', { departureTime, arrivalTime });
-        return "Unknown";
-      }
-      
-      const durationMs = arrival.getTime() - departure.getTime();
-      const hours = Math.floor(durationMs / (1000 * 60 * 60));
-      const minutes = Math.floor((durationMs % (1000 * 60 * 60)) / (1000 * 60));
-      return `${hours}h ${minutes}m`;
-    } catch (e) {
-      console.error('Error formatting duration:', e);
-      return "Unknown";
-    }
-  };
-
-  const nightsStay = (checkInDate: string | Date | number, checkOutDate: string | Date | number) => {
-    try {
-      const checkIn = parseDate(checkInDate);
-      const checkOut = parseDate(checkOutDate);
-      
-      if (!checkIn || !checkOut || isNaN(checkIn.getTime()) || isNaN(checkOut.getTime())) {
-        return "Unknown";
-      }
-      
-      const durationMs = checkOut.getTime() - checkIn.getTime();
-      const nights = Math.floor(durationMs / (1000 * 60 * 60 * 24));
-      return nights === 1 ? `${nights} Night` : `${nights} Nights`;
-    } catch (e) {
-      console.error('Error calculating nights stay:', e);
-      return "Unknown";
-    }
-  };
-  
   const renderFlightCard = (booking: FlightBooking) => {
     return (
       <Card key={booking.id} className="overflow-hidden border border-gray-200 hover:shadow-md transition-shadow duration-300">
@@ -307,15 +219,15 @@ export default function BookingsPage() {
                 <Plane className="h-5 w-5" />
               </div>
               <div>
-                <CardTitle className="text-lg">{booking.airline || "Flight Booking"}</CardTitle>
-                <CardDescription className="text-xs">
-                  Flight {booking.flightNumber} • {booking.cabinClass}
+                <CardTitle className="text-lg">{booking.airline}</CardTitle>
+                <CardDescription>
+                  Flight {booking.flightNumber}
                 </CardDescription>
               </div>
             </div>
             <div>
               {booking.status.toUpperCase() === "CONFIRMED" ? (
-                <Badge className="bg-green-500 text-white hover:bg-green-600 flex items-center gap-1">
+                <Badge className="bg-[#15be53] text-white hover:bg-[#13a749] flex items-center gap-1">
                   <Check className="h-3 w-3" />
                   Confirmed
                 </Badge>
@@ -447,7 +359,7 @@ export default function BookingsPage() {
             </div>
             <div>
               {booking.status.toUpperCase() === "CONFIRMED" ? (
-                <Badge className="bg-green-500 text-white hover:bg-green-600 flex items-center gap-1">
+                <Badge className="bg-[#15be53] text-white hover:bg-[#13a749] flex items-center gap-1">
                   <Check className="h-3 w-3" />
                   Confirmed
                 </Badge>
