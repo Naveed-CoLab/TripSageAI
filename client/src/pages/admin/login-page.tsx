@@ -118,9 +118,9 @@ export default function AdminLoginPage() {
                 <Button 
                   type="submit" 
                   className="w-full h-11 rounded-lg bg-gradient-to-r from-indigo-600 to-indigo-700 hover:from-indigo-700 hover:to-indigo-800 transition-all duration-200 font-medium shadow-md" 
-                  disabled={loginMutation.isPending}
+                  disabled={adminLoginMutation.isPending}
                 >
-                  {loginMutation.isPending ? (
+                  {adminLoginMutation.isPending ? (
                     <>
                       <Loader2 className="mr-2 h-5 w-5 animate-spin" />
                       Signing in...
