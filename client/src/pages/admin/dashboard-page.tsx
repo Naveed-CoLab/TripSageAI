@@ -234,7 +234,7 @@ export default function DashboardPage() {
   // Add user mutation
   const addUserMutation = useMutation({
     mutationFn: async (userData: typeof newUser) => {
-      const res = await apiRequest("POST", "/api/admin/users", userData);
+      const res = await apiRequest("/api/admin/users", "POST", userData);
       return await res.json();
     },
     onSuccess: () => {
@@ -275,8 +275,8 @@ export default function DashboardPage() {
       status: 'approved' | 'rejected' 
     }) => {
       const res = await apiRequest(
-        "PUT", 
         `/api/admin/bookings/${bookingType}/${bookingId}/status`, 
+        "PUT", 
         { status }
       );
       return await res.json();
