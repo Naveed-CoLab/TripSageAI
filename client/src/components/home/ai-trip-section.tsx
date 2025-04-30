@@ -59,7 +59,7 @@ export default function AiTripSection() {
             </div>
 
             <div className="mt-8">
-              <Link href="/trips/create">
+              <Link href="/ai-trip-generator">
                 <Button variant="link" className="text-primary-600 hover:text-primary-500 font-medium px-0">
                   Create your AI travel plan now <span aria-hidden="true">→</span>
                 </Button>
@@ -104,7 +104,7 @@ export default function AiTripSection() {
                       <span className="block text-sm text-gray-500">Estimated Budget</span>
                       <span className="text-lg font-semibold">$2,450</span>
                     </div>
-                    <Link href="/trips/create?destination=Japan">
+                    <Link href="/ai-trip-generator?destination=Japan">
                       <Button size="sm">
                         View Details
                       </Button>

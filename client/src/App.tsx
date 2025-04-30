@@ -7,7 +7,7 @@ import NotFound from "@/pages/not-found";
 import HomePage from "@/pages/home-page";
 import AuthPage from "@/pages/auth-page";
 import TripsPage from "@/pages/trips-page";
-import TripCreatePage from "@/pages/trip-create-page";
+
 import TripDetailPage from "@/pages/trip-detail-page";
 import DestinationDetailPage from "@/pages/destination-detail-page";
 import ExplorePage from "@/pages/explore-page";
@@ -35,7 +35,6 @@ function Router() {
       </Route>
       <Route path="/auth" component={AuthPage} />
       <ProtectedRoute path="/trips" component={TripsPage} />
-      <ProtectedRoute path="/trips/create" component={TripCreatePage} />
       <ProtectedRoute path="/trips/:id" component={TripDetailPage} />
       <ProtectedRoute path="/profile" component={ProfilePage} />
       <ProtectedRoute path="/profile/flights" component={ProfileFlightsPage} />
