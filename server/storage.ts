@@ -1016,7 +1016,7 @@ export class DatabaseStorage implements IStorage {
     `;
     
     const result = await query(SQL);
-    return result.rows;
+    return this.toCamelCase(result.rows);
   }
 
   async getDestinationById(id: number): Promise<Destination | undefined> {
@@ -1026,7 +1026,7 @@ export class DatabaseStorage implements IStorage {
     `;
     
     const result = await query(SQL, [id]);
-    return result.rows[0];
+    return result.rows[0] ? this.toCamelCase(result.rows[0]) : undefined;
   }
 
   async createDestination(destination: InsertDestination): Promise<Destination> {
@@ -1051,7 +1051,7 @@ export class DatabaseStorage implements IStorage {
     `;
     
     const result = await query(SQL, values);
-    return result.rows[0];
+    return this.toCamelCase(result.rows[0]);
   }
 
   // Review methods

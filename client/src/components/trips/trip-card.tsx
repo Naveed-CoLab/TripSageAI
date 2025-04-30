@@ -1,4 +1,4 @@
-import { format, parseISO } from "date-fns";
+import { format, parseISO, isValid } from "date-fns";
 import { Link, useLocation } from "wouter";
 import { Card, CardContent, CardFooter } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -66,6 +66,34 @@ export default function TripCard({ trip }: TripCardProps) {
     deleteTripMutation.mutate();
     setShowDeleteDialog(false);
   };
+  
+  // Helper function to safely format dates
+  const formatDate = (dateString: string | null | undefined) => {
+    if (!dateString) return "No date";
+    
+    try {
+      // Log for debugging
+      console.log("Date string:", dateString, "Type:", typeof dateString);
+      
+      // Handle various date formats
+      let date;
+      if (typeof dateString === 'object') {
+        // If it's already a Date object
+        date = dateString as unknown as Date;
+      } else if (typeof dateString === 'string') {
+        // Attempt to parse ISO format
+        date = parseISO(dateString);
+      } else {
+        return "Invalid date format";
+      }
+      
+      if (!isValid(date)) return "Invalid date";
+      return format(date, "MMM d, yyyy");
+    } catch (error) {
+      console.error("Error parsing date:", error, "for value:", dateString);
+      return "Invalid date";
+    }
+  };
 
   const getDestinationImage = (destination: string) => {
     // Map of destinations to specific Unsplash image URLs
@@ -95,7 +123,9 @@ export default function TripCard({ trip }: TripCardProps) {
     return 'https://images.unsplash.com/photo-1504019347908-b45f9b0b8dd5?auto=format&fit=crop&w=800&q=80';
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusColor = (status: string | null | undefined) => {
+    if (!status) return 'bg-gray-600 text-white font-medium';
+    
     switch (status.toLowerCase()) {
       case 'completed':
         return 'bg-green-500 text-white font-medium';
@@ -142,7 +172,7 @@ export default function TripCard({ trip }: TripCardProps) {
               <div className="flex items-center text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-md shadow-sm">
                 <Calendar className="h-4 w-4 mr-2 text-primary" />
                 <span className="font-medium">
-                  {trip.startDate ? format(parseISO(trip.startDate), "MMM d, yyyy") : "No start date"} - {trip.endDate ? format(parseISO(trip.endDate), "MMM d, yyyy") : "No end date"}
+                  {formatDate(trip.startDate)} - {formatDate(trip.endDate)}
                 </span>
               </div>
             ) : (
@@ -156,7 +186,7 @@ export default function TripCard({ trip }: TripCardProps) {
           <CardFooter className="pt-0 pb-4 bg-gradient-to-b from-gray-50 to-gray-100 border-t border-gray-100">
             <div className="flex items-center text-xs font-medium text-gray-500 bg-white/80 px-2 py-1 rounded-full shadow-sm">
               <Clock className="h-3 w-3 mr-1 text-primary/70" />
-              <span>Created {format(parseISO(trip.createdAt), "MMM d, yyyy")}</span>
+              <span>Created {formatDate(trip.createdAt)}</span>
             </div>
           </CardFooter>
         </Link>
