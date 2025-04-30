@@ -203,7 +203,7 @@ export async function generateTripIdea(
     `;
     
     const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent",
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent",
       {
         method: "POST",
         headers: {
@@ -378,7 +378,7 @@ export async function generateItinerary(trip: Trip): Promise<GeneratedItinerary>
       6. Mention any seasonal events, festivals, or local markets happening during the travel dates.
       7. Include at least one off-the-beaten-path or hidden gem location per day.
       
-      IMPORTANT: Do NOT include any image URLs in your response. Leave the "image" fields empty or null, and we'll generate them separately.
+      IMPORTANT: Do NOT include any image URLs in your response. Leave the "image" fields empty, and we'll generate them separately.
       
       Format your response as a JSON object with the following structure:
       {
@@ -387,7 +387,7 @@ export async function generateItinerary(trip: Trip): Promise<GeneratedItinerary>
             "dayNumber": 1,
             "title": "Day 1: Arrival & Orientation",
             "city": "Main city being visited that day",
-            "image": null,
+            "image": "",
             "activities": [
               {
                 "title": "Activity name",
@@ -395,10 +395,10 @@ export async function generateItinerary(trip: Trip): Promise<GeneratedItinerary>
                 "time": "Specific time (e.g., '9:00 AM - 11:30 AM')",
                 "location": "Full location name with address or neighborhood",
                 "type": "Type of activity (e.g., 'sightseeing', 'meal', 'transportation', 'hidden gem')",
-                "rating": "Numeric rating between 1-5, can include decimals (e.g., 4.5)",
-                "reviewCount": "Number of reviews this place has (e.g., 423)",
+                "rating": 4.5,
+                "reviewCount": 423,
                 "city": "Specific city or neighborhood where this activity takes place",
-                "image": null
+                "image": ""
               }
             ]
           }
@@ -409,9 +409,9 @@ export async function generateItinerary(trip: Trip): Promise<GeneratedItinerary>
             "title": "Specific name of the booking (hotel name, tour company, etc.)",
             "provider": "Specific service provider name with location",
             "price": "Estimated price range in USD or local currency",
-            "rating": "Numeric rating between 1-5, can include decimals (e.g., 4.5)",
-            "reviewCount": "Number of reviews this place has (e.g., 423)",
-            "image": null,
+            "rating": 4.5,
+            "reviewCount": 423,
+            "image": "",
             "details": { 
               "address": "Full address",
               "website": "Official website if available",
@@ -427,7 +427,7 @@ export async function generateItinerary(trip: Trip): Promise<GeneratedItinerary>
     `;
     
     const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent",
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent",
       {
         method: "POST",
         headers: {
@@ -471,12 +471,12 @@ export async function generateItinerary(trip: Trip): Promise<GeneratedItinerary>
       return generateFallbackItinerary(trip);
     }
     
-    // Add dates to the days if trip dates are specified
+    // Assign date to each day if start date is provided
     if (trip.startDate) {
       const startDateObj = new Date(trip.startDate);
       result.days.forEach((day, index) => {
         const dayDate = new Date(startDateObj);
-        dayDate.setDate(startDateObj.getDate() + index);
+        dayDate.setDate(dayDate.getDate() + index);
         day.date = dayDate;
       });
     }
@@ -741,7 +741,7 @@ function generateFallbackItinerary(trip: Trip): GeneratedItinerary {
     }
   ];
   
-  // Create the itinerary result without images initially
+  // Create the itinerary result
   const result = {
     days,
     bookings
@@ -836,7 +836,7 @@ export async function getAIChatResponse(
     });
     
     const response = await fetch(
-      "https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-pro:generateContent",
+      "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-pro:generateContent",
       {
         method: "POST",
         headers: {
@@ -891,6 +891,3 @@ export async function getAIChatResponse(
     };
   }
 }
-
-// This second implementation of generateFallbackItinerary has been removed
-// The main implementation is at line 347
