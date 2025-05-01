@@ -1,7 +1,9 @@
-import pg from 'pg';
+import { Pool, neonConfig } from '@neondatabase/serverless';
+import ws from 'ws';
 // No need for drizzle-orm import since we're using raw SQL
 
-const { Pool } = pg;
+// Configure neon to use WebSockets for the serverless environment
+neonConfig.webSocketConstructor = ws;
 
 if (!process.env.DATABASE_URL) {
   throw new Error(
@@ -12,9 +14,6 @@ if (!process.env.DATABASE_URL) {
 // Create a pool of connections to PostgreSQL for better performance
 export const pool = new Pool({ 
   connectionString: process.env.DATABASE_URL,
-  max: 10, // Maximum number of clients in the pool (reduced from 20)
-  idleTimeoutMillis: 30000, // How long a client is allowed to remain idle before being closed
-  connectionTimeoutMillis: 5000, // Increased from 2000 to give more time for connection
 });
 
 // Helper function to run parameterized queries safely (prevents SQL injection)
@@ -33,7 +32,7 @@ export async function query(text: string, params: any[] = []) {
 
 // Helper function to run transactions with improved logging and error handling
 export async function transaction<T>(
-  callback: (client: pg.PoolClient) => Promise<T>,
+  callback: (client: any) => Promise<T>,
   options: { name?: string; isolation?: 'READ COMMITTED' | 'REPEATABLE READ' | 'SERIALIZABLE' } = {}
 ): Promise<T> {
   const transactionName = options.name || `tx_${Date.now()}`;
