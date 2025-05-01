@@ -627,9 +627,24 @@ export default function TripDetailPage() {
                               <span className="font-medium">{trip.budget}</span>
                               {trip.budgetIsEstimated && (
                                 <div className="flex items-center justify-end mt-1">
-                                  <Badge variant="outline" className="text-[10px] h-4 px-1 bg-primary-50 text-primary-700">
-                                    <span className="mr-1">✨</span> Estimated by TripSageAI
-                                  </Badge>
+                                  <div className="inline-flex items-center rounded-full border px-2.5 py-0.5 text-[10px] font-medium h-4 border-yellow-200 bg-yellow-50 text-amber-800">
+                                    <svg
+                                      xmlns="http://www.w3.org/2000/svg"
+                                      width="12"
+                                      height="12"
+                                      viewBox="0 0 24 24"
+                                      className="mr-1"
+                                    >
+                                      <circle cx="12" cy="12" r="10" fill="#FFD700" stroke="#CC8B00" strokeWidth="1" />
+                                      <path 
+                                        d="M12 3.953a7.442 7.442 0 1 0 .001 14.884A7.442 7.442 0 0 0 12 3.953m0 14.05a6.61 6.61 0 1 1 0-13.218 6.61 6.61 0 0 1 0 13.219M10.343 11.9a.91.91 0 1 1-1.821 0 .91.91 0 0 1 1.821 0m5.134 0a.91.91 0 1 1-1.821 0 .91.91 0 0 1 1.82 0m.82-1.897.84-.913h-1.863A5.8 5.8 0 0 0 12 8.08a5.77 5.77 0 0 0-3.27 1.008H6.862l.84.913a2.567 2.567 0 1 0 3.475 3.78l.823.896.823-.895a2.568 2.568 0 1 0 3.474-3.78"
+                                        fill="#FFD700" 
+                                        stroke="#CC8B00"
+                                        strokeWidth="0.8"
+                                      />
+                                    </svg>
+                                    AI Estimated
+                                  </div>
                                 </div>
                               )}
                             </div>
