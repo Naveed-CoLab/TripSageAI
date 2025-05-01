@@ -1131,7 +1131,11 @@ export class DatabaseStorage implements IStorage {
   async deleteTrip(id: number): Promise<void> {
     try {
       await transaction(async (client) => {
-        // Simply delete the trip from my_trips table
+        // First, delete any associated AI trip generation records
+        const deleteAiTripsQuery = 'DELETE FROM ai_trip_generations WHERE saved_trip_id = $1';
+        await client.query(deleteAiTripsQuery, [id]);
+        
+        // Then delete the trip from my_trips table
         const deleteTripQuery = 'DELETE FROM my_trips WHERE id = $1 RETURNING id';
         const result = await client.query(deleteTripQuery, [id]);
         
