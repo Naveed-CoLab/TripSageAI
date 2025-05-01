@@ -2,40 +2,19 @@ import { Pool } from 'pg';
 import { drizzle } from 'drizzle-orm/node-postgres';
 import * as schema from '@shared/schema';
 
-// Build the Supabase database URL from environment variables
-const buildDatabaseUrl = () => {
-  // If the DATABASE_URL is already set, use it directly
-  if (process.env.DATABASE_URL) {
-    return process.env.DATABASE_URL;
-  }
+// Check for required environment variables
+if (!process.env.DATABASE_URL) {
+  throw new Error(
+    "DATABASE_URL must be set. Did you forget to provision a database?"
+  );
+}
 
-  // Otherwise build it from individual components
-  if (!process.env.PGHOST || !process.env.PGUSER || !process.env.SUPABASE_PASSWORD || !process.env.PGDATABASE) {
-    throw new Error(
-      "Database connection information (PGHOST, PGUSER, SUPABASE_PASSWORD, PGDATABASE) must be set."
-    );
-  }
-
-  const host = process.env.PGHOST;
-  const user = process.env.PGUSER;
-  const password = process.env.SUPABASE_PASSWORD;
-  const database = process.env.PGDATABASE;
-  const port = process.env.PGPORT || '5432';
-  
-  return `postgresql://${user}:${password}@${host}:${port}/${database}`;
-};
-
-// Create the database URL
-const databaseUrl = buildDatabaseUrl();
-
-console.log('Connecting to Supabase PostgreSQL database...');
+console.log('Connecting to PostgreSQL database...');
 
 // Create a pool of connections to PostgreSQL for better performance
 export const pool = new Pool({ 
-  connectionString: databaseUrl,
-  ssl: {
-    rejectUnauthorized: false // Required for Supabase connections
-  }
+  connectionString: process.env.DATABASE_URL,
+  // No SSL needed for local Replit PostgreSQL
 });
 
 // Initialize Drizzle ORM with the PostgreSQL pool and schema
