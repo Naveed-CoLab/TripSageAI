@@ -902,7 +902,21 @@ export class DatabaseStorage implements IStorage {
   // Trip methods
   async getTripsByUserId(userId: number): Promise<Trip[]> {
     const SQL = `
-      SELECT * FROM my_trips
+      SELECT 
+        id, 
+        user_id, 
+        title, 
+        destination,
+        start_date::text,  -- Force conversion to text to prevent empty objects
+        end_date::text,    -- Force conversion to text to prevent empty objects 
+        budget, 
+        budget_is_estimated, 
+        preferences, 
+        status, 
+        itinerary_data, 
+        created_at::text,  -- Force conversion to text to prevent timestamp issues
+        updated_at::text   -- Force conversion to text to prevent timestamp issues
+      FROM my_trips
       WHERE user_id = $1
       ORDER BY created_at DESC
     `;
@@ -913,7 +927,21 @@ export class DatabaseStorage implements IStorage {
 
   async getTripById(id: number): Promise<Trip | undefined> {
     const SQL = `
-      SELECT * FROM my_trips
+      SELECT 
+        id, 
+        user_id, 
+        title, 
+        destination,
+        start_date::text,  -- Force conversion to text to prevent empty objects
+        end_date::text,    -- Force conversion to text to prevent empty objects 
+        budget, 
+        budget_is_estimated, 
+        preferences, 
+        status, 
+        itinerary_data, 
+        created_at::text,  -- Force conversion to text to prevent timestamp issues
+        updated_at::text   -- Force conversion to text to prevent timestamp issues
+      FROM my_trips
       WHERE id = $1
     `;
     
@@ -923,7 +951,21 @@ export class DatabaseStorage implements IStorage {
 
   async getTrip(id: number): Promise<Trip | undefined> {
     const SQL = `
-      SELECT * FROM my_trips
+      SELECT 
+        id, 
+        user_id, 
+        title, 
+        destination,
+        start_date::text,  -- Force conversion to text to prevent empty objects
+        end_date::text,    -- Force conversion to text to prevent empty objects 
+        budget, 
+        budget_is_estimated, 
+        preferences, 
+        status, 
+        itinerary_data, 
+        created_at::text,  -- Force conversion to text to prevent timestamp issues
+        updated_at::text   -- Force conversion to text to prevent timestamp issues
+      FROM my_trips
       WHERE id = $1
     `;
     
