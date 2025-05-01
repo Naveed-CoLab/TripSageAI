@@ -1,3 +1,4 @@
+
 import Amadeus from 'amadeus';
 
 // Initialize the Amadeus client
