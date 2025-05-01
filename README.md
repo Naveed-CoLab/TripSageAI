@@ -75,7 +75,7 @@ await transaction(async (client) => {
 // Transaction with custom options
 await transaction(
   async (client) => {
-    // Transaction operations here
+    
   }, 
   { 
     name: 'important_operation',
