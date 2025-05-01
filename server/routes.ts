@@ -3432,6 +3432,48 @@ export async function registerRoutes(app: Express): Promise<Server> {
     res.json({ embedUrl });
   });
   
+  // Proxy endpoint for Google Maps photos with proper headers
+  app.get("/api/maps/photo", async (req: Request, res: Response) => {
+    const reference = req.query.reference as string;
+    const maxwidth = parseInt(req.query.maxwidth as string) || 800;
+    
+    if (!reference) {
+      return res.status(400).json({ error: 'Photo reference is required' });
+    }
+    
+    try {
+      // Build the Google Maps Place Photo API URL with RapidAPI
+      const url = `https://google-maps28.p.rapidapi.com/place/photo`;
+      const headers = {
+        'X-RapidAPI-Key': process.env.RAPIDAPI_KEY || '',
+        'X-RapidAPI-Host': 'google-maps28.p.rapidapi.com'
+      };
+      
+      // We'll proxy the request and stream it back to preserve image data
+      const response = await axios({
+        method: 'GET',
+        url,
+        params: {
+          maxwidth: maxwidth.toString(),
+          photoreference: reference,
+          key: 'rapidapi' // Placeholder for RapidAPI
+        },
+        headers,
+        responseType: 'stream'
+      });
+      
+      // Set headers from the original response
+      res.set('Content-Type', response.headers['content-type']);
+      
+      // Pipe the response directly to our client
+      response.data.pipe(res);
+    } catch (error) {
+      console.error('Error fetching photo:', error);
+      // Redirect to a fallback image on error
+      res.redirect(`https://source.unsplash.com/640x480/?hotel,destination,travel`);
+    }
+  });
+  
   // Search for places via Google Maps API
   app.get("/api/maps/places/search", async (req: Request, res: Response) => {
     const { query, type } = req.query;
