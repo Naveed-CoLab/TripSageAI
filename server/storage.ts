@@ -1,3 +1,4 @@
+
 import { 
   // The tables are no longer needed with raw SQL, keep only the types
   type User, 
