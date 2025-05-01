@@ -1,20 +1,45 @@
-import { Pool, neonConfig } from '@neondatabase/serverless';
-import ws from 'ws';
-// No need for drizzle-orm import since we're using raw SQL
+import { Pool } from 'pg';
+import { drizzle } from 'drizzle-orm/node-postgres';
+import * as schema from '@shared/schema';
 
-// Configure neon to use WebSockets for the serverless environment
-neonConfig.webSocketConstructor = ws;
+// Build the Supabase database URL from environment variables
+const buildDatabaseUrl = () => {
+  // If the DATABASE_URL is already set, use it directly
+  if (process.env.DATABASE_URL) {
+    return process.env.DATABASE_URL;
+  }
 
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
-}
+  // Otherwise build it from individual components
+  if (!process.env.PGHOST || !process.env.PGUSER || !process.env.SUPABASE_PASSWORD || !process.env.PGDATABASE) {
+    throw new Error(
+      "Database connection information (PGHOST, PGUSER, SUPABASE_PASSWORD, PGDATABASE) must be set."
+    );
+  }
+
+  const host = process.env.PGHOST;
+  const user = process.env.PGUSER;
+  const password = process.env.SUPABASE_PASSWORD;
+  const database = process.env.PGDATABASE;
+  const port = process.env.PGPORT || '5432';
+  
+  return `postgresql://${user}:${password}@${host}:${port}/${database}`;
+};
+
+// Create the database URL
+const databaseUrl = buildDatabaseUrl();
+
+console.log('Connecting to Supabase PostgreSQL database...');
 
 // Create a pool of connections to PostgreSQL for better performance
 export const pool = new Pool({ 
-  connectionString: process.env.DATABASE_URL,
+  connectionString: databaseUrl,
+  ssl: {
+    rejectUnauthorized: false // Required for Supabase connections
+  }
 });
+
+// Initialize Drizzle ORM with the PostgreSQL pool and schema
+export const db = drizzle(pool, { schema });
 
 // Helper function to run parameterized queries safely (prevents SQL injection)
 export async function query(text: string, params: any[] = []) {
