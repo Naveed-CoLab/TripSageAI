@@ -184,7 +184,8 @@ export default function TripCard({ trip }: TripCardProps) {
           </div>
           
           <CardContent className="pt-4 pb-2 flex-grow bg-gradient-to-b from-white to-gray-50">
-            {trip.startDate && trip.endDate ? (
+            {(trip.startDate && typeof trip.startDate === 'string' && 
+              trip.endDate && typeof trip.endDate === 'string') ? (
               <div className="flex items-center text-sm text-gray-600 bg-gray-50 px-3 py-2 rounded-md shadow-sm">
                 <Calendar className="h-4 w-4 mr-2 text-primary" />
                 <span className="font-medium">

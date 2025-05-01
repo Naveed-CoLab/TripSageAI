@@ -1243,11 +1243,14 @@ export class DatabaseStorage implements IStorage {
     }
     
     // Check if this is a PostgreSQL date/timestamp object
-    if (typeof data === 'object' && 
-        (data.hasOwnProperty('year') || data.hasOwnProperty('hours')) &&
-        !data.hasOwnProperty('length')) {
+    if (typeof data === 'object') {
+      // Special handling for PostgreSQL date type, which may be an empty object or a date object
+      if (Object.keys(data).length === 0) {
+        // Empty object dates, return null instead of empty objects
+        return null;
+      }
       
-      // Handle date objects from PostgreSQL
+      // Handle date objects from PostgreSQL that have year/month/day properties
       if (data.hasOwnProperty('year') && data.hasOwnProperty('month') && data.hasOwnProperty('day')) {
         // For date columns (like start_date, end_date)
         const year = data.year;

@@ -397,7 +397,11 @@ export default function TripDetailPage() {
                     <div>
                       <div className="text-xs uppercase tracking-wider text-white/70">Date</div>
                       <div className="text-white font-medium">
-                        {format(new Date(trip.startDate), "MMM d")} - {format(new Date(trip.endDate), "MMM d, yyyy")}
+                        {trip.startDate && typeof trip.startDate === 'string' 
+                          ? format(new Date(trip.startDate), "MMM d") 
+                          : "Start date"} - {trip.endDate && typeof trip.endDate === 'string' 
+                          ? format(new Date(trip.endDate), "MMM d, yyyy") 
+                          : "End date"}
                       </div>
                     </div>
                   </div>
