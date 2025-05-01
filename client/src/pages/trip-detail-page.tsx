@@ -20,6 +20,7 @@ import {
 } from "lucide-react";
 import { TripAdvisorImageGallery } from "@/components/tripadvisor/image-gallery"; 
 import { HotelImages } from "@/components/tripadvisor/hotel-images";
+import { BookingImage } from "@/components/tripadvisor/booking-image";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -153,59 +154,7 @@ const getActivityIcon = (type: string | null) => {
   }
 };
 
-// BookingImage component to fetch and display images from TripAdvisor API
-function BookingImage({ booking, destination }: { booking: Booking; destination: string }) {
-  const { data, isLoading } = useQuery({
-    queryKey: ['/api/tripadvisor/search', `${booking.title} in ${destination}`, 'hotels'],
-    queryFn: async () => {
-      const response = await fetch(`/api/tripadvisor/search?query=${encodeURIComponent(`${booking.title} in ${destination}`)}&type=hotels`);
-      if (!response.ok) {
-        throw new Error('Failed to fetch hotel images');
-      }
-      return response.json();
-    },
-    // Don't refetch unnecessarily
-    staleTime: 60 * 60 * 1000, // 1 hour
-  });
-  
-  // First try to use the booking's own image if it exists
-  if (booking.image) {
-    return (
-      <img 
-        src={booking.image}
-        alt={booking.title}
-        className="w-full h-full object-cover"
-      />
-    );
-  }
-  
-  // If loading, show a skeleton
-  if (isLoading) {
-    return (
-      <div className="w-full h-full flex items-center justify-center bg-gray-100 animate-pulse">
-        <Hotel className="h-12 w-12 text-primary-200" />
-      </div>
-    );
-  }
-  
-  // If we have results from TripAdvisor, show the first image
-  if (data && data.length > 0 && data[0].image) {
-    return (
-      <img 
-        src={data[0].image}
-        alt={booking.title}
-        className="w-full h-full object-cover"
-      />
-    );
-  }
-  
-  // Fallback to the hotel icon
-  return (
-    <div className="w-full h-full flex items-center justify-center bg-gradient-to-r from-primary-50 to-primary-100">
-      <Hotel className="h-12 w-12 text-primary-300" />
-    </div>
-  );
-}
+
 
 export default function TripDetailPage() {
   const { id } = useParams<{ id: string }>();
