@@ -1,3 +1,4 @@
+
 // Import the unified Gemini service implementation
 import { generateImageWithGemini } from "../gemini-service";
 
