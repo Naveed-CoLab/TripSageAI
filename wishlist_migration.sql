@@ -1,4 +1,4 @@
--- Create wishlist_items table
+--- Create wishlist_items table
 CREATE TABLE IF NOT EXISTS "wishlist_items" (
   "id" SERIAL PRIMARY KEY,
   "user_id" INTEGER NOT NULL REFERENCES "users"("id"),
