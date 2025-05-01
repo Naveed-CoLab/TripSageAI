@@ -1,6 +1,10 @@
-import { Pool } from 'pg';
-import { drizzle } from 'drizzle-orm/node-postgres';
+import { Pool, neonConfig } from '@neondatabase/serverless';
+import { drizzle } from 'drizzle-orm/neon-serverless';
+import ws from 'ws';
 import * as schema from '@shared/schema';
+
+// Enable WebSocket for Neon serverless
+neonConfig.webSocketConstructor = ws;
 
 // Check for required environment variables
 if (!process.env.DATABASE_URL) {
@@ -9,16 +13,15 @@ if (!process.env.DATABASE_URL) {
   );
 }
 
-console.log('Connecting to PostgreSQL database...');
+console.log('Connecting to Neon PostgreSQL database...');
 
 // Create a pool of connections to PostgreSQL for better performance
 export const pool = new Pool({ 
-  connectionString: process.env.DATABASE_URL,
-  // No SSL needed for local Replit PostgreSQL
+  connectionString: process.env.DATABASE_URL 
 });
 
 // Initialize Drizzle ORM with the PostgreSQL pool and schema
-export const db = drizzle(pool, { schema });
+export const db = drizzle({ client: pool, schema });
 
 // Helper function to run parameterized queries safely (prevents SQL injection)
 export async function query(text: string, params: any[] = []) {
