@@ -1,3 +1,4 @@
+
 import { Trip } from "@shared/schema";
 
 // Type for chat messages
