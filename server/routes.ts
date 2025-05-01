@@ -2403,6 +2403,122 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to get trips" });
     }
   });
+
+  // Get all AI-generated trips (admin action)
+  app.get("/api/admin/ai-trips", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const sql = `
+        SELECT 
+          aig.*, 
+          u.username as user_username,
+          u.email as user_email,
+          t.title as saved_trip_title,
+          t.status as saved_trip_status
+        FROM ai_trip_generations aig
+        LEFT JOIN users u ON aig.user_id = u.id
+        LEFT JOIN my_trips t ON aig.saved_trip_id = t.id
+        ORDER BY aig.created_at DESC
+      `;
+
+      const result = await query(sql);
+      
+      // Process the result for better display in admin dashboard
+      const processedTrips = result.rows.map(trip => ({
+        id: trip.id,
+        userId: trip.user_id,
+        username: trip.user_username,
+        userEmail: trip.user_email,
+        destination: trip.destination,
+        dateRange: `${trip.start_date} to ${trip.end_date}`,
+        tripType: trip.trip_type || 'Not specified',
+        interests: trip.interests || [],
+        withPets: trip.with_pets,
+        prompt: trip.prompt,
+        saved: trip.saved,
+        savedTripId: trip.saved_trip_id,
+        savedTripTitle: trip.saved_trip_title,
+        savedTripStatus: trip.saved_trip_status,
+        createdAt: trip.created_at
+      }));
+      
+      // Log the activity in admin_logs
+      await query(`
+        INSERT INTO admin_logs (admin_id, action, entity_type, details)
+        VALUES ($1, $2, $3, $4)
+      `, [req.user!.id, 'viewed_ai_trips', 'ai_trip_generations', 'Viewed AI-generated trips']);
+      
+      res.json(processedTrips);
+    } catch (error) {
+      console.error('Error getting AI-generated trips:', error);
+      res.status(500).json({ error: "Failed to get AI-generated trips" });
+    }
+  });
+  
+  // Get details of a specific AI-generated trip (admin action)
+  app.get("/api/admin/ai-trips/:tripId", isAdmin, async (req: Request, res: Response) => {
+    try {
+      const tripId = parseInt(req.params.tripId);
+      
+      if (isNaN(tripId)) {
+        return res.status(400).json({ error: "Invalid trip ID" });
+      }
+      
+      const sql = `
+        SELECT 
+          aig.*, 
+          u.username as user_username,
+          u.email as user_email,
+          t.title as saved_trip_title,
+          t.status as saved_trip_status
+        FROM ai_trip_generations aig
+        LEFT JOIN users u ON aig.user_id = u.id
+        LEFT JOIN my_trips t ON aig.saved_trip_id = t.id
+        WHERE aig.id = $1
+      `;
+
+      const result = await query(sql, [tripId]);
+      
+      if (result.rows.length === 0) {
+        return res.status(404).json({ error: "AI-generated trip not found" });
+      }
+      
+      // Get the full details
+      const trip = result.rows[0];
+      
+      // Format the response
+      const detailedTrip = {
+        id: trip.id,
+        userId: trip.user_id,
+        username: trip.user_username,
+        userEmail: trip.user_email,
+        destination: trip.destination,
+        startDate: trip.start_date,
+        endDate: trip.end_date,
+        tripType: trip.trip_type || 'Not specified',
+        interests: trip.interests || [],
+        withPets: trip.with_pets,
+        prompt: trip.prompt,
+        aiResponse: trip.ai_response,
+        generatedTrip: trip.generated_trip,
+        saved: trip.saved,
+        savedTripId: trip.saved_trip_id,
+        savedTripTitle: trip.saved_trip_title,
+        savedTripStatus: trip.saved_trip_status,
+        createdAt: trip.created_at
+      };
+      
+      // Log the activity in admin_logs
+      await query(`
+        INSERT INTO admin_logs (admin_id, action, entity_type, entity_id, details)
+        VALUES ($1, $2, $3, $4, $5)
+      `, [req.user!.id, 'viewed_ai_trip_detail', 'ai_trip_generations', tripId, `Viewed AI-generated trip #${tripId} details`]);
+      
+      res.json(detailedTrip);
+    } catch (error) {
+      console.error('Error getting AI-generated trip details:', error);
+      res.status(500).json({ error: "Failed to get AI-generated trip details" });
+    }
+  });
   
   // Delete a trip (admin action)
   app.delete("/api/admin/trips/:tripId", isAdmin, async (req: Request, res: Response) => {
