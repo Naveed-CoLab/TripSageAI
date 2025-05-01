@@ -68,47 +68,54 @@ export async function generateImageWithGemini(prompt: string): Promise<string | 
   try {
     if (!GEMINI_API_KEY) {
       console.warn("No GEMINI_API_KEY provided. Cannot generate image.");
-      return getDefaultImage(prompt);
+      throw new Error("Gemini API key is missing. Unable to generate image.");
     }
 
     const enhancedPrompt = `High-quality travel photograph of ${prompt}. Clear lighting, detailed, professional travel photography style. 4K resolution.`;
     
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": GEMINI_API_KEY,
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [{ text: enhancedPrompt }],
+    // Define the fetch function to be retried
+    const fetchWithRetry = async () => {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": GEMINI_API_KEY,
+          },
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [{ text: enhancedPrompt }],
+              },
+            ],
+            generationConfig: {
+              temperature: 0.4,
+              topK: 32,
+              topP: 1,
+              maxOutputTokens: 2048,
             },
-          ],
-          generationConfig: {
-            temperature: 0.4,
-            topK: 32,
-            topP: 1,
-            maxOutputTokens: 2048,
-          },
-          // Request image generation
-          mediaOutputConfig: {
-            genAllowed: true,
-            genImgType: "photo",
-            genImgCount: 1,
-            genImgSize: "1024x1024",
-          },
-        }),
+            // Request image generation
+            mediaOutputConfig: {
+              genAllowed: true,
+              genImgType: "photo",
+              genImgCount: 1,
+              genImgSize: "1024x1024",
+            },
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        console.error(`Gemini image generation API error: ${response.statusText}`);
+        throw new Error(`Image generation failed: ${response.statusText}`);
       }
-    );
-
-    if (!response.ok) {
-      console.error(`Gemini image generation API error: ${response.statusText}`);
-      return getDefaultImage(prompt);
-    }
-
+      
+      return response;
+    };
+    
+    // Execute with retry logic - use shorter retry count for images to not block the main itinerary
+    const response = await retryWithBackoff(fetchWithRetry, 2, 1500);
     const data = await response.json();
     
     // Extract image data from response
@@ -126,10 +133,11 @@ export async function generateImageWithGemini(prompt: string): Promise<string | 
     }
     
     console.error("No image found in Gemini response");
-    return getDefaultImage(prompt);
+    throw new Error("No image found in Gemini response");
   } catch (error) {
     console.error("Error generating image with Gemini:", error);
-    return getDefaultImage(prompt);
+    // Return undefined instead of fallback image when there's an error
+    return undefined;
   }
 }
 
@@ -183,10 +191,10 @@ export async function generateTripIdea(
     const preferencesString = preferences ? preferences.join(", ") : "general tourism";
     const durationString = duration || "a week";
     
-    // Check if API key is missing - if so, immediately return fallback data
+    // Check if API key is missing - if so, throw an error
     if (!GEMINI_API_KEY) {
-      console.warn("No GEMINI_API_KEY provided. Using fallback trip idea data.");
-      return generateFallbackTripIdea(destination, preferencesString, durationString);
+      console.warn("No GEMINI_API_KEY provided. Cannot generate trip idea.");
+      throw new Error("Gemini API key is missing. Please check your environment configuration.");
     }
     
     const prompt = `
@@ -204,35 +212,42 @@ export async function generateTripIdea(
       }
     `;
     
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": GEMINI_API_KEY,
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [{ text: prompt }],
-            },
-          ],
-          generationConfig: {
-            temperature: 0.7,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 2048,
+    // Define the fetch function to be retried
+    const fetchWithRetry = async () => {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": GEMINI_API_KEY,
           },
-        }),
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [{ text: prompt }],
+              },
+            ],
+            generationConfig: {
+              temperature: 0.7,
+              topK: 40,
+              topP: 0.95,
+              maxOutputTokens: 2048,
+            },
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        console.error(`Gemini API error: ${response.statusText}`);
+        throw new Error(`Failed to generate trip idea: ${response.statusText}`);
       }
-    );
-
-    if (!response.ok) {
-      console.error(`Gemini API error: ${response.statusText}`);
-      return generateFallbackTripIdea(destination, preferencesString, durationString);
-    }
-
+      
+      return response;
+    };
+    
+    // Execute fetch with retry logic
+    const response = await retryWithBackoff(fetchWithRetry, 3, 2000);
     const data = await response.json();
     const text = data.candidates[0].content.parts[0].text;
     
@@ -246,13 +261,13 @@ export async function generateTripIdea(
     } catch (e) {
       console.error("Failed to parse Gemini response as JSON:", e);
       console.error("Raw response:", text);
-      return generateFallbackTripIdea(destination, preferencesString, durationString);
+      throw new Error("Failed to parse AI-generated trip idea. Please try again.");
     }
     
     return result;
   } catch (error) {
     console.error("Error generating trip idea:", error);
-    return generateFallbackTripIdea(destination, preferences?.join(", ") || "general tourism", duration || "a week");
+    throw new Error("An error occurred while generating your trip idea. Please try again later.");
   }
 }
 
@@ -315,6 +330,37 @@ function generateFallbackTripIdea(destination: string, preferences: string, dura
   }
   
   return tripIdea;
+}
+
+// Helper function to add delay with exponential backoff
+async function delay(ms: number): Promise<void> {
+  return new Promise(resolve => setTimeout(resolve, ms));
+}
+
+// Retry function for API calls with exponential backoff
+async function retryWithBackoff<T>(
+  fn: () => Promise<T>, 
+  maxRetries: number = 3, 
+  initialDelay: number = 1000
+): Promise<T> {
+  let retries = 0;
+  
+  while (true) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      if (retries >= maxRetries || !(error.toString().includes("Too Many Requests"))) {
+        throw error; // Rethrow the error if maximum retries reached or it's not a rate limit error
+      }
+      
+      // Calculate delay with exponential backoff
+      const waitTime = initialDelay * Math.pow(2, retries);
+      console.log(`Rate limit hit. Retrying in ${waitTime}ms (retry ${retries + 1}/${maxRetries})...`);
+      
+      await delay(waitTime);
+      retries++;
+    }
+  }
 }
 
 export async function generateItinerary(trip: Trip): Promise<GeneratedItinerary> {
@@ -460,34 +506,42 @@ export async function generateItinerary(trip: Trip): Promise<GeneratedItinerary>
       - Transportation arrangements if applicable
     `;
     
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": GEMINI_API_KEY,
-        },
-        body: JSON.stringify({
-          contents: [
-            {
-              parts: [{ text: prompt }],
-            },
-          ],
-          generationConfig: {
-            temperature: 0.7,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 16384,
+    // Use the retry function to handle rate limiting
+    const fetchWithRetry = async () => {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": GEMINI_API_KEY,
           },
-        }),
-      }
-    );
+          body: JSON.stringify({
+            contents: [
+              {
+                parts: [{ text: prompt }],
+              },
+            ],
+            generationConfig: {
+              temperature: 0.7,
+              topK: 40,
+              topP: 0.95,
+              maxOutputTokens: 16384,
+            },
+          }),
+        }
+      );
 
-    if (!response.ok) {
-      console.error(`Gemini API error: ${response.statusText}`);
-      throw new Error(`Failed to generate itinerary: ${response.statusText}`);
-    }
+      if (!response.ok) {
+        console.error(`Gemini API error: ${response.statusText}`);
+        throw new Error(`Failed to generate itinerary: ${response.statusText}`);
+      }
+      
+      return response;
+    };
+    
+    // Execute the fetch with retry logic
+    const response = await retryWithBackoff(fetchWithRetry, 3, 2000);
 
     const data = await response.json();
     const text = data.candidates[0].content.parts[0].text;
