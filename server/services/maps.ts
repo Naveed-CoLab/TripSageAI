@@ -154,7 +154,7 @@ class MapsService {
       
       const options = {
         method: 'GET',
-        url: 'https://maps-data-by-google.p.rapidapi.com/places/textsearch',
+        url: 'https://google-maps28.p.rapidapi.com/places/textsearch',
         params: {
           'query': type,
           'location': `${coordinates.lat},${coordinates.lng}`,
@@ -286,7 +286,7 @@ class MapsService {
       // If no results or all detail lookups failed, fall back to text search
       const fallbackOptions = {
         method: 'GET',
-        url: 'https://maps-data-by-google.p.rapidapi.com/places/textsearch',
+        url: 'https://google-maps28.p.rapidapi.com/places/textsearch',
         params: {
           'query': type ? `${query} ${type}` : query,
           'language': 'en'
@@ -342,11 +342,17 @@ class MapsService {
    * @returns URL to the photo
    */
   getPlacePhotoUrl(photoReference: string, maxWidth: number = 800): string | null {
-    if (!photoReference) return null;
+    if (!photoReference || !this.rapidApiKey) return null;
     
-    // We have a RapidAPI key issue with the photos endpoint
-    // Use Unsplash as a consistent fallback for now
-    return `https://source.unsplash.com/640x480/?hotel,destination,travel`;
+    try {
+      // Rather than returning a direct URL, we can create a new middleware endpoint
+      // that handles the API key and proxies the request
+      return `/api/maps/photo?reference=${encodeURIComponent(photoReference)}&maxwidth=${maxWidth}`;
+    } catch (error) {
+      console.error('Error generating photo URL:', error);
+      // Use Unsplash as a fallback
+      return `https://source.unsplash.com/640x480/?hotel,destination,travel`;
+    }
   }
   
   /**
