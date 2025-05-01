@@ -348,27 +348,7 @@ export default function TripDetailPage() {
     );
   }
 
-  const hasItinerary = trip.days && trip.days.length > 0;
-  const hasBookings = trip.bookings && trip.bookings.length > 0;
-  
-  // Group days by month for better organization
-  const groupedDays = trip.days.reduce((acc, day) => {
-    if (day.date) {
-      const month = format(new Date(day.date), 'MMMM yyyy');
-      if (!acc[month]) {
-        acc[month] = [];
-      }
-      acc[month].push(day);
-    } else {
-      if (!acc['Unscheduled']) {
-        acc['Unscheduled'] = [];
-      }
-      acc['Unscheduled'].push(day);
-    }
-    return acc;
-  }, {} as Record<string, typeof trip.days>);
-  
-  // For dynamic image loading
+  // For dynamic image loading - must be before any conditional logic to maintain hook order
   const [backgroundImage, setBackgroundImage] = useState<string>("");
   
   // Load destination image dynamically
@@ -401,6 +381,26 @@ export default function TripDetailPage() {
       isMounted = false;
     };
   }, [trip.destination]);
+
+  const hasItinerary = trip.days && trip.days.length > 0;
+  const hasBookings = trip.bookings && trip.bookings.length > 0;
+  
+  // Group days by month for better organization
+  const groupedDays = trip.days.reduce((acc, day) => {
+    if (day.date) {
+      const month = format(new Date(day.date), 'MMMM yyyy');
+      if (!acc[month]) {
+        acc[month] = [];
+      }
+      acc[month].push(day);
+    } else {
+      if (!acc['Unscheduled']) {
+        acc['Unscheduled'] = [];
+      }
+      acc['Unscheduled'].push(day);
+    }
+    return acc;
+  }, {} as Record<string, typeof trip.days>);
 
   return (
     <MainLayout>
