@@ -2,7 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
-import { perplexityService } from "./services/perplexity";
+import { generateTripIdea, generateItinerary } from "./gemini";
 import { searchFlights, searchAirports, getAirlineInfo } from "./services/amadeus";
 import { hotelService } from "./services/hotels";
 import { mapsService } from "./services/maps";
@@ -348,7 +348,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       `;
       
       // Call Gemini API to generate itinerary
-      const generatedTrip = await perplexityService.generateItinerary({
+      const generatedTrip = await generateItinerary({
         id: 0,
         userId,
         title: `Trip to ${destination}`,
@@ -837,7 +837,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Destination is required" });
       }
       
-      const tripIdea = await perplexityService.generateTripIdea(destination, preferences, duration);
+      const tripIdea = await generateTripIdea(destination, preferences, duration);
       res.json({ tripIdea });
     } catch (error) {
       res.status(500).json({ message: "Failed to generate trip idea" });
@@ -942,7 +942,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       }
       
       // Generate itinerary - this will now use fallback data if API key is missing
-      const itinerary = await perplexityService.generateItinerary(trip);
+      const itinerary = await generateItinerary(trip);
       
       try {
         // Check if the trip already has days/activities before adding new ones
