@@ -1,4 +1,4 @@
--- Create sample AI trip generation for testing
+--- Create sample AI trip generation for testing
 INSERT INTO ai_trip_generations (
   user_id,
   destination,
