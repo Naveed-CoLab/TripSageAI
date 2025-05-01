@@ -53,6 +53,10 @@ export interface IStorage {
   getTripCount(): Promise<number>;
   getNewTripCountToday(): Promise<number>;
   
+  // AI Trip Generation methods
+  getAllAiTrips(): Promise<any[]>;
+  getAiTripById(id: number): Promise<any | undefined>;
+  
   // Admin logs methods
   createAdminLog(adminLog: InsertAdminLog): Promise<AdminLog>;
   getAdminLogsByAdminId(adminId: number): Promise<AdminLog[]>;
@@ -370,6 +374,99 @@ export class DatabaseStorage implements IStorage {
     
     const result = await query(SQL, [today]);
     return parseInt(result.rows[0].count);
+  }
+  
+  // AI Trip Generation methods
+  async getAllAiTrips(): Promise<any[]> {
+    try {
+      const sql = `
+        SELECT 
+          aig.*, 
+          u.username as user_username,
+          u.email as user_email,
+          t.title as saved_trip_title,
+          t.status as saved_trip_status
+        FROM ai_trip_generations aig
+        LEFT JOIN users u ON aig.user_id = u.id
+        LEFT JOIN my_trips t ON aig.saved_trip_id = t.id
+        ORDER BY aig.created_at DESC
+      `;
+
+      const result = await query(sql);
+      
+      // Process the result for better format
+      return result.rows.map(trip => ({
+        id: trip.id,
+        userId: trip.user_id,
+        username: trip.user_username,
+        userEmail: trip.user_email,
+        destination: trip.destination,
+        dateRange: `${trip.start_date} to ${trip.end_date}`,
+        tripType: trip.trip_type || 'Not specified',
+        interests: trip.interests || [],
+        withPets: trip.with_pets,
+        prompt: trip.prompt,
+        saved: trip.saved,
+        savedTripId: trip.saved_trip_id,
+        savedTripTitle: trip.saved_trip_title,
+        savedTripStatus: trip.saved_trip_status,
+        createdAt: trip.created_at
+      }));
+    } catch (error) {
+      console.error('Error getting AI trips:', error);
+      throw error;
+    }
+  }
+  
+  async getAiTripById(id: number): Promise<any | undefined> {
+    try {
+      const sql = `
+        SELECT 
+          aig.*, 
+          u.username as user_username,
+          u.email as user_email,
+          t.title as saved_trip_title,
+          t.status as saved_trip_status
+        FROM ai_trip_generations aig
+        LEFT JOIN users u ON aig.user_id = u.id
+        LEFT JOIN my_trips t ON aig.saved_trip_id = t.id
+        WHERE aig.id = $1
+      `;
+
+      const result = await query(sql, [id]);
+      
+      if (result.rows.length === 0) {
+        return undefined;
+      }
+      
+      // Get the full details
+      const trip = result.rows[0];
+      
+      // Format the response
+      return {
+        id: trip.id,
+        userId: trip.user_id,
+        username: trip.user_username,
+        userEmail: trip.user_email,
+        destination: trip.destination,
+        startDate: trip.start_date,
+        endDate: trip.end_date,
+        tripType: trip.trip_type || 'Not specified',
+        interests: trip.interests || [],
+        withPets: trip.with_pets,
+        prompt: trip.prompt,
+        aiResponse: trip.ai_response,
+        generatedTrip: trip.generated_trip,
+        saved: trip.saved,
+        savedTripId: trip.saved_trip_id,
+        savedTripTitle: trip.saved_trip_title,
+        savedTripStatus: trip.saved_trip_status,
+        createdAt: trip.created_at
+      };
+    } catch (error) {
+      console.error('Error getting AI trip details:', error);
+      throw error;
+    }
   }
   
   // Admin logs methods
