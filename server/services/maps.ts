@@ -201,15 +201,13 @@ class MapsService {
     try {
       console.log(`Searching for place: ${query} (${type})`);
       
-      // Step 1: First use findplacefromtext to get place_id
+      // Step 1: Use textsearch to get place_id - replacing findplacefromtext which doesn't exist
       const findPlaceOptions = {
         method: 'GET',
-        url: 'https://google-map-places-new-v2.p.rapidapi.com/findplacefromtext/json',
+        url: 'https://google-map-places-new-v2.p.rapidapi.com/textsearch/json',
         params: {
-          'input': type ? `${query} ${type}` : query,
-          'inputtype': 'textquery',
-          'language': 'en',
-          'fields': 'place_id,name,formatted_address'
+          'query': type ? `${query} ${type}` : query,
+          'language': 'en'
         },
         headers: {
           'X-RapidAPI-Key': this.rapidApiKey,
@@ -220,13 +218,13 @@ class MapsService {
       const findPlaceResponse = await axios.request(findPlaceOptions);
       
       if (findPlaceResponse.data && 
-          findPlaceResponse.data.candidates && 
-          findPlaceResponse.data.candidates.length > 0) {
+          findPlaceResponse.data.results && 
+          findPlaceResponse.data.results.length > 0) {
         
         // We got place_ids, now get details with photos for each place
         const places = [];
         
-        for (const candidate of findPlaceResponse.data.candidates.slice(0, 3)) { // Limit to top 3 matches
+        for (const candidate of findPlaceResponse.data.results.slice(0, 3)) { // Limit to top 3 matches
           const placeId = candidate.place_id;
           
           if (placeId) {
