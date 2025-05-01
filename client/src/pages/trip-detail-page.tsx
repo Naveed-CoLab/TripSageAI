@@ -16,11 +16,12 @@ import {
   User, Pencil, Calendar, DollarSign, Share2, Loader2, PlusCircle, Map, 
   Heart, Info, ExternalLink, MoreHorizontal, MapPin, Star, Clock, Coffee,
   Utensils, Hotel, Camera, Landmark, Plane, Plus, Building, Edit, Ticket,
-  Calculator, Image
+  Calculator, Image, ChevronDown
 } from "lucide-react";
 import { TripAdvisorImageGallery } from "@/components/tripadvisor/image-gallery"; 
 import { HotelImages } from "@/components/tripadvisor/hotel-images";
 import { BookingImage } from "@/components/tripadvisor/booking-image";
+import { fetchDestinationImage, getDestinationImageSync } from "@/lib/image-service";
 import {
   DropdownMenu,
   DropdownMenuContent,
