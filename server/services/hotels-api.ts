@@ -1,3 +1,4 @@
+//HTTP client library 
 import axios from 'axios';
 
 // Hotel data structure to maintain consistency with existing frontend
