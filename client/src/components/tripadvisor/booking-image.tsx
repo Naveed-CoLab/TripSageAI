@@ -24,14 +24,14 @@ export function BookingImage({ booking, destination }: BookingImageProps) {
   // Store the loaded image URL to prevent flickering
   const [cachedImageUrl, setCachedImageUrl] = useState<string | null>(booking.image || null);
   
-  // First, check if we have a direct search result
-  const { data: hotelSearchData, isLoading: searchLoading } = useQuery({
-    queryKey: ['/api/tripadvisor/search', `${booking.title} in ${destination}`, 'hotels'],
+  // Use Google Maps API to get hotel images
+  const { data: googleMapsHotelData, isLoading: googleMapsLoading } = useQuery({
+    queryKey: ['/api/maps/hotels', booking.title, destination],
     queryFn: async () => {
-      console.log(`Searching for hotel: ${booking.title} in ${destination}`);
-      const response = await fetch(`/api/tripadvisor/search?query=${encodeURIComponent(`${booking.title} in ${destination}`)}&type=hotels`);
+      console.log(`Searching for hotel via Google Maps: ${booking.title} in ${destination}`);
+      const response = await fetch(`/api/maps/hotels?name=${encodeURIComponent(booking.title)}&destination=${encodeURIComponent(destination)}`);
       if (!response.ok) {
-        throw new Error('Failed to fetch hotel search results');
+        throw new Error('Failed to fetch hotel details from Google Maps');
       }
       return response.json();
     },
@@ -41,38 +41,14 @@ export function BookingImage({ booking, destination }: BookingImageProps) {
     enabled: !booking.image
   });
   
-  // Second, try to get specific hotel images if we found a hotel ID
-  const hotelId = hotelSearchData && hotelSearchData.length > 0 ? hotelSearchData[0].id : null;
-  
-  const { data: hotelImagesData, isLoading: imagesLoading } = useQuery({
-    queryKey: ['/api/tripadvisor/hotels/images', hotelId, booking.title, destination],
-    queryFn: async () => {
-      if (!hotelId) return null;
-      
-      console.log(`Fetching images for hotel ID: ${hotelId}`);
-      const response = await fetch(
-        `/api/tripadvisor/hotels/${hotelId}/images?hotelName=${encodeURIComponent(booking.title)}&destination=${encodeURIComponent(destination)}`
-      );
-      
-      if (!response.ok) {
-        throw new Error('Failed to fetch hotel images');
-      }
-      return response.json();
-    },
-    // Only run this query if we have a hotel ID
-    enabled: !!hotelId && !booking.image,
-  });
-  
   // Update cached image when data changes
   useEffect(() => {
     if (booking.image) {
       setCachedImageUrl(booking.image);
-    } else if (hotelSearchData && hotelSearchData.length > 0 && hotelSearchData[0].image) {
-      setCachedImageUrl(hotelSearchData[0].image);
-    } else if (hotelImagesData && hotelImagesData.images && hotelImagesData.images.length > 0) {
-      setCachedImageUrl(hotelImagesData.images[0].url);
+    } else if (googleMapsHotelData && googleMapsHotelData.length > 0 && googleMapsHotelData[0].image) {
+      setCachedImageUrl(googleMapsHotelData[0].image);
     }
-  }, [booking.image, hotelSearchData, hotelImagesData]);
+  }, [booking.image, googleMapsHotelData]);
   
   // If we have a cached image, use it
   if (cachedImageUrl) {
@@ -87,7 +63,7 @@ export function BookingImage({ booking, destination }: BookingImageProps) {
   }
   
   // If loading, show a skeleton
-  if (searchLoading || imagesLoading) {
+  if (googleMapsLoading) {
     return (
       <div className="w-full h-full flex items-center justify-center bg-gray-100 animate-pulse">
         <Hotel className="h-12 w-12 text-primary-200" />

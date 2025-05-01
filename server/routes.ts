@@ -3431,6 +3431,46 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     res.json({ embedUrl });
   });
+  
+  // Search for places via Google Maps API
+  app.get("/api/maps/places/search", async (req: Request, res: Response) => {
+    const { query, type } = req.query;
+    if (!query) {
+      return res.status(400).json({ error: "Search query is required" });
+    }
+    
+    try {
+      const places = await mapsService.searchPlaces(
+        query as string,
+        type as string || ''
+      );
+      
+      res.json(places || []);
+    } catch (error) {
+      console.error("Error searching places:", error);
+      res.status(500).json({ error: "Failed to search places" });
+    }
+  });
+  
+  // Get hotel details and images via Google Maps API
+  app.get("/api/maps/hotels", async (req: Request, res: Response) => {
+    const { name, destination } = req.query;
+    if (!name || !destination) {
+      return res.status(400).json({ error: "Hotel name and destination are required" });
+    }
+    
+    try {
+      const hotelDetails = await mapsService.getHotelDetails(
+        name as string,
+        destination as string
+      );
+      
+      res.json(hotelDetails || []);
+    } catch (error) {
+      console.error("Error getting hotel details:", error);
+      res.status(500).json({ error: "Failed to get hotel details" });
+    }
+  });
 
   // TripAdvisor API routes
 
