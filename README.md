@@ -1,8 +1,8 @@
-# Travel Application with Advanced PostgreSQL Features
+# AI Trip Planner - TripSage  (PERN Stack)
 
-This application leverages powerful PostgreSQL features to provide robust data management, consistency, and auditability.
+The AI Trip Planner leverages advanced PostgreSQL functionalities to ensure robust data handling, consistency, transparency, and seamless auditability throughout the platform.
 
-#Video Demonstration:
+# Video Demonstration:
 
 ## PostgreSQL Features Implemented
 
