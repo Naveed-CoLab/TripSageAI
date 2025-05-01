@@ -31,7 +31,8 @@ export function BookingImage({ booking, destination }: BookingImageProps) {
     queryKey: ['/api/maps/places/search', booking.title, destination],
     queryFn: async () => {
       console.log(`Searching for place: ${booking.title} in ${destination}`);
-      const response = await fetch(`/api/maps/places/search?query=${encodeURIComponent(booking.title + ' in ' + destination)}&type=${booking.type}`);
+      const query = booking.title + ' in ' + destination;
+      const response = await fetch(`/api/maps/places/search?query=${encodeURIComponent(query)}&type=${encodeURIComponent(booking.type)}`);
       if (!response.ok) {
         throw new Error('Failed to search for place');
       }

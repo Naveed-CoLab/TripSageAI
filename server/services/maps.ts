@@ -344,9 +344,9 @@ class MapsService {
   getPlacePhotoUrl(photoReference: string, maxWidth: number = 800): string | null {
     if (!photoReference) return null;
     
-    // For RapidAPI implementation, photo endpoint is:
-    // Note: This will return a redirect to the actual image URL
-    return `https://maps-data-by-google.p.rapidapi.com/places/photos?photo_reference=${encodeURIComponent(photoReference)}&maxheight=${maxWidth}&key=unused`;
+    // We have a RapidAPI key issue with the photos endpoint
+    // Use Unsplash as a consistent fallback for now
+    return `https://source.unsplash.com/640x480/?hotel,destination,travel`;
   }
   
   /**
