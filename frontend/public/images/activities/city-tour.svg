@@ -1,0 +1,65 @@
+<svg width="500" height="300" viewBox="0 0 500 300" xmlns="http://www.w3.org/2000/svg">
+  <rect width="500" height="300" fill="#f8f9fa"/>
+  <rect width="500" height="300" fill="url(#grad1)"/>
+  
+  <!-- Gradient background -->
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#fc5c7d;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#6a82fb;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- City skyline -->
+  <path d="M0,200 L60,200 L60,150 L90,150 L90,170 L120,170 L120,140 L150,140 L150,160 L170,160 L170,120 L200,120 L200,140 L230,140 L230,90 L250,90 L250,110 L270,110 L270,80 L290,80 L290,100 L310,100 L310,130 L330,130 L330,70 L360,70 L360,150 L380,150 L380,110 L410,110 L410,160 L440,160 L440,130 L470,130 L470,180 L500,180 L500,300 L0,300 Z" fill="#1a1a2e"/>
+  
+  <!-- Building details -->
+  <!-- Windows -->
+  <rect x="70" y="160" width="10" height="10" fill="#ffcc00"/>
+  <rect x="70" y="180" width="10" height="10" fill="#ffcc00"/>
+  <rect x="130" y="150" width="10" height="10" fill="#ffcc00"/>
+  <rect x="180" y="130" width="10" height="10" fill="#ffcc00"/>
+  <rect x="180" y="150" width="10" height="10" fill="#ffcc00"/>
+  <rect x="235" y="100" width="10" height="10" fill="#ffcc00"/>
+  <rect x="235" y="120" width="10" height="10" fill="#ffcc00"/>
+  <rect x="275" y="90" width="10" height="10" fill="#ffcc00"/>
+  <rect x="340" y="80" width="10" height="10" fill="#ffcc00"/>
+  <rect x="340" y="100" width="10" height="10" fill="#ffcc00"/>
+  <rect x="340" y="120" width="10" height="10" fill="#ffcc00"/>
+  <rect x="390" y="120" width="10" height="10" fill="#ffcc00"/>
+  <rect x="390" y="140" width="10" height="10" fill="#ffcc00"/>
+  <rect x="450" y="140" width="10" height="10" fill="#ffcc00"/>
+  <rect x="450" y="160" width="10" height="10" fill="#ffcc00"/>
+  
+  <!-- Tour bus -->
+  <rect x="100" y="220" width="150" height="40" rx="10" fill="#ffcc00"/>
+  <rect x="250" y="230" width="30" height="30" rx="5" fill="#ffcc00"/>
+  <circle cx="130" cy="270" r="15" fill="#333333"/>
+  <circle cx="130" cy="270" r="8" fill="#666666"/>
+  <circle cx="230" cy="270" r="15" fill="#333333"/>
+  <circle cx="230" cy="270" r="8" fill="#666666"/>
+  
+  <!-- Bus windows -->
+  <rect x="120" y="230" width="20" height="15" rx="2" fill="#add8e6"/>
+  <rect x="150" y="230" width="20" height="15" rx="2" fill="#add8e6"/>
+  <rect x="180" y="230" width="20" height="15" rx="2" fill="#add8e6"/>
+  <rect x="210" y="230" width="20" height="15" rx="2" fill="#add8e6"/>
+  <rect x="260" y="240" width="15" height="10" rx="2" fill="#add8e6"/>
+  
+  <!-- Tour guide with flag -->
+  <circle cx="340" cy="230" r="10" fill="#ff9999"/>
+  <rect x="335" y="240" width="10" height="30" fill="#3366cc"/>
+  <rect x="335" y="270" width="10" height="5" fill="#ff9999"/>
+  <rect x="330" y="230" width="5" height="20" fill="#ff9999"/>
+  <polygon points="335,215 335,230 360,220" fill="#ff3366"/>
+  
+  <!-- Tourist with camera -->
+  <circle cx="370" cy="235" r="8" fill="#ffcc99"/>
+  <rect x="367" y="243" width="6" height="22" fill="#66cc99"/>
+  <rect x="367" y="265" width="6" height="10" fill="#3366cc"/>
+  <rect x="372" y="235" width="12" height="8" fill="#333333"/>
+  
+  <!-- Text -->
+  <text x="250" y="50" font-family="Arial" font-size="24" fill="#ffffff" text-anchor="middle" font-weight="bold">CITY TOUR</text>
+  <text x="250" y="75" font-family="Arial" font-size="16" fill="#ffffff" text-anchor="middle">Explore with Local Guides</text>
+</svg>

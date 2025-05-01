@@ -1,0 +1,91 @@
+<svg width="500" height="300" viewBox="0 0 500 300" xmlns="http://www.w3.org/2000/svg">
+  <rect width="500" height="300" fill="#f8f9fa"/>
+  <rect width="500" height="300" fill="url(#grad1)"/>
+  
+  <!-- Gradient background -->
+  <defs>
+    <linearGradient id="grad1" x1="0%" y1="0%" x2="0%" y2="100%">
+      <stop offset="0%" style="stop-color:#0f2027;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#203a43;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#2c5364;stop-opacity:1" />
+    </linearGradient>
+    
+    <!-- Gold gradient for luxury elements -->
+    <linearGradient id="gold" x1="0%" y1="0%" x2="100%" y2="0%">
+      <stop offset="0%" style="stop-color:#bf953f;stop-opacity:1" />
+      <stop offset="50%" style="stop-color:#fcf6ba;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#b38728;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Hotel building -->
+  <rect x="100" y="80" width="300" height="220" fill="#e0e0e0"/>
+  <rect x="120" y="100" width="260" height="200" fill="#f5f5f5"/>
+  
+  <!-- Entrance -->
+  <rect x="220" y="230" width="60" height="70" fill="#333333"/>
+  <rect x="235" y="230" width="30" height="50" fill="#1a1a1a"/>
+  
+  <!-- Awning -->
+  <path d="M180,230 L320,230 L250,200 Z" fill="url(#gold)"/>
+  <path d="M190,230 L310,230 L250,210 Z" fill="#fdfdfd"/>
+  
+  <!-- Windows - top floor -->
+  <rect x="140" y="120" width="30" height="40" fill="#87ceeb"/>
+  <rect x="190" y="120" width="30" height="40" fill="#87ceeb"/>
+  <rect x="240" y="120" width="30" height="40" fill="#87ceeb"/>
+  <rect x="290" y="120" width="30" height="40" fill="#87ceeb"/>
+  <rect x="340" y="120" width="30" height="40" fill="#87ceeb"/>
+  
+  <!-- Windows - middle floor -->
+  <rect x="140" y="170" width="30" height="40" fill="#87ceeb"/>
+  <rect x="190" y="170" width="30" height="40" fill="#87ceeb"/>
+  <rect x="290" y="170" width="30" height="40" fill="#87ceeb"/>
+  <rect x="340" y="170" width="30" height="40" fill="#87ceeb"/>
+  
+  <!-- Window frames -->
+  <rect x="140" y="140" width="30" height="2" fill="#ffffff"/>
+  <rect x="190" y="140" width="30" height="2" fill="#ffffff"/>
+  <rect x="240" y="140" width="30" height="2" fill="#ffffff"/>
+  <rect x="290" y="140" width="30" height="2" fill="#ffffff"/>
+  <rect x="340" y="140" width="30" height="2" fill="#ffffff"/>
+  
+  <rect x="140" y="190" width="30" height="2" fill="#ffffff"/>
+  <rect x="190" y="190" width="30" height="2" fill="#ffffff"/>
+  <rect x="290" y="190" width="30" height="2" fill="#ffffff"/>
+  <rect x="340" y="190" width="30" height="2" fill="#ffffff"/>
+  
+  <!-- Rooftop with pool -->
+  <rect x="150" y="85" width="200" height="10" fill="#b3e0ff"/>
+  <rect x="180" y="85" width="140" height="10" fill="#4fc3f7"/>
+  
+  <!-- Rooftop lounge chairs -->
+  <rect x="160" y="83" width="10" height="3" fill="#ffcc00"/>
+  <rect x="330" y="83" width="10" height="3" fill="#ffcc00"/>
+  
+  <!-- Luxury car in front -->
+  <rect x="270" y="260" width="80" height="20" rx="5" fill="#000000"/>
+  <rect x="285" y="250" width="50" height="15" rx="3" fill="#111111"/>
+  <circle cx="290" cy="280" r="6" fill="#333333"/>
+  <circle cx="290" cy="280" r="3" fill="#666666"/>
+  <circle cx="330" cy="280" r="6" fill="#333333"/>
+  <circle cx="330" cy="280" r="3" fill="#666666"/>
+  
+  <!-- Hotel sign -->
+  <rect x="150" y="60" width="200" height="15" rx="2" fill="url(#gold)"/>
+  
+  <!-- Stars to indicate luxury rating -->
+  <polygon points="175,68 178,61 181,68 188,68 183,73 185,80 178,76 171,80 173,73 168,68" fill="#ffffff"/>
+  <polygon points="205,68 208,61 211,68 218,68 213,73 215,80 208,76 201,80 203,73 198,68" fill="#ffffff"/>
+  <polygon points="235,68 238,61 241,68 248,68 243,73 245,80 238,76 231,80 233,73 228,68" fill="#ffffff"/>
+  <polygon points="265,68 268,61 271,68 278,68 273,73 275,80 268,76 261,80 263,73 258,68" fill="#ffffff"/>
+  <polygon points="295,68 298,61 301,68 308,68 303,73 305,80 298,76 291,80 293,73 288,68" fill="#ffffff"/>
+  
+  <!-- Red carpet leading to entrance -->
+  <rect x="250" y="280" width="0" height="20" rx="0" fill="#cc0000"/>
+  <rect x="230" y="280" width="40" height="20" fill="#cc0000"/>
+  
+  <!-- Text -->
+  <text x="250" y="35" font-family="Arial" font-size="24" fill="#ffffff" text-anchor="middle" font-weight="bold">LUXURY HOTEL</text>
+  <text x="250" y="55" font-family="Arial" font-size="16" fill="#ffffff" text-anchor="middle" font-style="italic">Five-Star Accommodations</text>
+</svg>
