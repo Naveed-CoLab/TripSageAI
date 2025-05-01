@@ -678,10 +678,14 @@ export default function TripDetailPage() {
               {/* Main Trip Content */}
               <div className="lg:col-span-2">
                 <Tabs defaultValue="itinerary" className="w-full">
-                  <TabsList className="grid w-full grid-cols-3 mb-8">
+                  <TabsList className="grid w-full grid-cols-4 mb-8">
                     <TabsTrigger value="itinerary" className="text-sm md:text-base">
                       <Calendar className="h-4 w-4 mr-2 inline-block" />
                       Itinerary
+                    </TabsTrigger>
+                    <TabsTrigger value="photos" className="text-sm md:text-base">
+                      <Image className="h-4 w-4 mr-2 inline-block" />
+                      Photos
                     </TabsTrigger>
                     <TabsTrigger value="for-you" className="text-sm md:text-base">
                       <User className="h-4 w-4 mr-2 inline-block" />
@@ -869,6 +873,49 @@ export default function TripDetailPage() {
                         </div>
                       </div>
                     )}
+                  </TabsContent>
+                  
+                  <TabsContent value="photos" className="mt-0">
+                    <div className="space-y-8">
+                      <div className="bg-white rounded-xl shadow-sm p-6">
+                        <h3 className="text-xl font-semibold text-gray-800 mb-6 flex items-center">
+                          <Image className="h-5 w-5 mr-2 text-primary-500" />
+                          Places in {trip.destination}
+                        </h3>
+                        
+                        <TripAdvisorImageGallery 
+                          searchQuery={trip.destination} 
+                          type="location" 
+                          limit={6} 
+                        />
+                      </div>
+                      
+                      <div className="bg-white rounded-xl shadow-sm p-6">
+                        <h3 className="text-xl font-semibold text-gray-800 mb-6 flex items-center">
+                          <Hotel className="h-5 w-5 mr-2 text-primary-500" />
+                          Hotels in {trip.destination}
+                        </h3>
+                        
+                        <TripAdvisorImageGallery 
+                          searchQuery={`hotels in ${trip.destination}`} 
+                          type="hotels" 
+                          limit={6} 
+                        />
+                      </div>
+                      
+                      <div className="bg-white rounded-xl shadow-sm p-6">
+                        <h3 className="text-xl font-semibold text-gray-800 mb-6 flex items-center">
+                          <Utensils className="h-5 w-5 mr-2 text-primary-500" />
+                          Restaurants in {trip.destination}
+                        </h3>
+                        
+                        <TripAdvisorImageGallery 
+                          searchQuery={`restaurants in ${trip.destination}`} 
+                          type="restaurants" 
+                          limit={6} 
+                        />
+                      </div>
+                    </div>
                   </TabsContent>
                   
                   <TabsContent value="for-you" className="mt-0">
