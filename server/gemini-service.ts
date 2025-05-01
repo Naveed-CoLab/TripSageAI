@@ -57,13 +57,13 @@ type GeneratedItinerary = {
 
 // Gemini API configuration
 const GEMINI_API_KEY = process.env.GEMINI_API_KEY || "";
-const GEMINI_MODEL = "gemini-2.5-pro-preview-03-25"; // Unified model for all requests
+const GEMINI_MODEL = "gemini-1.5-pro"; // Using 1.5 Pro for better compatibility
 
 if (!GEMINI_API_KEY) {
   console.warn("GEMINI_API_KEY is not set! AI features will not work properly.");
 }
 
-// Function to generate images with Gemini 2.5 Pro Preview
+// Function to generate images using a separate model for images (flash)
 export async function generateImageWithGemini(prompt: string): Promise<string | undefined> {
   try {
     if (!GEMINI_API_KEY) {
@@ -75,8 +75,9 @@ export async function generateImageWithGemini(prompt: string): Promise<string | 
     
     // Define the fetch function to be retried
     const fetchWithRetry = async () => {
+      // For image generation, use gemini-1.5-flash which has better image generation capabilities
       const response = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent`,
         {
           method: "POST",
           headers: {
@@ -94,13 +95,6 @@ export async function generateImageWithGemini(prompt: string): Promise<string | 
               topK: 32,
               topP: 1,
               maxOutputTokens: 2048,
-            },
-            // Request image generation
-            mediaOutputConfig: {
-              genAllowed: true,
-              genImgType: "photo",
-              genImgCount: 1,
-              genImgSize: "1024x1024",
             },
           }),
         }
@@ -349,13 +343,22 @@ async function retryWithBackoff<T>(
     try {
       return await fn();
     } catch (error: any) {
-      if (retries >= maxRetries || !(error.toString().includes("Too Many Requests"))) {
-        throw error; // Rethrow the error if maximum retries reached or it's not a rate limit error
+      const errorString = error.toString();
+      const isRetryableError = 
+        errorString.includes("Too Many Requests") || 
+        errorString.includes("429") ||
+        errorString.includes("network error") ||
+        errorString.includes("timeout") ||
+        errorString.includes("ECONNRESET") ||
+        errorString.includes("ETIMEDOUT");
+      
+      if (retries >= maxRetries || !isRetryableError) {
+        throw error; // Rethrow the error if maximum retries reached or it's not a retryable error
       }
       
       // Calculate delay with exponential backoff
       const waitTime = initialDelay * Math.pow(2, retries);
-      console.log(`Rate limit hit. Retrying in ${waitTime}ms (retry ${retries + 1}/${maxRetries})...`);
+      console.log(`API error encountered. Retrying in ${waitTime}ms (retry ${retries + 1}/${maxRetries})...`);
       
       await delay(waitTime);
       retries++;
@@ -686,9 +689,7 @@ export async function chatWithAI(
 ): Promise<ChatbotResponse> {
   try {
     if (!GEMINI_API_KEY) {
-      return {
-        reply: "I'm sorry, but I'm currently unable to access my AI capabilities. Please try again later or contact support."
-      };
+      throw new Error("Gemini API key is missing. Please check your environment configuration.");
     }
     
     // Prepare trip context if available
@@ -732,33 +733,38 @@ export async function chatWithAI(
       ...messages.map(msg => ({ role: msg.role, parts: [{ text: msg.content }] }))
     ];
     
-    const response = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
-      {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "x-goog-api-key": GEMINI_API_KEY,
-        },
-        body: JSON.stringify({
-          contents: formattedMessages,
-          generationConfig: {
-            temperature: 0.8,
-            topK: 40,
-            topP: 0.95,
-            maxOutputTokens: 1024,
+    // Define the fetch function to be retried
+    const fetchWithRetry = async () => {
+      const response = await fetch(
+        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            "x-goog-api-key": GEMINI_API_KEY,
           },
-        }),
+          body: JSON.stringify({
+            contents: formattedMessages,
+            generationConfig: {
+              temperature: 0.8,
+              topK: 40,
+              topP: 0.95,
+              maxOutputTokens: 1024,
+            },
+          }),
+        }
+      );
+
+      if (!response.ok) {
+        console.error(`Gemini API error: ${response.statusText}`);
+        throw new Error(`Failed to generate chat response: ${response.statusText}`);
       }
-    );
-
-    if (!response.ok) {
-      console.error(`Gemini API error: ${response.statusText}`);
-      return {
-        reply: "I'm having trouble connecting to my knowledge base right now. Could you please try again in a moment?"
-      };
-    }
-
+      
+      return response;
+    };
+    
+    // Execute the fetch with retry logic
+    const response = await retryWithBackoff(fetchWithRetry, 3, 2000);
     const data = await response.json();
     const text = data.candidates[0].content.parts[0].text;
     
@@ -774,37 +780,46 @@ export async function chatWithAI(
         Your response: ${text}
       `;
       
-      const suggestionsResponse = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            "x-goog-api-key": GEMINI_API_KEY,
-          },
-          body: JSON.stringify({
-            contents: [
-              {
-                parts: [{ text: suggestionsPrompt }],
-              },
-            ],
-            generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 256,
+      // Define suggestions fetch with retry
+      const fetchSuggestionsWithRetry = async () => {
+        const suggestionsResponse = await fetch(
+          `https://generativelanguage.googleapis.com/v1beta/models/${GEMINI_MODEL}:generateContent`,
+          {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+              "x-goog-api-key": GEMINI_API_KEY,
             },
-          }),
-        }
-      );
-      
-      if (suggestionsResponse.ok) {
-        const suggestionsData = await suggestionsResponse.json();
-        const suggestionsText = suggestionsData.candidates[0].content.parts[0].text;
+            body: JSON.stringify({
+              contents: [
+                {
+                  parts: [{ text: suggestionsPrompt }],
+                },
+              ],
+              generationConfig: {
+                temperature: 0.7,
+                maxOutputTokens: 256,
+              },
+            }),
+          }
+        );
         
-        // Extract JSON array from response
-        const jsonMatch = suggestionsText.match(/\[.*\]/s);
-        if (jsonMatch) {
-          suggestions = JSON.parse(jsonMatch[0]);
+        if (!suggestionsResponse.ok) {
+          throw new Error(`Failed to generate suggestions: ${suggestionsResponse.statusText}`);
         }
+        
+        return suggestionsResponse;
+      };
+      
+      // Only use a short retry window for suggestions since they're optional
+      const suggestionsResponse = await retryWithBackoff(fetchSuggestionsWithRetry, 1, 1000);
+      const suggestionsData = await suggestionsResponse.json();
+      const suggestionsText = suggestionsData.candidates[0].content.parts[0].text;
+      
+      // Extract JSON array from response
+      const jsonMatch = suggestionsText.match(/\[.*\]/s);
+      if (jsonMatch) {
+        suggestions = JSON.parse(jsonMatch[0]);
       }
     } catch (error) {
       console.error("Error generating suggestions:", error);
