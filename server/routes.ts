@@ -3471,6 +3471,22 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ error: "Failed to get hotel details" });
     }
   });
+  
+  // Get place details by ID
+  app.get("/api/maps/places/:id", async (req: Request, res: Response) => {
+    const placeId = req.params.id;
+    if (!placeId) {
+      return res.status(400).json({ error: "Place ID is required" });
+    }
+    
+    try {
+      const placeDetails = await mapsService.getPlaceDetailsById(placeId);
+      res.json(placeDetails || { error: "Place not found" });
+    } catch (error) {
+      console.error("Error getting place details:", error);
+      res.status(500).json({ error: "Failed to get place details" });
+    }
+  });
 
   // TripAdvisor API routes
 

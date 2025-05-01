@@ -187,10 +187,10 @@ class MapsService {
   }
   
   /**
-   * Search for place details including images
+   * Search for place details including images - using the proper two-step process
    * @param query Search query string (e.g., 'Hotel Manoir Victoria in Quebec')
    * @param type Type of place (hotel, restaurant, attraction)
-   * @returns Array of places with details including photo references
+   * @returns Array of places with details including photos
    */
   async searchPlaces(query: string, type: string = ''): Promise<any> {
     if (!this.rapidApiKey) {
@@ -201,7 +201,90 @@ class MapsService {
     try {
       console.log(`Searching for place: ${query} (${type})`);
       
-      const options = {
+      // Step 1: First use findplacefromtext to get place_id
+      const findPlaceOptions = {
+        method: 'GET',
+        url: 'https://maps-data-by-google.p.rapidapi.com/places/findplacefromtext/json',
+        params: {
+          'input': type ? `${query} ${type}` : query,
+          'inputtype': 'textquery',
+          'language': 'en',
+          'fields': 'place_id,name,formatted_address'
+        },
+        headers: {
+          'X-RapidAPI-Key': this.rapidApiKey,
+          'X-RapidAPI-Host': this.placesApiHost
+        }
+      };
+      
+      const findPlaceResponse = await axios.request(findPlaceOptions);
+      
+      if (findPlaceResponse.data && 
+          findPlaceResponse.data.candidates && 
+          findPlaceResponse.data.candidates.length > 0) {
+        
+        // We got place_ids, now get details with photos for each place
+        const places = [];
+        
+        for (const candidate of findPlaceResponse.data.candidates.slice(0, 3)) { // Limit to top 3 matches
+          const placeId = candidate.place_id;
+          
+          if (placeId) {
+            // Step 2: Get place details including photos
+            const detailsOptions = {
+              method: 'GET',
+              url: 'https://maps-data-by-google.p.rapidapi.com/places/details/json',
+              params: {
+                'place_id': placeId,
+                'language': 'en',
+                'fields': 'name,place_id,formatted_address,geometry,rating,user_ratings_total,types,photos'
+              },
+              headers: {
+                'X-RapidAPI-Key': this.rapidApiKey,
+                'X-RapidAPI-Host': this.placesApiHost
+              }
+            };
+            
+            try {
+              const detailsResponse = await axios.request(detailsOptions);
+              
+              if (detailsResponse.data && detailsResponse.data.result) {
+                const place = detailsResponse.data.result;
+                let photoUrl = null;
+                let photoReference = null;
+                
+                // If place has photos, get the first one
+                if (place.photos && place.photos.length > 0) {
+                  photoReference = place.photos[0].photo_reference;
+                  photoUrl = this.getPlacePhotoUrl(photoReference);
+                }
+                
+                places.push({
+                  id: place.place_id || `sample-${type}-${Math.floor(Math.random() * 1000)}`,
+                  name: place.name,
+                  address: place.formatted_address,
+                  location: place.geometry?.location,
+                  rating: place.rating,
+                  userRatingsTotal: place.user_ratings_total,
+                  placeTypes: place.types,
+                  image: photoUrl || this.getUnsplashFallbackUrl(type, query),
+                  photoReference: photoReference
+                });
+              }
+            } catch (detailsError) {
+              console.error(`Error getting details for place ID ${placeId}:`, detailsError);
+              // Continue with next place
+            }
+          }
+        }
+        
+        if (places.length > 0) {
+          return places;
+        }
+      }
+      
+      // If no results or all detail lookups failed, fall back to text search
+      const fallbackOptions = {
         method: 'GET',
         url: 'https://maps-data-by-google.p.rapidapi.com/places/textsearch',
         params: {
@@ -214,17 +297,15 @@ class MapsService {
         }
       };
       
-      const response = await axios.request(options);
+      const fallbackResponse = await axios.request(fallbackOptions);
       
-      if (response.data && response.data.results && response.data.results.length > 0) {
+      if (fallbackResponse.data && fallbackResponse.data.results && fallbackResponse.data.results.length > 0) {
         // Process the results to extract image URLs when available
-        const results = response.data.results.map((place: any) => {
+        const results = fallbackResponse.data.results.map((place: any) => {
           let photoUrl = null;
           
           // If place has photos, get the first one
           if (place.photos && place.photos.length > 0) {
-            // For photos, we need to make an additional API call to get the actual image
-            // Here we'll return the photo_reference that can be used to fetch the photo
             photoUrl = this.getPlacePhotoUrl(place.photos[0].photo_reference);
           }
           
@@ -263,10 +344,9 @@ class MapsService {
   getPlacePhotoUrl(photoReference: string, maxWidth: number = 800): string | null {
     if (!photoReference) return null;
     
-    // For testing purposes, we'll simulate photo URLs since actual implementation
-    // would require Google Maps API key which we're not using here
-    // In a real implementation, you would use Google's Place Photos API
-    return `https://maps-data-by-google.p.rapidapi.com/places/photo?photo_reference=${photoReference}&maxwidth=${maxWidth}`;
+    // For RapidAPI implementation, photo endpoint is:
+    // Note: This will return a redirect to the actual image URL
+    return `https://maps-data-by-google.p.rapidapi.com/places/photos?photo_reference=${encodeURIComponent(photoReference)}&maxheight=${maxWidth}&key=unused`;
   }
   
   /**
@@ -322,6 +402,79 @@ class MapsService {
   async getHotelDetails(hotelName: string, destination: string): Promise<any> {
     const searchQuery = `${hotelName} in ${destination}`;
     return this.searchPlaces(searchQuery, 'hotel');
+  }
+  
+  /**
+   * Get place details directly by place ID
+   * @param placeId Google Maps place ID 
+   * @returns Place details including photos
+   */
+  async getPlaceDetailsById(placeId: string): Promise<any> {
+    if (!this.rapidApiKey) {
+      console.warn('RAPIDAPI_KEY not set. Cannot get place details.');
+      return null;
+    }
+    
+    try {
+      const detailsOptions = {
+        method: 'GET',
+        url: 'https://maps-data-by-google.p.rapidapi.com/places/details/json',
+        params: {
+          'place_id': placeId,
+          'language': 'en',
+          'fields': 'name,place_id,formatted_address,geometry,rating,user_ratings_total,types,photos,website,url,price_level,international_phone_number,opening_hours'
+        },
+        headers: {
+          'X-RapidAPI-Key': this.rapidApiKey,
+          'X-RapidAPI-Host': this.placesApiHost
+        }
+      };
+      
+      const detailsResponse = await axios.request(detailsOptions);
+      
+      if (detailsResponse.data && detailsResponse.data.result) {
+        const place = detailsResponse.data.result;
+        const photos = [];
+        
+        // Process all photos if available
+        if (place.photos && place.photos.length > 0) {
+          for (const photo of place.photos.slice(0, 10)) { // Limit to 10 photos
+            const photoUrl = this.getPlacePhotoUrl(photo.photo_reference);
+            if (photoUrl) {
+              photos.push({
+                reference: photo.photo_reference,
+                width: photo.width,
+                height: photo.height,
+                url: photoUrl
+              });
+            }
+          }
+        }
+        
+        return {
+          id: place.place_id,
+          name: place.name,
+          address: place.formatted_address,
+          location: place.geometry?.location,
+          rating: place.rating,
+          userRatingsTotal: place.user_ratings_total,
+          placeTypes: place.types,
+          website: place.website,
+          googleMapsUrl: place.url,
+          priceLevel: place.price_level,
+          phone: place.international_phone_number,
+          openingHours: place.opening_hours,
+          photos: photos,
+          // Add a direct image URL for easy access
+          image: photos.length > 0 ? photos[0].url : this.getUnsplashFallbackUrl('hotel', place.name)
+        };
+      }
+      
+      return null;
+    } catch (error) {
+      console.error(`Error getting place details for ID ${placeId}:`, error);
+      return null;
+    }
   }
 }
 
