@@ -1,6 +1,5 @@
 import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
-import { setupVite, serveStatic, log } from "./vite";
 
 const app = express();
 app.use(express.json());
@@ -29,42 +28,68 @@ app.use((req, res, next) => {
         logLine = logLine.slice(0, 79) + "…";
       }
 
-      log(logLine);
+      console.log(logLine);
     }
   });
 
   next();
 });
 
-(async () => {
-  const server = await registerRoutes(app);
-
-  app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
-    const status = err.status || err.statusCode || 500;
-    const message = err.message || "Internal Server Error";
-
-    res.status(status).json({ message });
-    throw err;
-  });
-
-  // importantly only setup vite in development and after
-  // setting up all the other routes so the catch-all route
-  // doesn't interfere with the other routes
-  if (app.get("env") === "development") {
-    await setupVite(app, server);
+// Handle CORS for local development and production
+app.use((req, res, next) => {
+  // Vercel-specific header
+  const vercelEnv = process.env.VERCEL_ENV;
+  const isProduction = vercelEnv === 'production';
+  
+  // Only set CORS headers in production
+  if (isProduction) {
+    const allowedOrigins = [
+      'https://travel-advisor-app.vercel.app',
+      'https://www.travel-advisor-app.vercel.app'
+    ];
+    
+    const origin = req.headers.origin;
+    if (origin && allowedOrigins.includes(origin)) {
+      res.setHeader('Access-Control-Allow-Origin', origin);
+    }
   } else {
-    serveStatic(app);
+    // In development, allow all origins
+    res.setHeader('Access-Control-Allow-Origin', '*');
   }
+  
+  res.setHeader('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, PATCH, OPTIONS');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, Authorization');
+  res.setHeader('Access-Control-Allow-Credentials', 'true');
+  
+  if (req.method === 'OPTIONS') {
+    return res.status(200).end();
+  }
+  
+  next();
+});
 
-  // ALWAYS serve the app on port 5000
-  // this serves both the API and the client.
-  // It is the only port that is not firewalled.
-  const port = 5000;
+// Setup API routes and error handling
+const server = registerRoutes(app);
+
+app.use((err: any, _req: Request, res: Response, _next: NextFunction) => {
+  const status = err.status || err.statusCode || 500;
+  const message = err.message || "Internal Server Error";
+
+  res.status(status).json({ message });
+  console.error(err);
+});
+
+// For Vercel serverless functions, we don't need to start a server
+// The server will only be started in development or when running standalone
+if (process.env.NODE_ENV === 'development' || process.env.START_SERVER === 'true') {
+  const port = process.env.PORT || 5000;
   server.listen({
-    port,
+    port: Number(port),
     host: "0.0.0.0",
-    reusePort: true,
   }, () => {
-    log(`serving on port ${port}`);
+    console.log(`Server running on port ${port}`);
   });
-})();
+}
+
+// Export for serverless environment
+export default app;
