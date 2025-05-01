@@ -1,7 +1,7 @@
 {
   "name": "travel-advisor-admin",
   "version": "1.0.0",
-  "license": "MIT",
+  "license": "MIT ",
   "type": "module",
   "scripts": {
     "dev": "vite",
