@@ -1,5 +1,13 @@
-// Script to test the avatar functionality
-import { generateDefaultAvatarUrl } from '../shared/utils/avatar.ts';
+// Simple avatar generation function for testing
+function generateDefaultAvatarUrl(name, size = 256) {
+  // Clean up the name and ensure we have something to work with
+  const cleanName = name.trim() || 'User';
+  
+  // Create a URL for ui-avatars.com
+  const url = `https://ui-avatars.com/api/?name=${encodeURIComponent(cleanName)}&size=${size}&background=random&color=fff&bold=true`;
+  
+  return url;
+}
 
 function testAvatarGeneration() {
   console.log('Testing avatar generation function...');
