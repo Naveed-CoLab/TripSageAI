@@ -2,7 +2,6 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
-import { generateTripIdea } from "./gemini";
 import { perplexityService } from "./services/perplexity";
 import { searchFlights, searchAirports, getAirlineInfo } from "./services/amadeus";
 import { hotelService } from "./services/hotels";
@@ -838,7 +837,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
         return res.status(400).json({ message: "Destination is required" });
       }
       
-      const tripIdea = await generateTripIdea(destination, preferences, duration);
+      const tripIdea = await perplexityService.generateTripIdea(destination, preferences, duration);
       res.json({ tripIdea });
     } catch (error) {
       res.status(500).json({ message: "Failed to generate trip idea" });

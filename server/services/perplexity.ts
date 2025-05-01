@@ -7,6 +7,15 @@ type ChatMessage = {
   content: string;
 };
 
+// Type for trip idea
+type TripIdea = {
+  summary: string;
+  highlights: string[];
+  bestTimeToVisit: string;
+  estimatedBudget: string;
+  recommendedDuration: string;
+};
+
 // Type for itinerary day
 type ItineraryDay = {
   dayNumber: number;
@@ -59,6 +68,214 @@ export class PerplexityService {
     if (!this.apiKey) {
       console.warn("RAPIDAPI_KEY is not set! AI features will not work properly.");
     }
+  }
+  
+  /**
+   * Generate a trip idea with highlights, best time to visit, etc.
+   * @param destination The destination for the trip
+   * @param preferences Optional array of preferences
+   * @param duration Optional trip duration
+   * @returns Trip idea object with summary, highlights, etc.
+   */
+  async generateTripIdea(
+    destination: string,
+    preferences?: string[],
+    duration?: string
+  ): Promise<TripIdea> {
+    try {
+      const preferencesString = preferences ? preferences.join(", ") : "general tourism";
+      const durationString = duration || "a week";
+      
+      // Check if API key is missing
+      if (!this.apiKey) {
+        console.warn("No RAPIDAPI_KEY provided. Using fallback trip idea data.");
+        return this.generateFallbackTripIdea(destination, preferencesString, durationString);
+      }
+      
+      // System prompt to set the context and requirements
+      const systemPrompt = `
+        You are an expert travel advisor specializing in providing detailed, specific, and accurate travel recommendations.
+        For each trip idea request, you will provide informative, structured recommendations with specific details.
+      `;
+      
+      // User prompt requesting trip idea
+      const userPrompt = `
+        Create a travel plan idea for a trip to ${destination}.
+        The traveler is interested in: ${preferencesString}.
+        The trip duration is approximately ${durationString}.
+        
+        Format your response as a JSON object with the following structure:
+        {
+          "summary": "Brief overview of the destination and trip (2-3 sentences)",
+          "highlights": ["Specific attraction 1 with exact name", "Specific attraction 2 with exact name", "Specific attraction 3 with exact name", "Specific attraction 4 with exact name", "Specific attraction 5 with exact name"],
+          "bestTimeToVisit": "Season or months that are ideal for this destination",
+          "estimatedBudget": "Specific price range in USD for this trip",
+          "recommendedDuration": "Ideal length of stay in days"
+        }
+        
+        Important: Your JSON response MUST be valid and parseable. Use specific, real place names for attractions.
+      `;
+      
+      const messages: ChatMessage[] = [
+        { role: 'system', content: systemPrompt },
+        { role: 'user', content: userPrompt }
+      ];
+      
+      const options = {
+        method: 'POST',
+        url: 'https://perplexity-ai.p.rapidapi.com/chat/completions',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-RapidAPI-Key': this.apiKey,
+          'X-RapidAPI-Host': this.apiHost
+        },
+        data: {
+          model: this.model,
+          messages: messages,
+          temperature: 0.3,  // Lower temperature for more factual responses
+          max_tokens: 1000,
+          top_p: 0.9,
+          frequency_penalty: 0.0,
+          presence_penalty: 0.0,
+          response_format: { type: "json_object" }  // Request JSON response format
+        }
+      };
+      
+      // Make request to Perplexity API
+      const response = await axios.request(options);
+      
+      // Extract the content from response
+      const content = response.data.choices[0].message.content;
+      
+      // Parse the JSON response
+      let result: TripIdea;
+      try {
+        result = JSON.parse(content);
+      } catch (e) {
+        console.error("Failed to parse Perplexity API response as JSON:", e);
+        console.error("Raw response:", content);
+        
+        // Try to extract JSON from markdown code blocks if present
+        const jsonMatch = content.match(/```(?:json)?\s*(\{[\s\S]*?\})\s*```/);
+        if (jsonMatch && jsonMatch[1]) {
+          try {
+            result = JSON.parse(jsonMatch[1]);
+          } catch (e2) {
+            console.error("Failed to parse extracted JSON:", e2);
+            return this.generateFallbackTripIdea(destination, preferencesString, durationString);
+          }
+        } else {
+          return this.generateFallbackTripIdea(destination, preferencesString, durationString);
+        }
+      }
+      
+      return result;
+    } catch (error) {
+      console.error("Error generating trip idea:", error);
+      return this.generateFallbackTripIdea(destination, preferences?.join(", ") || "general tourism", duration || "a week");
+    }
+  }
+  
+  /**
+   * Generate fallback trip idea when API call fails
+   * @param destination The destination
+   * @param preferences User preferences
+   * @param duration Trip duration
+   * @returns Fallback trip idea
+   */
+  private generateFallbackTripIdea(destination: string, preferences: string, duration: string): TripIdea {
+    // Create destination-specific trip ideas based on common tourist destinations
+    let tripIdea: TripIdea;
+    
+    // Customize trip idea based on destination
+    switch(destination.toLowerCase()) {
+      case 'tokyo':
+      case 'japan':
+        tripIdea = {
+          summary: "Experience the perfect blend of ancient traditions and futuristic innovation in Japan. From serene temples and gardens to bustling city streets and technological wonders, Japan offers a unique cultural experience that will captivate any traveler.",
+          highlights: [
+            "Visit the historic Senso-ji Temple in Asakusa",
+            "Experience the organized chaos of Shibuya Crossing",
+            "Take in breathtaking views of Mt. Fuji",
+            "Explore the pop culture district of Akihabara",
+            "Enjoy authentic Japanese cuisine from sushi to ramen"
+          ],
+          bestTimeToVisit: "Late March to May for cherry blossoms, or October to November for autumn foliage",
+          estimatedBudget: "$150-300 per day including accommodations, food, and activities",
+          recommendedDuration: "10-14 days to explore Tokyo and surrounding areas"
+        };
+        break;
+        
+      case 'paris':
+      case 'france':
+        tripIdea = {
+          summary: "Discover the romance and charm of Paris, the City of Light. Known for its iconic landmarks, world-class museums, and exquisite cuisine, Paris offers a perfect blend of history, culture, and beauty.",
+          highlights: [
+            "Marvel at the iconic Eiffel Tower",
+            "Explore the vast art collections at the Louvre Museum",
+            "Visit the Gothic masterpiece Notre-Dame Cathedral",
+            "Stroll along the elegant Champs-Élysées",
+            "Experience Parisian café culture at Les Deux Magots"
+          ],
+          bestTimeToVisit: "April to June or September to October for mild weather and fewer crowds",
+          estimatedBudget: "$150-250 per day including accommodations, food, and activities",
+          recommendedDuration: "5-7 days to experience the main attractions of Paris"
+        };
+        break;
+        
+      case 'rome':
+      case 'italy':
+        tripIdea = {
+          summary: "Step back in time in Rome, the Eternal City, where ancient history meets modern Italian life. With its incredible archaeological sites, Renaissance masterpieces, and vibrant streets, Rome offers an unforgettable journey through the layers of Western civilization.",
+          highlights: [
+            "Explore the ancient Colosseum and Roman Forum",
+            "Visit Vatican City and St. Peter's Basilica",
+            "Toss a coin in the Trevi Fountain",
+            "Marvel at the perfect dome of the Pantheon",
+            "Indulge in authentic Italian cuisine at Trastevere"
+          ],
+          bestTimeToVisit: "April to May or September to October for pleasant weather and thinner crowds",
+          estimatedBudget: "$120-200 per day including accommodations, food, and activities",
+          recommendedDuration: "4-6 days to see Rome's major attractions"
+        };
+        break;
+        
+      case 'new york':
+      case 'new york city':
+      case 'usa':
+        tripIdea = {
+          summary: "Experience the energy and diversity of New York City, the city that never sleeps. From iconic skyscrapers and world-class museums to diverse neighborhoods and Broadway shows, NYC offers endless possibilities for exploration and entertainment.",
+          highlights: [
+            "Take in the views from the Empire State Building or One World Observatory",
+            "Stroll through the urban oasis of Central Park",
+            "Visit the Metropolitan Museum of Art",
+            "Experience the bright lights of Times Square",
+            "Explore diverse neighborhoods like Greenwich Village and Brooklyn"
+          ],
+          bestTimeToVisit: "April to June or September to November for mild weather and fewer tourists",
+          estimatedBudget: "$200-350 per day including accommodations, food, and activities",
+          recommendedDuration: "5-7 days to experience the highlights of NYC"
+        };
+        break;
+        
+      // Default fallback for any other destination
+      default:
+        tripIdea = {
+          summary: `A journey to ${destination} focusing on ${preferences}. This trip offers a perfect balance of exploration, relaxation, and cultural immersion.`,
+          highlights: [
+            "Explore the main attractions and historical sites",
+            "Sample local cuisine and culinary specialties",
+            "Immerse yourself in the local culture and traditions",
+            "Visit museums and cultural institutions",
+            "Discover hidden gems off the typical tourist path"
+          ],
+          bestTimeToVisit: "Spring or fall for the most pleasant weather conditions",
+          estimatedBudget: "$100-200 per day depending on accommodation choices and activities",
+          recommendedDuration: duration
+        };
+    }
+    
+    return tripIdea;
   }
 
   /**
