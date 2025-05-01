@@ -38,6 +38,8 @@ type TripCardProps = {
 };
 
 export default function TripCard({ trip }: TripCardProps) {
+  // Debug log to see the exact structure of trip data
+  console.log("Trip object:", JSON.stringify(trip));
   const [, navigate] = useLocation();
   const { toast } = useToast();
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
