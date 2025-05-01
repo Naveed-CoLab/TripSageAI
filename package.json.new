@@ -1,0 +1,34 @@
+{
+  "name": "travel-advisor-app",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "workspaces": [
+    "frontend",
+    "backend",
+    "admin",
+    "shared"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:backend\" \"npm run dev:frontend\"",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev:backend": "cd backend && npm run dev",
+    "dev:admin": "cd admin && npm run dev",
+    "build": "npm run build:shared && npm run build:backend && npm run build:frontend && npm run build:admin",
+    "build:shared": "cd shared && npm run build",
+    "build:backend": "cd backend && npm run build",
+    "build:frontend": "cd frontend && npm run build",
+    "build:admin": "cd admin && npm run build",
+    "start": "cd backend && npm run start",
+    "check": "npm run check:shared && npm run check:backend && npm run check:frontend && npm run check:admin",
+    "check:shared": "cd shared && npm run check",
+    "check:backend": "cd backend && npm run check",
+    "check:frontend": "cd frontend && npm run check",
+    "check:admin": "cd admin && npm run check",
+    "db:push": "cd backend && npm run db:push"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.3",
+    "typescript": "5.6.3"
+  }
+}
