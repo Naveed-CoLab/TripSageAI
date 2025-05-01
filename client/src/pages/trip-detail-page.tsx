@@ -153,6 +153,60 @@ const getActivityIcon = (type: string | null) => {
   }
 };
 
+// BookingImage component to fetch and display images from TripAdvisor API
+function BookingImage({ booking, destination }: { booking: Booking; destination: string }) {
+  const { data, isLoading } = useQuery({
+    queryKey: ['/api/tripadvisor/search', `${booking.title} in ${destination}`, 'hotels'],
+    queryFn: async () => {
+      const response = await fetch(`/api/tripadvisor/search?query=${encodeURIComponent(`${booking.title} in ${destination}`)}&type=hotels`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch hotel images');
+      }
+      return response.json();
+    },
+    // Don't refetch unnecessarily
+    staleTime: 60 * 60 * 1000, // 1 hour
+  });
+  
+  // First try to use the booking's own image if it exists
+  if (booking.image) {
+    return (
+      <img 
+        src={booking.image}
+        alt={booking.title}
+        className="w-full h-full object-cover"
+      />
+    );
+  }
+  
+  // If loading, show a skeleton
+  if (isLoading) {
+    return (
+      <div className="w-full h-full flex items-center justify-center bg-gray-100 animate-pulse">
+        <Hotel className="h-12 w-12 text-primary-200" />
+      </div>
+    );
+  }
+  
+  // If we have results from TripAdvisor, show the first image
+  if (data && data.length > 0 && data[0].image) {
+    return (
+      <img 
+        src={data[0].image}
+        alt={booking.title}
+        className="w-full h-full object-cover"
+      />
+    );
+  }
+  
+  // Fallback to the hotel icon
+  return (
+    <div className="w-full h-full flex items-center justify-center bg-gradient-to-r from-primary-50 to-primary-100">
+      <Hotel className="h-12 w-12 text-primary-300" />
+    </div>
+  );
+}
+
 export default function TripDetailPage() {
   const { id } = useParams<{ id: string }>();
   const [, navigate] = useLocation();
@@ -952,7 +1006,12 @@ export default function TripDetailPage() {
                               className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-shadow duration-200"
                             >
                               <div className="relative h-32 bg-gray-100">
-                                {booking.image ? (
+                                {booking.type === 'hotel' ? (
+                                  <BookingImage 
+                                    booking={booking}
+                                    destination={trip.destination}
+                                  />
+                                ) : booking.image ? (
                                   <img
                                     src={booking.image}
                                     alt={booking.title}
@@ -960,9 +1019,7 @@ export default function TripDetailPage() {
                                   />
                                 ) : (
                                   <div className="w-full h-full flex items-center justify-center bg-gradient-to-r from-primary-50 to-primary-100">
-                                    {booking.type === 'hotel' ? (
-                                      <Hotel className="h-12 w-12 text-primary-300" />
-                                    ) : booking.type === 'flight' ? (
+                                    {booking.type === 'flight' ? (
                                       <Plane className="h-12 w-12 text-primary-300" />
                                     ) : (
                                       <Ticket className="h-12 w-12 text-primary-300" />
