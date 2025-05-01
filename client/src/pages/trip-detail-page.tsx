@@ -169,6 +169,8 @@ export default function TripDetailPage() {
   const mapRef = useRef<HTMLIFrameElement>(null);
   const [expandedDay, setExpandedDay] = useState<number | null>(null);
   const [savedStates, setSavedStates] = useState<{ [key: string]: boolean }>({});
+  // For dynamic image loading - must be before any conditional logic to maintain hook order
+  const [backgroundImage, setBackgroundImage] = useState<string>("");
   
   // Fetch wishlist items to check if any attractions are already saved
   const { data: wishlistItems } = useQuery<any[]>({
@@ -348,11 +350,10 @@ export default function TripDetailPage() {
     );
   }
 
-  // For dynamic image loading - must be before any conditional logic to maintain hook order
-  const [backgroundImage, setBackgroundImage] = useState<string>("");
-  
   // Load destination image dynamically
   useEffect(() => {
+    if (!trip) return;
+    
     let isMounted = true;
     
     const loadImage = async () => {
@@ -380,7 +381,7 @@ export default function TripDetailPage() {
     return () => {
       isMounted = false;
     };
-  }, [trip.destination]);
+  }, [trip?.destination, backgroundImage]);
 
   const hasItinerary = trip.days && trip.days.length > 0;
   const hasBookings = trip.bookings && trip.bookings.length > 0;
