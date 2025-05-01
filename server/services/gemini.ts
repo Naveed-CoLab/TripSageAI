@@ -1,5 +1,5 @@
-// Import the improved Gemini implementation
-import { generateImageWithGemini } from "../gemini-updated";
+// Import the unified Gemini service implementation
+import { generateImageWithGemini } from "../gemini-service";
 
 // Use Gemini to generate an image for a travel destination or activity
 export async function generateTravelImage(
@@ -7,7 +7,7 @@ export async function generateTravelImage(
   fallbackImageUrl?: string
 ): Promise<string> {
   try {
-    // Generate image with Gemini 2.5 Pro
+    // Generate image with Gemini 2.5 Pro Preview model
     const generatedImage = await generateImageWithGemini(prompt);
     
     // Return the generated image or fallback

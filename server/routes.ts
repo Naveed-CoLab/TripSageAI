@@ -2,7 +2,7 @@ import type { Express, Request, Response, NextFunction } from "express";
 import { createServer, type Server } from "http";
 import { storage } from "./storage";
 import { setupAuth } from "./auth";
-import { generateTripIdea, generateItinerary } from "./gemini";
+import { generateTripIdea, generateItinerary, chatWithAI } from "./gemini-service";
 import { searchFlights, searchAirports, getAirlineInfo } from "./services/amadeus";
 import { hotelService } from "./services/hotels";
 import { mapsService } from "./services/maps";
