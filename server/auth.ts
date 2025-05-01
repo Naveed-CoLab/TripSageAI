@@ -7,6 +7,7 @@ import { scrypt, randomBytes, timingSafeEqual } from "crypto";
 import { promisify } from "util";
 import { storage } from "./storage";
 import { User as SelectUser } from "@shared/schema";
+import { generateDefaultAvatarUrl } from "../shared/utils/avatar";
 
 declare global {
   namespace Express {
@@ -125,13 +126,18 @@ export function setupAuth(app: Express) {
         return res.status(400).json({ message: "Username already exists" });
       }
 
+      // Generate default profile image URL based on user's name
+      const displayName = firstName ? `${firstName} ${lastName || ''}` : username;
+      const profileImage = generateDefaultAvatarUrl(displayName);
+
       console.log("Creating user:", username);
       const user = await storage.createUser({
         username,
         email,
         password: await hashPassword(password),
         firstName,
-        lastName
+        lastName,
+        profileImage
       });
       console.log("User created successfully with ID:", user.id);
 
@@ -345,6 +351,10 @@ export function setupAuth(app: Express) {
                 uniqueUsername = `${username}_${Math.random().toString(36).substring(2, 8)}`;
               }
               
+              // Generate a default profile image based on the user's name
+              const displayName = profile.displayName || uniqueUsername;
+              const profileImage = generateDefaultAvatarUrl(displayName);
+              
               user = await storage.createUser({
                 username: uniqueUsername,
                 email,
@@ -352,7 +362,8 @@ export function setupAuth(app: Express) {
                 password: await hashPassword(randomBytes(16).toString('hex')),
                 firstName: profile.name?.givenName || '',
                 lastName: profile.name?.familyName || '',
-                googleId: profile.id
+                googleId: profile.id,
+                profileImage
               });
             } else if (!user.googleId) {
               // If user exists but doesn't have a Google ID, update it
@@ -431,6 +442,10 @@ export function setupAuth(app: Express) {
                   uniqueUsername = `${username}_${Math.random().toString(36).substring(2, 8)}`;
                 }
                 
+                // Generate a default profile image based on the user's name
+                const displayName = profile.displayName || uniqueUsername;
+                const profileImage = generateDefaultAvatarUrl(displayName);
+                
                 user = await storage.createUser({
                   username: uniqueUsername,
                   email,
@@ -438,7 +453,8 @@ export function setupAuth(app: Express) {
                   password: await hashPassword(randomBytes(16).toString('hex')),
                   firstName: profile.name?.givenName || '',
                   lastName: profile.name?.familyName || '',
-                  googleId: profile.id
+                  googleId: profile.id,
+                  profileImage
                 });
               } else if (!user.googleId) {
                 // If user exists but doesn't have a Google ID, update it
