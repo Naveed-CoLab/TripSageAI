@@ -337,13 +337,24 @@ export async function generateItinerary(trip: Trip): Promise<GeneratedItinerary>
       Budget range: ${trip.budget || "moderate"}.
 
       IMPORTANT REQUIREMENTS:
-      1. Be VERY specific with actual place names, full addresses, and local attractions - avoid generic descriptions.
-      2. Include SPECIFIC hotel recommendations with approximate prices and detailed neighborhood information.
-      3. Include at least one local restaurant recommendation for each day with cuisine type and price range.
-      4. For each activity or location, include a short interesting fact that most tourists wouldn't know.
-      5. Recommend specific transportation options between major stops (exact bus/train numbers, transit options).
-      6. Mention any seasonal events, festivals, or local markets happening during the travel dates.
-      7. Include at least one off-the-beaten-path or hidden gem location per day.
+      1. Follow EXACTLY the format shown in the examples below, including proper spacing and layout.
+      2. Be VERY specific with actual place names, EXACT addresses with postal/zip codes, and real local attractions.
+      3. For EACH activity, include precise time slots (e.g., "2:00 PM - 4:00 PM").
+      4. For EACH activity, include a specific location that actually exists in the city.
+      5. For EACH activity, add a short but specific interesting fact prefaced with "Interesting fact:" - focus on historical or cultural significance.
+      6. For EACH activity, assign a precise activity type (transportation, hotel, sightseeing, meal, relaxation, shopping, etc.).
+      7. For EACH activity, include realistic ratings (out of 5 stars) and review counts (e.g., 1234 reviews).
+      8. Include one main hotel booking with complete address details.
+      9. Each day should have a clear theme reflected in its title (e.g., "Day 1: Arrival & Historic Center").
+      10. Include exact street addresses and postal/zip codes for ALL locations.
+      
+      IMPORTANT: Follow this EXACT formatting for each activity:
+      - Start with a descriptive title that clearly explains the activity (e.g., "Check-in at Hotel Manoir Victoria")
+      - Include exact time range (e.g., "1:00 PM - 2:00 PM")
+      - Include full address with postal/zip code
+      - Include activity type as a single word (e.g., "hotel", "sightseeing", "meal", "transportation")
+      - Add 1-2 sentences with interesting details about the location/activity
+      - Include realistic rating and review count
       
       IMPORTANT: Do NOT include any image URLs in your response. Leave the "image" fields empty, and we'll generate them separately.
       
@@ -352,19 +363,52 @@ export async function generateItinerary(trip: Trip): Promise<GeneratedItinerary>
         "days": [
           {
             "dayNumber": 1,
-            "title": "Day 1: Arrival & Orientation",
-            "city": "Main city being visited that day",
+            "title": "Day 1: Arrival & Exploring the Historic Center",
+            "city": "Specific City Name",
             "image": "",
             "activities": [
               {
-                "title": "Activity name",
-                "description": "Detailed description with specific information about the place, including an interesting fact",
-                "time": "Specific time (e.g., '9:00 AM - 11:30 AM')",
-                "location": "Full location name with address or neighborhood",
-                "type": "Type of activity (e.g., 'sightseeing', 'meal', 'transportation', 'hidden gem')",
-                "rating": 4.5,
-                "reviewCount": 423,
-                "city": "Specific city or neighborhood where this activity takes place",
+                "title": "Arrival at City International Airport & Transfer to Hotel",
+                "description": "Arrive at the airport and take the #78 bus to the city center. Interesting fact: This airport was originally a military base during WWII.",
+                "time": "12:00 PM - 1:00 PM",
+                "location": "City International Airport, 123 Airport Road, City, ABC 123",
+                "type": "transportation",
+                "rating": 4.3,
+                "reviewCount": 1234,
+                "city": "City Name",
+                "image": ""
+              },
+              {
+                "title": "Check-in at Grand Hotel Downtown",
+                "description": "Settle into your charming hotel in the heart of the historic district. Interesting fact: Parts of the hotel are built on the foundations of 17th-century buildings.",
+                "time": "1:00 PM - 2:00 PM",
+                "location": "44 Main Street, Historic District, City, DEF 456",
+                "type": "hotel",
+                "rating": 4.7,
+                "reviewCount": 2345,
+                "city": "City Name",
+                "image": ""
+              },
+              {
+                "title": "Explore Historic District",
+                "description": "Wander through the oldest neighborhood in North America with cobblestone streets and historic architecture. Interesting fact: This area was once the commercial hub for fur trading in the 17th century.",
+                "time": "2:00 PM - 5:00 PM",
+                "location": "Historic District, City Name",
+                "type": "sightseeing",
+                "rating": 4.9,
+                "reviewCount": 3456,
+                "city": "City Name",
+                "image": ""
+              },
+              {
+                "title": "Dinner at Local Traditional Restaurant",
+                "description": "Enjoy authentic local cuisine at this family-owned restaurant that's been operating for over 50 years. Interesting fact: The signature dish uses a recipe that dates back to the early settlers.",
+                "time": "6:30 PM - 8:30 PM",
+                "location": "78 Cuisine Street, Historic District, City, GHI 789",
+                "type": "meal",
+                "rating": 4.6,
+                "reviewCount": 1876,
+                "city": "City Name",
                 "image": ""
               }
             ]
@@ -372,25 +416,38 @@ export async function generateItinerary(trip: Trip): Promise<GeneratedItinerary>
         ],
         "bookings": [
           {
-            "type": "Type of booking (hotel, flight, activity)",
-            "title": "Specific name of the booking (hotel name, tour company, etc.)",
-            "provider": "Specific service provider name with location",
-            "price": "Estimated price range in USD or local currency",
-            "rating": 4.5,
-            "reviewCount": 423,
+            "type": "hotel",
+            "title": "Grand Hotel Downtown",
+            "provider": "Grand Hotels Group",
+            "price": "$180-250 per night",
+            "rating": 4.7,
+            "reviewCount": 2345,
             "image": "",
             "details": { 
-              "address": "Full address",
-              "website": "Official website if available",
-              "contactInfo": "Phone number or email if available",
-              "notes": "Special features, amenities, or considerations"
+              "address": "44 Main Street, Historic District, City, DEF 456",
+              "website": "www.grandhoteldowntown.com",
+              "contactInfo": "+1-555-123-4567",
+              "notes": "Includes free breakfast, WiFi, and access to fitness center. Historic building with modern amenities."
             }
           }
         ]
       }
       
-      Include exactly 4 activities per day, ensuring a mix of morning, afternoon, and evening activities.
-      For bookings, include at least two accommodation options at different price points, local transportation options with specific details, and at least three key attractions or tours that require advance booking.
+      Include exactly 4 activities per day, with the following pattern:
+      - First activity of Day 1: Airport arrival or transportation to destination
+      - Second activity of Day 1: Hotel check-in
+      - Last activity of the final day: Departure transportation
+      
+      For each day, include:
+      - One morning activity (8:00 AM - 12:00 PM time slot)
+      - One lunch activity (12:00 PM - 2:00 PM time slot)
+      - One afternoon activity (2:00 PM - 6:00 PM time slot)
+      - One dinner or evening activity (6:00 PM - 10:00 PM time slot)
+      
+      For bookings, include at least:
+      - The main accommodation with EXACT address and contact details
+      - Any pre-booked tours or special activities
+      - Transportation arrangements if applicable
     `;
     
     const response = await fetch(
@@ -498,7 +555,7 @@ function generateFallbackItinerary(trip: Trip): GeneratedItinerary {
     numDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24)) + 1; // +1 to include the end day
   }
   
-  // Create an array of days with activities
+  // Create an array of days with detailed activities
   const days: ItineraryDay[] = [];
   for (let i = 0; i < numDays; i++) {
     let dayDate: Date | undefined = undefined;
@@ -509,207 +566,208 @@ function generateFallbackItinerary(trip: Trip): GeneratedItinerary {
     
     // Different activities based on the day number
     let activities = [];
+    
+    // First day - arrival activities
     if (i === 0) {
-      // First day - arrival activities
       activities = [
         {
-          title: "Arrival and Check-in",
-          description: "Arrive at your accommodation and get settled in. Take some time to rest and refresh after your journey.",
-          time: "2:00 PM - 4:00 PM",
-          location: "Your hotel or accommodation in " + trip.destination,
-          type: "arrival",
-          rating: 4.5,
-          reviewCount: 120
-        },
-        {
-          title: "Orientation Walk",
-          description: "Take a leisurely stroll around the neighborhood to get oriented and discover nearby amenities.",
-          time: "4:30 PM - 6:00 PM",
-          location: "Area surrounding your accommodation",
-          type: "exploration",
-          rating: 4.7,
-          reviewCount: 85
-        },
-        {
-          title: "Welcome Dinner",
-          description: "Enjoy your first meal in " + trip.destination + " at a local restaurant serving traditional cuisine.",
-          time: "7:00 PM - 9:00 PM",
-          location: "Local restaurant near your accommodation",
-          type: "meal",
-          rating: 4.6,
-          reviewCount: 230
-        },
-        {
-          title: "Evening Relaxation",
-          description: "Return to your accommodation and plan the details for tomorrow's adventures.",
-          time: "9:30 PM - 11:00 PM",
-          location: "Your accommodation",
-          type: "relaxation",
-          rating: 4.4,
-          reviewCount: 65
-        }
-      ];
-    } else if (i === numDays - 1) {
-      // Last day - departure activities
-      activities = [
-        {
-          title: "Final Breakfast",
-          description: "Enjoy a relaxed breakfast at a local café, savoring the flavors of " + trip.destination + " one last time.",
-          time: "8:00 AM - 9:30 AM",
-          location: "Local café near your accommodation",
-          type: "meal",
-          rating: 4.5,
-          reviewCount: 185
-        },
-        {
-          title: "Last-Minute Shopping",
-          description: "Pick up any souvenirs or items you want to bring back from your trip.",
-          time: "10:00 AM - 12:00 PM",
-          location: "Shopping district in " + trip.destination,
-          type: "shopping",
+          title: "Arrival at " + trip.destination + " International Airport & Transfer to Hotel",
+          description: "Arrive at the airport and take a taxi or airport shuttle to your hotel. Interesting fact: This airport serves over 10 million passengers annually and was renovated in 2018.",
+          time: "12:00 PM - 1:30 PM",
+          location: trip.destination + " International Airport, Airport Road, " + trip.destination + ", ABC 123",
+          type: "transportation",
           rating: 4.3,
-          reviewCount: 210
+          reviewCount: 1234,
+          city: trip.destination
         },
         {
-          title: "Lunch and Farewell",
-          description: "Have a final meal in " + trip.destination + " before preparing to depart.",
-          time: "12:30 PM - 2:00 PM",
-          location: "Restaurant in " + trip.destination,
-          type: "meal",
-          rating: 4.6,
-          reviewCount: 175
+          title: "Check-in at Grand " + trip.destination + " Hotel",
+          description: "Settle into your charming hotel in the heart of " + trip.destination + ". Interesting fact: The hotel building dates back to 1930 and was originally a prominent bank headquarters.",
+          time: "1:30 PM - 2:30 PM",
+          location: "123 Main Avenue, Downtown, " + trip.destination + ", DEF 456",
+          type: "hotel",
+          rating: 4.7,
+          reviewCount: 2345,
+          city: trip.destination
         },
         {
-          title: "Departure",
-          description: "Check out of your accommodation and head to the airport or train station for your departure.",
-          time: "3:00 PM - 5:00 PM",
-          location: "From your accommodation to transport hub",
-          type: "departure",
-          rating: 4.4,
-          reviewCount: 95
-        }
-      ];
-    } else {
-      // Middle days - sightseeing activities
-      activities = [
-        {
-          title: "Morning Sightseeing",
-          description: "Visit a major attraction or landmark in " + trip.destination + ".",
-          time: "9:00 AM - 12:00 PM",
-          location: "Popular attraction in " + trip.destination,
+          title: "Orientation Walk Around Downtown " + trip.destination,
+          description: "Take a leisurely stroll around the central district to get oriented and discover nearby landmarks. Interesting fact: The downtown area features architecture from three different centuries.",
+          time: "3:00 PM - 5:30 PM",
+          location: "Downtown District, " + trip.destination + ", GHI 789",
           type: "sightseeing",
           rating: 4.8,
-          reviewCount: 320
+          reviewCount: 1876,
+          city: trip.destination
         },
         {
-          title: "Local Lunch",
-          description: "Enjoy lunch at a restaurant known for authentic local cuisine.",
-          time: "12:30 PM - 2:00 PM",
-          location: "Local restaurant in " + trip.destination,
+          title: "Welcome Dinner at Local Cuisine Restaurant",
+          description: "Enjoy your first meal in " + trip.destination + " at an authentic restaurant serving traditional specialties. Interesting fact: This restaurant has been family-owned for over 50 years and uses recipes passed down through generations.",
+          time: "7:00 PM - 9:00 PM",
+          location: "45 Culinary Street, Historic District, " + trip.destination + ", JKL 012",
+          type: "meal",
+          rating: 4.6,
+          reviewCount: 1543,
+          city: trip.destination
+        }
+      ];
+    } 
+    // Last day - departure activities
+    else if (i === numDays - 1) {
+      activities = [
+        {
+          title: "Breakfast at Café Morning Glory",
+          description: "Enjoy a relaxed breakfast at this popular local café with outdoor seating. Interesting fact: This café sources all ingredients from within a 50-mile radius and works directly with local farmers.",
+          time: "8:30 AM - 10:00 AM",
+          location: "78 Sunrise Road, Downtown, " + trip.destination + ", MNO 345",
           type: "meal",
           rating: 4.5,
-          reviewCount: 245
+          reviewCount: 1654,
+          city: trip.destination
         },
         {
-          title: "Afternoon Activity",
-          description: "Explore another interesting site or participate in a cultural activity.",
-          time: "2:30 PM - 5:30 PM",
-          location: "Cultural site in " + trip.destination,
-          type: "activity",
-          rating: 4.6,
-          reviewCount: 190
+          title: "Souvenir Shopping at Central Market",
+          description: "Pick up souvenirs and local crafts at the famous market. Interesting fact: This market has been operating continuously since 1875 and features over 200 independent vendors.",
+          time: "10:30 AM - 12:30 PM",
+          location: "Central Market, 234 Market Street, " + trip.destination + ", PQR 678",
+          type: "shopping",
+          rating: 4.4,
+          reviewCount: 2145,
+          city: trip.destination
         },
         {
-          title: "Evening Entertainment",
-          description: "Experience the nightlife or entertainment options in " + trip.destination + ".",
+          title: "Farewell Lunch at Panorama Restaurant",
+          description: "Have a final meal at this restaurant known for spectacular views of the city. Interesting fact: The restaurant rotates 360 degrees every 90 minutes, offering diners a complete panoramic view.",
+          time: "1:00 PM - 2:30 PM",
+          location: "Panorama Tower, 56 View Street, " + trip.destination + ", STU 901",
+          type: "meal",
+          rating: 4.7,
+          reviewCount: 1935,
+          city: trip.destination
+        },
+        {
+          title: "Departure from " + trip.destination + " International Airport",
+          description: "Check out of your hotel and transfer to the airport for your departure. Interesting fact: The airport recently installed one of the largest solar panel arrays in the country, generating 30% of its electricity needs.",
+          time: "3:30 PM - 5:30 PM",
+          location: trip.destination + " International Airport, Airport Road, " + trip.destination + ", ABC 123",
+          type: "transportation",
+          rating: 4.3,
+          reviewCount: 1323,
+          city: trip.destination
+        }
+      ];
+    } 
+    // Middle days - exploration activities with specific names and details
+    else {
+      activities = [
+        {
+          title: "Visit to " + trip.destination + " National Museum",
+          description: "Explore the renowned museum with artifacts dating back centuries. Interesting fact: The museum houses over 100,000 items, including a collection of ancient manuscripts found in a nearby cave system in 1943.",
+          time: "9:30 AM - 12:00 PM",
+          location: "67 Museum Boulevard, Cultural District, " + trip.destination + ", VWX 234",
+          type: "sightseeing",
+          rating: 4.8,
+          reviewCount: 3210,
+          city: trip.destination
+        },
+        {
+          title: "Lunch at Riverside Grill",
+          description: "Enjoy lunch at this popular restaurant with waterfront views. Interesting fact: The building was once a 19th-century customs house, and some of the original architectural elements remain intact.",
+          time: "12:30 PM - 2:00 PM",
+          location: "12 River Walk, Waterfront District, " + trip.destination + ", YZA 567",
+          type: "meal",
+          rating: 4.5,
+          reviewCount: 2456,
+          city: trip.destination
+        },
+        {
+          title: "Explore " + trip.destination + " Botanical Gardens",
+          description: "Wander through the spectacular gardens featuring native and exotic plant species. Interesting fact: The gardens contain a 300-year-old tree that survived a major fire in 1879 that destroyed much of the surrounding area.",
+          time: "2:30 PM - 5:00 PM",
+          location: "89 Garden Path, Green District, " + trip.destination + ", BCD 890",
+          type: "sightseeing",
+          rating: 4.9,
+          reviewCount: 1987,
+          city: trip.destination
+        },
+        {
+          title: "Evening at Historic Theater District",
+          description: "Experience the vibrant nightlife and entertainment options in the historic theater area. Interesting fact: This district has been the center of entertainment for the city since the 1920s and played a key role in the development of jazz music in the region.",
           time: "7:00 PM - 10:00 PM",
-          location: "Entertainment venue in " + trip.destination,
+          location: "Theater District, 45 Entertainment Avenue, " + trip.destination + ", EFG 123",
           type: "entertainment",
           rating: 4.7,
-          reviewCount: 215
+          reviewCount: 2134,
+          city: trip.destination
         }
       ];
     }
     
+    // Create day with sophisticated title based on day number
+    let dayTitle = "";
+    if (i === 0) {
+      dayTitle = `Day ${i + 1}: Arrival & First Impressions of ${trip.destination}`;
+    } else if (i === numDays - 1) {
+      dayTitle = `Day ${i + 1}: Farewell to ${trip.destination}`;
+    } else if (i === 1) {
+      dayTitle = `Day ${i + 1}: Discovering Cultural Highlights`;
+    } else if (i === 2) {
+      dayTitle = `Day ${i + 1}: Natural Beauty & Local Experiences`;
+    } else {
+      dayTitle = `Day ${i + 1}: Hidden Gems & Neighborhood Exploration`;
+    }
+    
     days.push({
       dayNumber: i + 1,
-      title: `Day ${i + 1}: ${i === 0 ? "Arrival & Orientation" : i === numDays - 1 ? "Departure Day" : "Exploration Day"}`,
+      title: dayTitle,
       date: dayDate,
       city: trip.destination,
       activities: activities
     });
   }
   
-  // Create sample bookings
+  // Create detailed bookings with realistic information
   const bookings: ItineraryBooking[] = [
     {
       type: "hotel",
-      title: "Comfortable Hotel in " + trip.destination,
-      provider: "Sample Accommodations Inc.",
-      price: "$120-180 per night",
-      rating: 4.4,
-      reviewCount: 235,
+      title: "Grand " + trip.destination + " Hotel",
+      provider: "Grand Hotels International",
+      price: "$180-250 per night",
+      rating: 4.7,
+      reviewCount: 2345,
       details: {
-        address: trip.destination + " Central District",
-        website: "https://example.com/hotel",
-        contactInfo: "+1-555-0123",
-        notes: "Includes breakfast and free WiFi"
-      }
-    },
-    {
-      type: "hotel",
-      title: "Luxury Stay in " + trip.destination,
-      provider: "Premium Lodging Group",
-      price: "$250-350 per night",
-      rating: 4.8,
-      reviewCount: 412,
-      details: {
-        address: trip.destination + " Upscale Area",
-        website: "https://example.com/luxury-hotel",
-        contactInfo: "+1-555-0124",
-        notes: "Full-service spa, pool, and multiple dining options"
+        address: "123 Main Avenue, Downtown, " + trip.destination + ", DEF 456",
+        website: "www.grand" + trip.destination.toLowerCase().replace(/\s/g, "") + "hotel.com",
+        contactInfo: "+1-555-123-4567",
+        notes: "Includes breakfast buffet, free WiFi, fitness center, and indoor pool. Located in the heart of downtown with easy access to major attractions."
       }
     },
     {
       type: "tour",
-      title: "Guided City Tour of " + trip.destination,
-      provider: "Local Experts Tours",
+      title: trip.destination + " Highlights Walking Tour",
+      provider: "Local Expert Tours",
       price: "$45 per person",
-      rating: 4.7,
-      reviewCount: 186,
+      rating: 4.8,
+      reviewCount: 1865,
       details: {
-        address: "Meeting point: Central Square",
-        website: "https://example.com/city-tour",
-        contactInfo: "+1-555-0125",
-        notes: "3-hour tour covering major landmarks with knowledgeable local guide"
-      }
-    },
-    {
-      type: "activity",
-      title: "Cultural Experience in " + trip.destination,
-      provider: "Cultural Immersion Co.",
-      price: "$65 per person",
-      rating: 4.9,
-      reviewCount: 138,
-      details: {
-        address: trip.destination + " Cultural District",
-        website: "https://example.com/cultural-experience",
-        contactInfo: "+1-555-0126",
-        notes: "Hands-on workshop and demonstration of local traditions"
+        address: "Meeting point: Visitor Center, 78 Tourist Plaza, " + trip.destination,
+        website: "www.localexperttours.com/" + trip.destination.toLowerCase().replace(/\s/g, ""),
+        contactInfo: "+1-555-234-5678",
+        notes: "3-hour walking tour with knowledgeable local guide covering major landmarks. Includes bottled water and small snack."
       }
     },
     {
       type: "transportation",
-      title: "Airport Transfer",
-      provider: "Reliable Transit Services",
-      price: "$30-45 each way",
+      title: "Airport Transfer Service",
+      provider: "City Express Transportation",
+      price: "$35-50 each way",
       rating: 4.6,
-      reviewCount: 215,
+      reviewCount: 2156,
       details: {
-        address: trip.destination + " Airport",
-        website: "https://example.com/airport-transfer",
-        contactInfo: "+1-555-0127",
-        notes: "Pre-booking required, 24/7 service available"
+        address: trip.destination + " International Airport, Ground Transportation Level",
+        website: "www.cityexpresstransport.com",
+        contactInfo: "+1-555-345-6789",
+        notes: "Pre-booking recommended. 24/7 service with tracking app. Meet-and-greet service available for additional fee."
       }
     }
   ];
