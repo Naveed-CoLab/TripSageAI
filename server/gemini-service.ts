@@ -339,24 +339,35 @@ export async function generateItinerary(trip: Trip): Promise<GeneratedItinerary>
       IMPORTANT REQUIREMENTS:
       1. Follow EXACTLY the format shown in the examples below, including proper spacing and layout.
       2. Be VERY specific with actual place names, EXACT addresses with postal/zip codes, and real local attractions.
-      3. For EACH activity, include precise time slots (e.g., "2:00 PM - 4:00 PM").
-      4. For EACH activity, include a specific location that actually exists in the city.
-      5. For EACH activity, add a short but specific interesting fact prefaced with "Interesting fact:" - focus on historical or cultural significance.
-      6. For EACH activity, assign a precise activity type (transportation, hotel, sightseeing, meal, relaxation, shopping, etc.).
-      7. For EACH activity, include realistic ratings (out of 5 stars) and review counts (e.g., 1234 reviews).
-      8. Include one main hotel booking with complete address details.
-      9. Each day should have a clear theme reflected in its title (e.g., "Day 1: Arrival & Historic Center").
-      10. Include exact street addresses and postal/zip codes for ALL locations.
+      3. For EACH activity, include precise time slots (e.g., "2:00 PM - 4:00 PM") with realistic time durations.
+      4. For EACH activity, include a specific location with complete street address, city, and postal/zip code that actually exists in the city.
+      5. For EACH activity, add a detailed interesting fact prefaced with "Interesting fact:" - focus on historical or cultural significance that most tourists wouldn't know.
+      6. For EACH activity, assign ONE of these specific activity types: "transportation", "hotel", "sightseeing", "meal", "relaxation", "shopping", "cultural", "adventure", "entertainment", "nightlife", "nature".
+      7. For EACH activity, include realistic ratings (between 3.5-4.9 out of 5 stars) and specific review counts (e.g., 1234 reviews).
+      8. Include one main hotel booking with complete address details, nearby landmarks, and amenities.
+      9. Each day should have a clear theme reflected in its title (e.g., "Day 1: Arrival & Historic Exploration").
+      10. Include exact street addresses and postal/zip codes for ALL locations - never use generic addresses.
+      11. For restaurant activities, include what cuisine is served and 1-2 recommended dishes.
+      12. For sightseeing activities, mention how busy it typically is and best times to avoid crowds.
+      13. When suggesting transportation, be specific about which bus/train number, route, or taxi service to use.
       
       IMPORTANT: Follow this EXACT formatting for each activity:
       - Start with a descriptive title that clearly explains the activity (e.g., "Check-in at Hotel Manoir Victoria")
       - Include exact time range (e.g., "1:00 PM - 2:00 PM")
-      - Include full address with postal/zip code
+      - Include full address with postal/zip code (e.g., "44 Côte du Palais, Quebec City, QC G1R 4H8")
       - Include activity type as a single word (e.g., "hotel", "sightseeing", "meal", "transportation")
-      - Add 1-2 sentences with interesting details about the location/activity
-      - Include realistic rating and review count
+      - Add 2-3 sentences with detailed information about the location/activity including an interesting fact
+      - Include realistic rating (e.g., 4.7) and specific review count (e.g., 1234)
       
       IMPORTANT: Do NOT include any image URLs in your response. Leave the "image" fields empty, and we'll generate them separately.
+      
+      IMPORTANT: Create a balanced and realistic itinerary with:
+      - Morning activities starting after 8:00 AM
+      - Adequate lunch and dinner breaks
+      - Reasonable travel times between locations
+      - Sufficient free time for relaxation
+      - Some evening activities when appropriate
+      - At least 5-6 activities per day
       
       Format your response as a JSON object with the following structure:
       {
@@ -468,7 +479,7 @@ export async function generateItinerary(trip: Trip): Promise<GeneratedItinerary>
             temperature: 0.7,
             topK: 40,
             topP: 0.95,
-            maxOutputTokens: 8192,
+            maxOutputTokens: 16384,
           },
         }),
       }
@@ -572,19 +583,19 @@ function generateFallbackItinerary(trip: Trip): GeneratedItinerary {
       activities = [
         {
           title: "Arrival at " + trip.destination + " International Airport & Transfer to Hotel",
-          description: "Arrive at the airport and take a taxi or airport shuttle to your hotel. Interesting fact: This airport serves over 10 million passengers annually and was renovated in 2018.",
+          description: "Arrive at the airport and take the Airport Express shuttle bus #A1 to the city center, departing every 15 minutes from Terminal 1. Interesting fact: This airport was originally built as a military airbase in 1942 before being converted to civilian use in 1960, and now serves over 15 million passengers annually.",
           time: "12:00 PM - 1:30 PM",
-          location: trip.destination + " International Airport, Airport Road, " + trip.destination + ", ABC 123",
+          location: trip.destination + " International Airport, 200 Airport Boulevard, " + trip.destination + ", AX1 2ZY",
           type: "transportation",
           rating: 4.3,
-          reviewCount: 1234,
+          reviewCount: 1678,
           city: trip.destination
         },
         {
           title: "Check-in at Grand " + trip.destination + " Hotel",
-          description: "Settle into your charming hotel in the heart of " + trip.destination + ". Interesting fact: The hotel building dates back to 1930 and was originally a prominent bank headquarters.",
+          description: "Settle into your 4-star hotel in the heart of downtown, featuring an indoor pool, spa services, and complimentary high-speed WiFi. Interesting fact: The hotel building dates back to 1930 and was originally the headquarters of National Trust Bank, with the original vault now serving as a unique conference room in the basement level.",
           time: "1:30 PM - 2:30 PM",
-          location: "123 Main Avenue, Downtown, " + trip.destination + ", DEF 456",
+          location: "123 Main Avenue, Downtown, " + trip.destination + ", DW1 7HG",
           type: "hotel",
           rating: 4.7,
           reviewCount: 2345,
@@ -592,9 +603,9 @@ function generateFallbackItinerary(trip: Trip): GeneratedItinerary {
         },
         {
           title: "Orientation Walk Around Downtown " + trip.destination,
-          description: "Take a leisurely stroll around the central district to get oriented and discover nearby landmarks. Interesting fact: The downtown area features architecture from three different centuries.",
+          description: "Take a leisurely stroll around the central district to get oriented and discover nearby landmarks. Best to visit in the afternoon when crowds are smaller. Interesting fact: The downtown area features architecture spanning three distinct periods: Georgian, Victorian, and Art Deco, with many buildings surviving the major fire of 1887 that destroyed nearly 30% of the city center.",
           time: "3:00 PM - 5:30 PM",
-          location: "Downtown District, " + trip.destination + ", GHI 789",
+          location: "Central Plaza, 45 Heritage Boulevard, Downtown, " + trip.destination + ", DW2 8JK",
           type: "sightseeing",
           rating: 4.8,
           reviewCount: 1876,
@@ -647,12 +658,12 @@ function generateFallbackItinerary(trip: Trip): GeneratedItinerary {
         },
         {
           title: "Departure from " + trip.destination + " International Airport",
-          description: "Check out of your hotel and transfer to the airport for your departure. Interesting fact: The airport recently installed one of the largest solar panel arrays in the country, generating 30% of its electricity needs.",
+          description: "Check out of your hotel and take the Airport Express shuttle bus #A1 from Central Plaza, departing every 20 minutes. Arrive at the airport at least 2 hours before your flight. Interesting fact: The airport recently completed a $450 million eco-friendly renovation, installing one of the largest solar panel arrays in the country that now generates 35% of its electricity needs.",
           time: "3:30 PM - 5:30 PM",
-          location: trip.destination + " International Airport, Airport Road, " + trip.destination + ", ABC 123",
+          location: trip.destination + " International Airport, 200 Airport Boulevard, " + trip.destination + ", AX1 2ZY",
           type: "transportation",
           rating: 4.3,
-          reviewCount: 1323,
+          reviewCount: 1582,
           city: trip.destination
         }
       ];
@@ -662,17 +673,17 @@ function generateFallbackItinerary(trip: Trip): GeneratedItinerary {
       activities = [
         {
           title: "Visit to " + trip.destination + " National Museum",
-          description: "Explore the renowned museum with artifacts dating back centuries. Interesting fact: The museum houses over 100,000 items, including a collection of ancient manuscripts found in a nearby cave system in 1943.",
+          description: "Explore the renowned museum with artifacts dating back centuries. Weekday mornings are the least crowded times to visit. Interesting fact: The museum houses over 100,000 items, including a collection of ancient manuscripts found in a nearby cave system in 1943 that changed historians' understanding of the region's early writing systems.",
           time: "9:30 AM - 12:00 PM",
           location: "67 Museum Boulevard, Cultural District, " + trip.destination + ", VWX 234",
-          type: "sightseeing",
+          type: "cultural",
           rating: 4.8,
           reviewCount: 3210,
           city: trip.destination
         },
         {
           title: "Lunch at Riverside Grill",
-          description: "Enjoy lunch at this popular restaurant with waterfront views. Interesting fact: The building was once a 19th-century customs house, and some of the original architectural elements remain intact.",
+          description: "Enjoy lunch at this popular restaurant with waterfront views, specializing in fresh seafood and local specialties. Try their signature fish chowder or grilled local catch of the day. Interesting fact: The building was once a 19th-century customs house, and some of the original architectural elements remain intact, including the harbormaster's office which is now a private dining room.",
           time: "12:30 PM - 2:00 PM",
           location: "12 River Walk, Waterfront District, " + trip.destination + ", YZA 567",
           type: "meal",
@@ -682,17 +693,17 @@ function generateFallbackItinerary(trip: Trip): GeneratedItinerary {
         },
         {
           title: "Explore " + trip.destination + " Botanical Gardens",
-          description: "Wander through the spectacular gardens featuring native and exotic plant species. Interesting fact: The gardens contain a 300-year-old tree that survived a major fire in 1879 that destroyed much of the surrounding area.",
+          description: "Wander through the spectacular gardens featuring over 3,000 native and exotic plant species. The tropical pavilion is particularly impressive and worth at least 30 minutes. Interesting fact: The gardens contain a 300-year-old oak tree that survived a major fire in 1879 that destroyed much of the surrounding area, and is now considered a living monument with its own dedicated conservation program.",
           time: "2:30 PM - 5:00 PM",
           location: "89 Garden Path, Green District, " + trip.destination + ", BCD 890",
-          type: "sightseeing",
+          type: "nature",
           rating: 4.9,
           reviewCount: 1987,
           city: trip.destination
         },
         {
           title: "Evening at Historic Theater District",
-          description: "Experience the vibrant nightlife and entertainment options in the historic theater area. Interesting fact: This district has been the center of entertainment for the city since the 1920s and played a key role in the development of jazz music in the region.",
+          description: "Experience the vibrant nightlife and entertainment options in the historic theater area. The Royal Theater offers evening performances starting at 7:30 PM, with tickets starting at $45. Interesting fact: This district has been the center of entertainment for the city since the 1920s and played a key role in the development of jazz music in the region, with famous musicians like Louis Armstrong and Duke Ellington having performed in several venues here.",
           time: "7:00 PM - 10:00 PM",
           location: "Theater District, 45 Entertainment Avenue, " + trip.destination + ", EFG 123",
           type: "entertainment",
@@ -736,10 +747,15 @@ function generateFallbackItinerary(trip: Trip): GeneratedItinerary {
       rating: 4.7,
       reviewCount: 2345,
       details: {
-        address: "123 Main Avenue, Downtown, " + trip.destination + ", DEF 456",
+        address: "123 Main Avenue, Downtown, " + trip.destination + ", DW1 7HG",
         website: "www.grand" + trip.destination.toLowerCase().replace(/\s/g, "") + "hotel.com",
         contactInfo: "+1-555-123-4567",
-        notes: "Includes breakfast buffet, free WiFi, fitness center, and indoor pool. Located in the heart of downtown with easy access to major attractions."
+        checkIn: "3:00 PM",
+        checkOut: "11:00 AM",
+        amenities: ["Free Wi-Fi", "Indoor Pool", "Fitness Center", "Restaurant", "Bar/Lounge", "Room Service", "Business Center", "Concierge", "Parking ($25/day)", "Spa Services"],
+        roomTypes: ["Standard Queen", "Deluxe King", "Junior Suite", "Executive Suite"],
+        nearbyAttractions: ["Central Museum (0.3 miles)", "Historic District (0.5 miles)", "Shopping District (0.7 miles)", "Conference Center (0.4 miles)"],
+        notes: "Includes full breakfast buffet 6:30 AM - 10:30 AM daily. Located in the heart of downtown with easy access to major attractions and public transportation. Early check-in available based on availability for an additional $50 fee."
       }
     },
     {
@@ -750,10 +766,17 @@ function generateFallbackItinerary(trip: Trip): GeneratedItinerary {
       rating: 4.8,
       reviewCount: 1865,
       details: {
-        address: "Meeting point: Visitor Center, 78 Tourist Plaza, " + trip.destination,
+        address: "Meeting point: Visitor Center, 78 Tourist Plaza, " + trip.destination + ", DW3 9TU",
         website: "www.localexperttours.com/" + trip.destination.toLowerCase().replace(/\s/g, ""),
         contactInfo: "+1-555-234-5678",
-        notes: "3-hour walking tour with knowledgeable local guide covering major landmarks. Includes bottled water and small snack."
+        schedule: "Daily at 9:30 AM and 2:00 PM",
+        duration: "3 hours (approximately 2 miles of walking)",
+        groupSize: "Maximum 12 people",
+        languages: ["English", "Spanish", "French", "German"],
+        highlights: ["Historic District", "Cultural Quarter", "Famous Landmarks", "Local Stories and Legends", "Hidden Gems"],
+        accessibility: "Moderate walking required, some steps and uneven surfaces. Not suitable for wheelchairs.",
+        cancellation: "Free cancellation up to 24 hours before the tour starts",
+        notes: "Wear comfortable walking shoes and weather-appropriate clothing. Includes bottled water, small snack, and a local guidebook. Tours operate rain or shine - umbrellas provided if needed."
       }
     },
     {
@@ -764,10 +787,16 @@ function generateFallbackItinerary(trip: Trip): GeneratedItinerary {
       rating: 4.6,
       reviewCount: 2156,
       details: {
-        address: trip.destination + " International Airport, Ground Transportation Level",
+        address: trip.destination + " International Airport, Ground Transportation Level, Terminal 1, Exit 4",
         website: "www.cityexpresstransport.com",
         contactInfo: "+1-555-345-6789",
-        notes: "Pre-booking recommended. 24/7 service with tracking app. Meet-and-greet service available for additional fee."
+        operatingHours: "24/7, 365 days a year",
+        vehicleTypes: ["Standard Sedan (1-3 passengers)", "Executive Car (1-3 passengers)", "Minivan (4-6 passengers)", "Shuttle Van (7-10 passengers)"],
+        serviceLevels: ["Standard", "Premium (includes Wi-Fi, bottled water, newspapers)", "VIP (includes priority service, refreshments)"],
+        bookingDeadline: "At least 6 hours in advance for guaranteed service",
+        pickupProcess: "Driver will meet you at the arrival hall with a name sign. Flight monitoring included - no extra charge for delayed flights.",
+        paymentOptions: ["Credit Card", "PayPal", "Cash (to driver)"],
+        notes: "Pre-booking required. Free waiting time (60 minutes for international flights, 30 minutes for domestic). Child seats available upon request. Luggage allowance: 1 large suitcase and 1 carry-on per passenger."
       }
     }
   ];
