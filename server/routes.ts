@@ -6,6 +6,7 @@ import { generateTripIdea, generateItinerary } from "./gemini";
 import { searchFlights, searchAirports, getAirlineInfo } from "./services/amadeus";
 import { hotelService } from "./services/hotels";
 import { mapsService } from "./services/maps";
+import tripAdvisorApi from "./services/tripAdvisorService";
 import { pool, query, transaction } from "./db";
 import { 
   myTrips, 
@@ -3429,6 +3430,67 @@ export async function registerRoutes(app: Express): Promise<Server> {
     );
     
     res.json({ embedUrl });
+  });
+
+  // TripAdvisor API routes
+
+  // Search for hotels and places with images
+  app.get("/api/tripadvisor/search", async (req: Request, res: Response) => {
+    try {
+      const { query, type } = req.query;
+      
+      if (!query) {
+        return res.status(400).json({ error: 'Query parameter is required' });
+      }
+      
+      const searchResults = await tripAdvisorApi.searchLocations(query as string, type as string);
+      
+      if (!searchResults) {
+        return res.status(404).json({ error: 'No results found' });
+      }
+      
+      // Extract just the images and basic info
+      const imagesWithInfo = searchResults.data.map(location => {
+        return {
+          id: location.location_id,
+          name: location.name,
+          image: location.photo?.images?.original?.url || location.photo?.images?.large?.url,
+          type: type || 'location',
+          rating: location.rating,
+          reviewCount: location.num_reviews
+        };
+      }).filter(item => item.image); // Only return items with images
+      
+      res.json(imagesWithInfo);
+    } catch (error) {
+      console.error('Error in TripAdvisor search API:', error);
+      res.status(500).json({ error: 'Failed to search locations' });
+    }
+  });
+
+  // Get specific hotel images
+  app.get("/api/tripadvisor/hotels/:id/images", async (req: Request, res: Response) => {
+    try {
+      const hotelId = req.params.id;
+      const hotelDetails = await tripAdvisorApi.getHotelPhotos(hotelId);
+      
+      if (!hotelDetails) {
+        return res.status(404).json({ error: 'Hotel not found' });
+      }
+      
+      // Extract just the images
+      const images = hotelDetails.data.images || [];
+      
+      res.json({ 
+        id: hotelId,
+        images: images.map((img: any) => ({
+          url: img.images.original.url || img.images.large.url
+        }))
+      });
+    } catch (error) {
+      console.error('Error fetching hotel images:', error);
+      res.status(500).json({ error: 'Failed to fetch hotel images' });
+    }
   });
 
   const httpServer = createServer(app);
