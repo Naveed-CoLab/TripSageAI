@@ -7,9 +7,9 @@ import axios from 'axios';
 class MapsService {
   private rapidApiKey: string;
   private geocodingHost = 'google-maps-geocoding.p.rapidapi.com';
-  private placesApiHost = 'maps-data-by-google.p.rapidapi.com';
+  private placesApiHost = 'google-maps28.p.rapidapi.com';
   private directionsApiHost = 'route-and-directions.p.rapidapi.com';
-  private placesPhotoHost = 'maps-data-by-google.p.rapidapi.com';
+  private placesPhotoHost = 'google-maps28.p.rapidapi.com';
   
   constructor() {
     this.rapidApiKey = process.env.RAPIDAPI_KEY || '';
@@ -204,7 +204,7 @@ class MapsService {
       // Step 1: First use findplacefromtext to get place_id
       const findPlaceOptions = {
         method: 'GET',
-        url: 'https://maps-data-by-google.p.rapidapi.com/places/findplacefromtext/json',
+        url: 'https://google-maps28.p.rapidapi.com/places/findplacefromtext/json',
         params: {
           'input': type ? `${query} ${type}` : query,
           'inputtype': 'textquery',
@@ -233,7 +233,7 @@ class MapsService {
             // Step 2: Get place details including photos
             const detailsOptions = {
               method: 'GET',
-              url: 'https://maps-data-by-google.p.rapidapi.com/places/details/json',
+              url: 'https://google-maps28.p.rapidapi.com/places/details/json',
               params: {
                 'place_id': placeId,
                 'language': 'en',
@@ -418,7 +418,7 @@ class MapsService {
     try {
       const detailsOptions = {
         method: 'GET',
-        url: 'https://maps-data-by-google.p.rapidapi.com/places/details/json',
+        url: 'https://google-maps28.p.rapidapi.com/places/details/json',
         params: {
           'place_id': placeId,
           'language': 'en',
