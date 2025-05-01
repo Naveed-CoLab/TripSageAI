@@ -237,26 +237,30 @@ export default function TripDetailPage() {
   
   // Load destination image dynamically
   useEffect(() => {
-    if (!trip) return;
+    if (!trip?.destination) return;
     
     let isMounted = true;
     
     const loadImage = async () => {
       try {
-        // Start with static image
-        const initialImage = getDestinationImage(trip?.destination || "");
-        if (isMounted) setBackgroundImage(initialImage);
+        // Start with a fallback image first
+        const fallbackImage = `/images/destinations/${trip.destination.toLowerCase().replace(/ /g, '-')}.jpg`;
+        if (isMounted) setBackgroundImage(fallbackImage);
         
-        // Try to get a real-time image
-        const realTimeImage = await fetchDestinationImage(trip?.destination || "");
-        if (isMounted) {
-          setBackgroundImage(realTimeImage);
+        // Try to get a better image from Unsplash
+        const destination = encodeURIComponent(trip.destination);
+        const response = await fetch(`/api/images/search?query=${destination}&width=1200&height=600`);
+        if (response.ok) {
+          const data = await response.json();
+          if (data.url && isMounted) {
+            setBackgroundImage(data.url);
+          }
         }
       } catch (error) {
         console.error("Error loading destination image:", error);
-        // Keep using the fallback image
+        // If all else fails, use a default placeholder
         if (isMounted && !backgroundImage) {
-          setBackgroundImage(getDestinationImage(trip?.destination || ""));
+          setBackgroundImage("https://images.unsplash.com/photo-1488646953014-85cb44e25828?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=1200&h=600&q=80");
         }
       }
     };
@@ -266,7 +270,7 @@ export default function TripDetailPage() {
     return () => {
       isMounted = false;
     };
-  }, [trip, backgroundImage]);
+  }, [trip?.destination]);
 
   const generateItineraryMutation = useMutation({
     mutationFn: async () => {
@@ -409,7 +413,7 @@ export default function TripDetailPage() {
     <MainLayout>
       <div className="relative">
         {/* Hero Banner with Trip Title */}
-        <div className="relative h-96 overflow-hidden">
+        <div className="relative h-64 sm:h-72 md:h-80 overflow-hidden">
           <div className="absolute inset-0 w-full h-full bg-gray-200">
             {backgroundImage && (
               <img 
@@ -419,7 +423,7 @@ export default function TripDetailPage() {
               />
             )}
           </div>
-          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/50 to-black/70"></div>
+          <div className="absolute inset-0 bg-gradient-to-b from-black/30 via-black/40 to-black/60"></div>
           
           {/* Back button */}
           <div className="absolute top-4 left-4 z-10">
@@ -434,29 +438,29 @@ export default function TripDetailPage() {
             </Button>
           </div>
           
-          <div className="absolute inset-0 container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col justify-end pb-12">
-            <div className="animate-fade-in-up">
-              <h1 className="text-5xl font-bold text-white mb-6 drop-shadow-md">
+          <div className="absolute inset-0 container mx-auto px-4 flex flex-col justify-end pb-6">
+            <div>
+              <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-white mb-4 drop-shadow-md">
                 {trip.title}
               </h1>
               
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
-                <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 flex items-center shadow-lg border border-white/20">
-                  <Calendar className="w-8 h-8 mr-3 text-primary-200" />
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 sm:gap-3">
+                <div className="bg-white/15 backdrop-blur-md rounded-lg p-3 flex items-center shadow border border-white/20">
+                  <Calendar className="w-6 h-6 mr-2 text-primary-200" />
                   <div>
-                    <div className="text-xs uppercase tracking-wider text-white/70">Duration</div>
-                    <div className="text-white font-medium text-lg">
+                    <div className="text-xs uppercase tracking-wider text-white/80">Duration</div>
+                    <div className="text-white font-medium">
                       {trip.days.length} days
                     </div>
                   </div>
                 </div>
                 
                 {trip.startDate && trip.endDate && (
-                  <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 flex items-center shadow-lg border border-white/20">
-                    <Calendar className="w-8 h-8 mr-3 text-primary-200" />
+                  <div className="bg-white/15 backdrop-blur-md rounded-lg p-3 flex items-center shadow border border-white/20">
+                    <Calendar className="w-6 h-6 mr-2 text-primary-200" />
                     <div>
-                      <div className="text-xs uppercase tracking-wider text-white/70">Date</div>
-                      <div className="text-white font-medium text-lg">
+                      <div className="text-xs uppercase tracking-wider text-white/80">Date</div>
+                      <div className="text-white font-medium">
                         {trip.startDate && typeof trip.startDate === 'string' 
                           ? format(new Date(trip.startDate), "MMM d") 
                           : "Start date"} - {trip.endDate && typeof trip.endDate === 'string' 
@@ -467,11 +471,11 @@ export default function TripDetailPage() {
                   </div>
                 )}
                 
-                <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 flex items-center shadow-lg border border-white/20">
-                  <MapPin className="w-8 h-8 mr-3 text-primary-200" />
+                <div className="bg-white/15 backdrop-blur-md rounded-lg p-3 flex items-center shadow border border-white/20">
+                  <MapPin className="w-6 h-6 mr-2 text-primary-200" />
                   <div>
-                    <div className="text-xs uppercase tracking-wider text-white/70">Destination</div>
-                    <div className="text-white font-medium text-lg">{trip.destination}</div>
+                    <div className="text-xs uppercase tracking-wider text-white/80">Destination</div>
+                    <div className="text-white font-medium">{trip.destination}</div>
                   </div>
                 </div>
               </div>
@@ -480,8 +484,8 @@ export default function TripDetailPage() {
         </div>
         
         {/* Main Content */}
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
-          <div className="max-w-6xl mx-auto relative -mt-20">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-6">
+          <div className="max-w-6xl mx-auto relative -mt-10">
             <div className="bg-white rounded-xl shadow-md p-6 mb-8 flex flex-col md:flex-row justify-between items-start md:items-center">
               <div className="flex items-center gap-4 mb-4 md:mb-0">
                 <div className="py-1 px-3 bg-primary-50 text-primary-700 rounded-full text-sm font-medium">
