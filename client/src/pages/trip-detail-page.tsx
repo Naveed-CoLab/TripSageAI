@@ -1031,14 +1031,36 @@ export default function TripDetailPage() {
                                     </Button>
                                   )}
                                   
-                                  <Button 
-                                    variant="outline" 
-                                    size="sm" 
-                                    className="text-xs flex-1"
-                                  >
-                                    <Pencil className="h-3.5 w-3.5 mr-1.5" />
-                                    Edit Details
-                                  </Button>
+                                  {booking.type === 'hotel' ? (
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm" 
+                                      className="text-xs flex-1 text-blue-600 border-blue-200 hover:bg-blue-50"
+                                      onClick={() => window.open('https://www.booking.com', '_blank')}
+                                    >
+                                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                                      Visit Booking.com
+                                    </Button>
+                                  ) : booking.type === 'flight' ? (
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm" 
+                                      className="text-xs flex-1 text-green-600 border-green-200 hover:bg-green-50"
+                                      onClick={() => window.open(`https://www.${booking.provider?.toLowerCase().replace(/\s+/g, '')}.com`, '_blank')}
+                                    >
+                                      <Calculator className="h-3.5 w-3.5 mr-1.5" />
+                                      View Expenditure
+                                    </Button>
+                                  ) : (
+                                    <Button 
+                                      variant="outline" 
+                                      size="sm" 
+                                      className="text-xs flex-1"
+                                    >
+                                      <ExternalLink className="h-3.5 w-3.5 mr-1.5" />
+                                      More Details
+                                    </Button>
+                                  )}
                                 </div>
                               </div>
                             </div>

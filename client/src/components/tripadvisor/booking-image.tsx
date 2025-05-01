@@ -37,8 +37,8 @@ export function BookingImage({ booking, destination }: BookingImageProps) {
     },
     // Don't refetch unnecessarily
     staleTime: 60 * 60 * 1000, // 1 hour
-    // Don't run if we already have an image from the booking itself
-    enabled: !booking.image
+    // Always run the query regardless of whether booking.image exists
+    enabled: true
   });
   
   // Update cached image when data changes
@@ -47,8 +47,12 @@ export function BookingImage({ booking, destination }: BookingImageProps) {
       setCachedImageUrl(booking.image);
     } else if (googleMapsHotelData && googleMapsHotelData.length > 0 && googleMapsHotelData[0].image) {
       setCachedImageUrl(googleMapsHotelData[0].image);
+    } else {
+      // Fallback to Unsplash image if neither booking image nor Google Maps data is available
+      const unsplashFallbackUrl = `https://source.unsplash.com/640x480/?${booking.type === 'hotel' ? 'hotel' : 'flight,airport'},${encodeURIComponent(booking.title)}`;
+      setCachedImageUrl(unsplashFallbackUrl);
     }
-  }, [booking.image, googleMapsHotelData]);
+  }, [booking.image, booking.title, booking.type, googleMapsHotelData]);
   
   // If we have a cached image, use it
   if (cachedImageUrl) {
@@ -57,7 +61,11 @@ export function BookingImage({ booking, destination }: BookingImageProps) {
         src={cachedImageUrl}
         alt={booking.title}
         className="w-full h-full object-cover"
-        onError={() => setCachedImageUrl(null)} // Clear the cached image if it fails to load
+        onError={(e) => {
+          // If the image fails to load, try an Unsplash fallback
+          const target = e.target as HTMLImageElement;
+          target.src = `https://source.unsplash.com/640x480/?${booking.type === 'hotel' ? 'hotel' : 'flight,airport'},${encodeURIComponent(destination)}`;
+        }}
       />
     );
   }
