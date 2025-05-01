@@ -1,6 +1,7 @@
 # Travel Application with Advanced PostgreSQL Features
 
 This application leverages powerful PostgreSQL features to provide robust data management, consistency, and auditability.
+Video Demonstration:
 
 ## PostgreSQL Features Implemented
 
@@ -112,5 +113,4 @@ await query(
 ## Database Schema Organization
 
 - **Automatic timestamps**: All tables with `updated_at` columns automatically get their values updated on change
-- **Activity logging**: All changes to important tables are logged in `analytics` and `admin_logs` tables
 - **Transactional integrity**: Complex operations are wrapped in transactions to ensure consistency
