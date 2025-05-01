@@ -234,6 +234,39 @@ export default function TripDetailPage() {
       estimateBudgetMutation.mutate();
     }
   }, [trip]);
+  
+  // Load destination image dynamically
+  useEffect(() => {
+    if (!trip) return;
+    
+    let isMounted = true;
+    
+    const loadImage = async () => {
+      try {
+        // Start with static image
+        const initialImage = getDestinationImage(trip?.destination || "");
+        if (isMounted) setBackgroundImage(initialImage);
+        
+        // Try to get a real-time image
+        const realTimeImage = await fetchDestinationImage(trip?.destination || "");
+        if (isMounted) {
+          setBackgroundImage(realTimeImage);
+        }
+      } catch (error) {
+        console.error("Error loading destination image:", error);
+        // Keep using the fallback image
+        if (isMounted && !backgroundImage) {
+          setBackgroundImage(getDestinationImage(trip?.destination || ""));
+        }
+      }
+    };
+    
+    loadImage();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [trip, backgroundImage]);
 
   const generateItineraryMutation = useMutation({
     mutationFn: async () => {
@@ -350,38 +383,7 @@ export default function TripDetailPage() {
     );
   }
 
-  // Load destination image dynamically
-  useEffect(() => {
-    if (!trip) return;
-    
-    let isMounted = true;
-    
-    const loadImage = async () => {
-      try {
-        // Start with static image
-        const initialImage = getDestinationImage(trip.destination);
-        if (isMounted) setBackgroundImage(initialImage);
-        
-        // Try to get a real-time image
-        const realTimeImage = await fetchDestinationImage(trip.destination);
-        if (isMounted) {
-          setBackgroundImage(realTimeImage);
-        }
-      } catch (error) {
-        console.error("Error loading destination image:", error);
-        // Keep using the fallback image
-        if (isMounted && !backgroundImage) {
-          setBackgroundImage(getDestinationImage(trip.destination));
-        }
-      }
-    };
-    
-    loadImage();
-    
-    return () => {
-      isMounted = false;
-    };
-  }, [trip?.destination, backgroundImage]);
+  // Use existing values - removed duplicate hook
 
   const hasItinerary = trip.days && trip.days.length > 0;
   const hasBookings = trip.bookings && trip.bookings.length > 0;
