@@ -3443,10 +3443,10 @@ export async function registerRoutes(app: Express): Promise<Server> {
     
     try {
       // Build the Google Maps Place Photo API URL with RapidAPI
-      const url = `https://google-maps28.p.rapidapi.com/place/photo`;
+      const url = `https://google-map-places-new-v2.p.rapidapi.com/photo`;
       const headers = {
         'X-RapidAPI-Key': process.env.RAPIDAPI_KEY || '',
-        'X-RapidAPI-Host': 'google-maps28.p.rapidapi.com'
+        'X-RapidAPI-Host': 'google-map-places-new-v2.p.rapidapi.com'
       };
       
       // We'll proxy the request and stream it back to preserve image data
