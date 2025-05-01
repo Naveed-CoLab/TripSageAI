@@ -63,14 +63,79 @@ if (!GEMINI_API_KEY) {
   console.warn("GEMINI_API_KEY is not set! AI features will not work properly.");
 }
 
-// Function to generate images using a separate model for images (flash)
+// Import necessary modules for Unsplash
+import { createApi } from 'unsplash-js';
+
+// Setup Unsplash API client
+const unsplashAccessKey = process.env.UNSPLASH_ACCESS_KEY || '';
+const unsplash = unsplashAccessKey ? createApi({ accessKey: unsplashAccessKey }) : null;
+
+/**
+ * Enhanced function to get images for travel destinations and activities
+ * Uses multiple sources with fallback strategy:
+ * 1. Unsplash API (if access key is available)
+ * 2. Unsplash source URL (direct access that doesn't require API key)
+ * 3. Gemini AI image generation
+ */
 export async function generateImageWithGemini(prompt: string): Promise<string | undefined> {
+  // Try Unsplash API first if available
+  if (unsplash) {
+    try {
+      console.log(`Fetching image from Unsplash API for: ${prompt}`);
+      
+      const searchQuery = `travel ${prompt}`;
+      const result = await unsplash.search.getPhotos({
+        query: searchQuery,
+        orientation: 'landscape',
+        perPage: 5,
+        orderBy: 'relevant'
+      });
+      
+      const photos = result.response?.results || [];
+      if (photos.length > 0) {
+        // Randomly select one of the top images for variety
+        const randomIndex = Math.floor(Math.random() * Math.min(5, photos.length));
+        const selectedPhoto = photos[randomIndex];
+        
+        console.log(`Found Unsplash image for: ${prompt}`);
+        
+        // Return image URL with attribution
+        return selectedPhoto.urls.regular;
+      }
+    } catch (error) {
+      console.error("Error fetching from Unsplash API:", error);
+      // Continue to fallback methods
+    }
+  }
+  
+  // Try Unsplash source URL as fallback (doesn't require API key)
+  try {
+    console.log(`Trying Unsplash source URL for: ${prompt}`);
+    
+    // Clean and format the prompt for URL
+    const cleanPrompt = encodeURIComponent(prompt.replace(/[^\w\s]/gi, '').replace(/\s+/g, ','));
+    
+    // Check if the URL is accessible
+    const checkUrl = `https://source.unsplash.com/1200x800/?${cleanPrompt},travel`;
+    const response = await fetch(checkUrl, { method: 'HEAD' });
+    
+    if (response.ok) {
+      console.log(`Found Unsplash direct image for: ${prompt}`);
+      return checkUrl;
+    }
+  } catch (error) {
+    console.error("Error with Unsplash source URL:", error);
+    // Continue to AI generation
+  }
+  
+  // Fallback to Gemini image generation as last resort
   try {
     if (!GEMINI_API_KEY) {
       console.warn("No GEMINI_API_KEY provided. Cannot generate image.");
       throw new Error("Gemini API key is missing. Unable to generate image.");
     }
 
+    console.log(`Generating image with Gemini AI for: ${prompt}`);
     const enhancedPrompt = `High-quality travel photograph of ${prompt}. Clear lighting, detailed, professional travel photography style. 4K resolution.`;
     
     // Define the fetch function to be retried
@@ -121,6 +186,7 @@ export async function generateImageWithGemini(prompt: string): Promise<string | 
       for (const part of data.candidates[0].content.parts) {
         if (part.inlineData && part.inlineData.data) {
           // Return the base64 image data
+          console.log(`Successfully generated AI image for: ${prompt}`);
           return `data:${part.inlineData.mimeType};base64,${part.inlineData.data}`;
         }
       }
@@ -130,7 +196,7 @@ export async function generateImageWithGemini(prompt: string): Promise<string | 
     throw new Error("No image found in Gemini response");
   } catch (error) {
     console.error("Error generating image with Gemini:", error);
-    // Return undefined instead of fallback image when there's an error
+    // Return undefined if all methods fail
     return undefined;
   }
 }
