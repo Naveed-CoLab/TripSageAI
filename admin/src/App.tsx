@@ -1,6 +1,8 @@
 import { Route, Switch, Link, useLocation } from "wouter";
 import { useState, useEffect } from "react";
 import { useAuth } from "./hooks/use-auth";
+import AiTripsList from "./pages/ai-trips/ai-trips-list";
+import AiTripDetail from "./pages/ai-trips/ai-trip-detail";
 
 function App() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
@@ -75,6 +77,11 @@ function App() {
             <li>
               <Link href="/admin/analytics" className={`flex items-center p-2 rounded-md ${location === '/admin/analytics' ? 'bg-primary text-white' : 'text-gray-300 hover:bg-gray-800'}`}>
                 Analytics
+              </Link>
+            </li>
+            <li>
+              <Link href="/admin/ai-trips" className={`flex items-center p-2 rounded-md ${location.includes('/admin/ai-trips') ? 'bg-primary text-white' : 'text-gray-300 hover:bg-gray-800'}`}>
+                AI Trips
               </Link>
             </li>
             <li>
@@ -168,6 +175,16 @@ function App() {
                 <p>User management interface would go here.</p>
               </div>
             </Route>
+            
+            {/* AI Trips Routes */}
+            <Route path="/admin/ai-trips">
+              <AiTripsList />
+            </Route>
+            
+            <Route path="/admin/ai-trips/:id">
+              <AiTripDetail />
+            </Route>
+            
             <Route>
               <div className="container mx-auto p-4">
                 <h1 className="text-2xl font-bold mb-4">Not Found</h1>
