@@ -1,3 +1,4 @@
+
 import { createApi } from 'unsplash-js';
 import { storage } from '../storage';
 import { HotelBooking, HotelSearch, InsertHotelBooking, InsertHotelSearch } from '@shared/schema';
