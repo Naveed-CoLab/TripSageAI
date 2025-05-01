@@ -1,4 +1,4 @@
--- Create tables for the travel advisor app
+--- Create tables for the travel advisor app
 
 -- Users table
 CREATE TABLE IF NOT EXISTS users (
