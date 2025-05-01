@@ -368,41 +368,92 @@ export default function TripDetailPage() {
     return acc;
   }, {} as Record<string, typeof trip.days>);
   
+  // For dynamic image loading
+  const [backgroundImage, setBackgroundImage] = useState<string>("");
+  
+  // Load destination image dynamically
+  useEffect(() => {
+    let isMounted = true;
+    
+    const loadImage = async () => {
+      try {
+        // Start with static image
+        const initialImage = getDestinationImage(trip.destination);
+        if (isMounted) setBackgroundImage(initialImage);
+        
+        // Try to get a real-time image
+        const realTimeImage = await fetchDestinationImage(trip.destination);
+        if (isMounted) {
+          setBackgroundImage(realTimeImage);
+        }
+      } catch (error) {
+        console.error("Error loading destination image:", error);
+        // Keep using the fallback image
+        if (isMounted && !backgroundImage) {
+          setBackgroundImage(getDestinationImage(trip.destination));
+        }
+      }
+    };
+    
+    loadImage();
+    
+    return () => {
+      isMounted = false;
+    };
+  }, [trip.destination]);
+
   return (
     <MainLayout>
       <div className="relative">
         {/* Hero Banner with Trip Title */}
-        <div className="relative h-80 overflow-hidden">
-          {trip.destination && (
-            <img 
-              src={getDestinationImage(trip.destination)}
-              alt={trip.destination}
-              className="absolute inset-0 w-full h-full object-cover"
-            />
-          )}
-          <div className="absolute inset-0 bg-gradient-to-r from-black/60 to-black/30"></div>
-          <div className="absolute inset-0 container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col justify-end pb-16">
+        <div className="relative h-96 overflow-hidden">
+          <div className="absolute inset-0 w-full h-full bg-gray-200">
+            {backgroundImage && (
+              <img 
+                src={backgroundImage}
+                alt={trip.destination}
+                className="absolute inset-0 w-full h-full object-cover transition-opacity duration-500 ease-in-out opacity-100"
+              />
+            )}
+          </div>
+          <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/50 to-black/70"></div>
+          
+          {/* Back button */}
+          <div className="absolute top-4 left-4 z-10">
+            <Button 
+              variant="ghost" 
+              size="sm" 
+              className="text-white hover:bg-white/20 backdrop-blur-sm"
+              onClick={() => navigate("/trips")}
+            >
+              <ChevronDown className="h-4 w-4 mr-1 rotate-90" />
+              Back to Trips
+            </Button>
+          </div>
+          
+          <div className="absolute inset-0 container mx-auto px-4 sm:px-6 lg:px-8 flex flex-col justify-end pb-12">
             <div className="animate-fade-in-up">
-              <h1 className="text-5xl font-bold text-white mb-4 drop-shadow-md">
+              <h1 className="text-5xl font-bold text-white mb-6 drop-shadow-md">
                 {trip.title}
               </h1>
-              <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 inline-flex space-x-6 shadow-lg border border-white/20">
-                <div className="flex items-center">
-                  <Calendar className="w-5 h-5 mr-2 text-primary-200" />
+              
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-8">
+                <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 flex items-center shadow-lg border border-white/20">
+                  <Calendar className="w-8 h-8 mr-3 text-primary-200" />
                   <div>
                     <div className="text-xs uppercase tracking-wider text-white/70">Duration</div>
-                    <div className="text-white font-medium">
+                    <div className="text-white font-medium text-lg">
                       {trip.days.length} days
                     </div>
                   </div>
                 </div>
                 
                 {trip.startDate && trip.endDate && (
-                  <div className="flex items-center">
-                    <Calendar className="w-5 h-5 mr-2 text-primary-200" />
+                  <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 flex items-center shadow-lg border border-white/20">
+                    <Calendar className="w-8 h-8 mr-3 text-primary-200" />
                     <div>
                       <div className="text-xs uppercase tracking-wider text-white/70">Date</div>
-                      <div className="text-white font-medium">
+                      <div className="text-white font-medium text-lg">
                         {trip.startDate && typeof trip.startDate === 'string' 
                           ? format(new Date(trip.startDate), "MMM d") 
                           : "Start date"} - {trip.endDate && typeof trip.endDate === 'string' 
@@ -413,11 +464,11 @@ export default function TripDetailPage() {
                   </div>
                 )}
                 
-                <div className="flex items-center">
-                  <MapPin className="w-5 h-5 mr-2 text-primary-200" />
+                <div className="bg-white/10 backdrop-blur-md rounded-xl p-4 flex items-center shadow-lg border border-white/20">
+                  <MapPin className="w-8 h-8 mr-3 text-primary-200" />
                   <div>
                     <div className="text-xs uppercase tracking-wider text-white/70">Destination</div>
-                    <div className="text-white font-medium">{trip.destination}</div>
+                    <div className="text-white font-medium text-lg">{trip.destination}</div>
                   </div>
                 </div>
               </div>
@@ -426,17 +477,17 @@ export default function TripDetailPage() {
         </div>
         
         {/* Main Content */}
-        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-6">
-          <div className="max-w-6xl mx-auto relative -mt-16">
-            <div className="bg-white rounded-xl shadow-md p-6 mb-6 flex flex-col md:flex-row justify-between items-start md:items-center">
+        <div className="container mx-auto px-4 sm:px-6 lg:px-8 py-8">
+          <div className="max-w-6xl mx-auto relative -mt-20">
+            <div className="bg-white rounded-xl shadow-md p-6 mb-8 flex flex-col md:flex-row justify-between items-start md:items-center">
               <div className="flex items-center gap-4 mb-4 md:mb-0">
                 <div className="py-1 px-3 bg-primary-50 text-primary-700 rounded-full text-sm font-medium">
-                  What's this trip about? (optional)
+                  Trip preferences
                 </div>
                 {trip.preferences && trip.preferences.length > 0 && (
                   <div className="flex flex-wrap gap-2">
                     {trip.preferences.map((preference, index) => (
-                      <Badge key={`pref-${index}`} variant="outline" className="bg-white">
+                      <Badge key={`pref-${index}`} variant="outline" className="bg-white hover:bg-primary-50 transition-colors">
                         {preference}
                       </Badge>
                     ))}
@@ -445,7 +496,7 @@ export default function TripDetailPage() {
               </div>
               
               <div className="flex gap-2">
-                <Button variant="outline" size="sm" onClick={() => navigate(`/trips/${trip.id}/edit`)}>
+                <Button variant="outline" size="sm" onClick={() => navigate(`/trips/${trip.id}/edit`)} className="hover:bg-primary-50 transition-colors">
                   <Pencil className="h-4 w-4 mr-1" />
                   Edit
                 </Button>
