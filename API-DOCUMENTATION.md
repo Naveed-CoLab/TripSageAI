@@ -200,3 +200,5 @@ All of these API endpoints leverage the PostgreSQL features implemented in this 
 2. **Stored Procedures**: Complex operations like booking approvals use stored procedures
 3. **Transactions**: Multi-step operations are wrapped in transactions for consistency
 4. **Functions**: Statistical queries use PostgreSQL functions for efficient calculation
+
+   Note: Many Third Party APIs are also used in it 
